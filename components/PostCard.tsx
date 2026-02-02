@@ -123,7 +123,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 </p>
 
                 {post.images.length > 0 && (
-                    <div className={`grid gap-1 rounded-xl overflow-hidden ${post.images.length > 1 ? 'grid-cols-2 h-64' : 'h-64'}`}>
+                    <div className={`grid gap-1 rounded-xl overflow-hidden ${post.images.length > 1 ? 'grid-cols-2 h-80' : 'h-[420px]'}`}>
                         {post.images.slice(0, 2).map((img, idx) => {
                             const isLastVisible = idx === 1 && post.images.length > 2;
                             return (

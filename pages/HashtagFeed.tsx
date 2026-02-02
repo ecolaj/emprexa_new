@@ -18,6 +18,79 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const [relevantPosts, setRelevantPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Follow Hashtag Logic (Real DB Persistence)
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (!currentUser?.id) return;
+      try {
+        const { data, error } = await import('../utils/supabase')
+          .then(mod => mod.supabase
+            .from('hashtag_follows')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('hashtag', cleanTag)
+            .maybeSingle()
+          );
+
+        if (!error && data) {
+          setIsFollowing(true);
+        }
+      } catch (err) {
+        console.error("Error checking hashtag status:", err);
+      }
+    };
+
+    checkFollowStatus();
+  }, [currentUser.id, cleanTag]);
+
+  const toggleFollow = async () => {
+    if (!currentUser?.id) {
+      alert("Inicia sesión para seguir hashtags");
+      return;
+    }
+
+    setFollowLoading(true);
+    const oldState = isFollowing;
+
+    // Optimistic update
+    setIsFollowing(!oldState);
+
+    try {
+      const supabase = (await import('../utils/supabase')).supabase;
+
+      if (oldState) {
+        // Unfollow
+        const { error } = await supabase
+          .from('hashtag_follows')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('hashtag', cleanTag);
+
+        if (error) throw error;
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from('hashtag_follows')
+          .insert({
+            user_id: currentUser.id,
+            hashtag: cleanTag
+          });
+
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      console.error("Error toggling follow:", err);
+      // Revert on error
+      setIsFollowing(oldState);
+      alert("Error al actualizar el seguimiento. Asegúrate de ejecutar el script de base de datos 'setup_hashtag_follows.sql'.");
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   // Interaction hook
   const {
     activeCommentSectionId,
@@ -132,13 +205,29 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
             </div>
             <div className="w-px bg-white/20"></div>
             <div className="flex flex-col">
-              <span className="text-2xl font-bold text-white">1.2k</span>
-              <span className="text-xs uppercase tracking-wider font-bold">Seguidores</span>
+              <span className="text-2xl font-bold text-white">
+                {new Set(relevantPosts.map(p => p.user?.id || p.user_id)).size}
+              </span>
+              <span className="text-xs uppercase tracking-wider font-bold">Personas</span>
             </div>
           </div>
 
-          <button className="mt-8 px-8 py-3 bg-white text-slate-900 rounded-full font-bold hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center gap-2">
-            <span className="material-symbols-outlined filled">notifications</span> Seguir Hashtag
+          <button
+            onClick={toggleFollow}
+            disabled={followLoading}
+            className={`mt-8 px-8 py-3 rounded-full font-bold transition-all shadow-lg flex items-center gap-2 ${isFollowing
+                ? 'bg-primary text-white shadow-primary/30 hover:bg-primary-dark'
+                : 'bg-white text-slate-900 hover:bg-slate-100 hover:shadow-xl hover:-translate-y-1'
+              } ${followLoading ? 'opacity-70 cursor-wait' : ''}`}
+          >
+            {followLoading ? (
+              <span className="size-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <span className={`material-symbols-outlined ${isFollowing ? 'filled' : ''}`}>
+                {isFollowing ? 'notifications_active' : 'notifications'}
+              </span>
+            )}
+            {isFollowing ? 'Siguiendo' : 'Seguir Hashtag'}
           </button>
         </div>
       </div>

@@ -58,6 +58,11 @@ export interface User {
   phone?: string;
   status?: 'active' | 'deactivated' | 'onboarding';
   lastSignInAt?: string;
+  joinedAt?: string;
+  isTrialActive?: boolean;
+  trialPostsRemaining?: number;
+  trialEndsAt?: string;
+  hasUsedTrial?: boolean;
 }
 
 export interface Organization {

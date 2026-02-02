@@ -12,7 +12,7 @@ import { supabase } from '../utils/supabase';
 import { getBaseUrl } from '../utils/environment';
 
 export const Feed: React.FC<NavProps> = ({ navigate }) => {
-  const { user, savedPostIds, toggleSavedPost, followedUserIds, followedSdgIds, sendMentionNotifications, isLoading: authLoading } = useAuth();
+  const { user, savedPostIds, toggleSavedPost, followedUserIds, followedSdgIds, sendMentionNotifications, isLoading: authLoading, activateTrial } = useAuth();
 
   // AUDIT FIX: Removed fallback to hardcoded "Juan Pérez".
   // If user is not logged in, we shouldn't show fake data.
@@ -23,7 +23,50 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
   // ... (existing state) ...
 
-  // --- STATE ---
+  // --- USER STATS ---
+  const [userStats, setUserStats] = useState({
+    followers: 0,
+    projects: 0,
+    posts: 0
+  });
+
+  useEffect(() => {
+    async function fetchUserStats() {
+      if (!currentUser?.id) return;
+
+      try {
+        // 1. Followers: Count where following_id = currentUser.id
+        const { count: followersCount } = await supabase
+          .from('follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', currentUser.id);
+
+        // 2. Projects: Count where owner_id = currentUser.id
+        const { count: projectsCount } = await supabase
+          .from('projects')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', currentUser.id);
+
+        // 3. Posts: Count where user_id = currentUser.id
+        const { count: postsCount } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', currentUser.id);
+
+        setUserStats({
+          followers: followersCount || 0,
+          projects: projectsCount || 0,
+          posts: postsCount || 0
+        });
+      } catch (error) {
+        console.error("Error fetching user stats:", error);
+      }
+    }
+
+    fetchUserStats();
+  }, [currentUser.id]);
+
+  // ... (existing state) ...
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [localProjects, setLocalProjects] = useState<any[]>([]);
   const [activeTooltipSdg, setActiveTooltipSdg] = useState<number | null>(null);
@@ -33,7 +76,9 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const [page, setPage] = useState(0);
   const POSTS_PER_PAGE = 20;
   const [showShareSuccessModal, setShowShareSuccessModal] = useState(false);
-const [copiedUrl, setCopiedUrl] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState('');
+  const [showTrialConfirmModal, setShowTrialConfirmModal] = useState(false);
+
 
   // Ref for infinite scroll
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -423,24 +468,24 @@ const [copiedUrl, setCopiedUrl] = useState('');
     }
   };
 
-const handleShare = (postId: ID) => {
-  // Usar URL dinámica para localhost y producción
-  const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
-  
-  navigator.clipboard.writeText(shareUrl).then(() => {
-    setCopiedUrl(shareUrl);
-    setShowShareSuccessModal(true);
-    
-    // Auto cerrar después de 3 segundos
-    setTimeout(() => {
-      setShowShareSuccessModal(false);
-    }, 3000);
-  }).catch(err => {
-    console.error('Error copying to clipboard:', err);
-    // Fallback al alert si clipboard falla
-    alert("¡Enlace de impacto copiado! Ahora puedes compartir esta historia en cualquier red social.");
-  });
-};
+  const handleShare = (postId: ID) => {
+    // Usar URL dinámica para localhost y producción
+    const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
+
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopiedUrl(shareUrl);
+      setShowShareSuccessModal(true);
+
+      // Auto cerrar después de 3 segundos
+      setTimeout(() => {
+        setShowShareSuccessModal(false);
+      }, 3000);
+    }).catch(err => {
+      console.error('Error copying to clipboard:', err);
+      // Fallback al alert si clipboard falla
+      alert("¡Enlace de impacto copiado! Ahora puedes compartir esta historia en cualquier red social.");
+    });
+  };
 
   const handleAddComment = (postId: number, text: string) => {
     const newComment = {
@@ -544,26 +589,80 @@ const handleShare = (postId: ID) => {
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Left Sidebar */}
-        <div className="hidden lg:block lg:col-span-3 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-100 sticky top-6">
-            <div className="flex items-center gap-4 mb-4 cursor-pointer group" onClick={() => navigate(View.PROFILE, { userId: currentUser.id })}>
-              <div
-                className="size-12 rounded-full bg-cover bg-center group-hover:scale-105 transition-transform"
-                style={{ backgroundImage: `url("${currentUser.avatar}")` }}
-              ></div>
-              <div>
-                <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{currentUser.name}</h3>
-                <div className="mt-1">{renderBadge(currentUser.plan || 'free')}</div>
+        <div className="hidden lg:block lg:col-span-3">
+          <div className="sticky top-6 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+              <div className="flex items-center gap-4 mb-4 cursor-pointer group" onClick={() => navigate(View.PROFILE, { userId: currentUser.id })}>
+                <div
+                  className="size-12 rounded-full bg-cover bg-center group-hover:scale-105 transition-transform"
+                  style={{ backgroundImage: `url("${currentUser.avatar}")` }}
+                ></div>
+                <div>
+                  <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{currentUser.name}</h3>
+                  <div className="mt-1">{renderBadge(currentUser.plan || 'free')}</div>
+                </div>
+              </div>
+              <div className="flex justify-between text-center text-sm pt-4 border-t border-slate-100">
+                <div><span className="block font-bold text-slate-900">{userStats.followers}</span><span className="text-xs text-slate-500">Seguidores</span></div>
+                <div><span className="block font-bold text-slate-900">{userStats.projects}</span><span className="text-xs text-slate-500">Proyectos</span></div>
+                <div><span className="block font-bold text-slate-900">{userStats.posts}</span><span className="text-xs text-slate-500">Posts</span></div>
               </div>
             </div>
-            <div className="flex justify-between text-center text-sm pt-4 border-t border-slate-100">
-              <div><span className="block font-bold text-slate-900">1.2k</span><span className="text-xs text-slate-500">Seguidores</span></div>
-              <div><span className="block font-bold text-slate-900">48</span><span className="text-xs text-slate-500">Proyectos</span></div>
-              <div><span className="block font-bold text-slate-900">850</span><span className="text-xs text-slate-500">Impacto</span></div>
-            </div>
+
+            {/* Trial Coupon / Status Widget */}
+            {currentUser.plan === 'free' && !currentUser.hasUsedTrial && (
+              <div className="bg-gradient-to-br from-primary to-purple-600 rounded-xl p-4 shadow-lg border border-primary/20 animate-[fade-in_0.5s_ease-out]">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="size-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-white text-2xl">redeem</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-black text-white text-sm mb-1">¡Regalo de Bienvenida!</h3>
+                    <p className="text-white/90 text-xs leading-relaxed">Activa tu kit PRO gratis: 5 posts o 30 días</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowTrialConfirmModal(true)}
+                  className="w-full bg-white text-primary font-bold py-2.5 rounded-lg hover:bg-slate-50 transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 text-sm flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">celebration</span>
+                  Activar Ahora
+                </button>
+              </div>
+            )}
+
+            {currentUser.isTrialActive && (
+              <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 shadow-lg border border-green-400/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-white filled">workspace_premium</span>
+                  <h3 className="font-black text-white text-sm">Modo PRO Activo</h3>
+                </div>
+                <div className="space-y-2">
+                  {currentUser.trialPostsRemaining !== undefined && currentUser.trialPostsRemaining > 0 && (
+                    <div className="flex items-center justify-between text-white/90 text-xs">
+                      <span>Posts restantes:</span>
+                      <span className="font-bold bg-white/20 px-2 py-1 rounded">{currentUser.trialPostsRemaining}</span>
+                    </div>
+                  )}
+                  {currentUser.trialEndsAt && (
+                    <div className="flex items-center justify-between text-white/90 text-xs">
+                      <span>Días restantes:</span>
+                      <span className="font-bold bg-white/20 px-2 py-1 rounded">
+                        {Math.max(0, Math.ceil((new Date(currentUser.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => navigate(View.PRICING)}
+                  className="w-full mt-3 bg-white/20 backdrop-blur text-white font-bold py-2 rounded-lg hover:bg-white/30 transition-all text-xs"
+                >
+                  Mantener PRO después
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
         {/* Center Feed */}
         <div className="col-span-1 lg:col-span-6 space-y-6 pb-8">
           {/* Create Post Widget */}
@@ -767,40 +866,136 @@ const handleShare = (postId: ID) => {
         icon="comment_bank"
       />
       {/* Share Success Modal */}
-      {showShareSuccessModal && (
+      {
+        showShareSuccessModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
+              onClick={() => setShowShareSuccessModal(false)}
+            ></div>
+
+            {/* Modal Card */}
+            <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
+              <div className="p-8 text-center">
+                {/* Icon */}
+                <div className="size-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <span className="material-symbols-outlined text-3xl">check_circle</span>
+                </div>
+
+                <h2 className="text-xl font-bold text-slate-900 mb-2">¡Enlace copiado!</h2>
+
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+                  El enlace de impacto ha sido copiado al portapapeles. Ahora puedes compartir esta historia en cualquier red social.
+                </p>
+
+                {/* URL Preview */}
+                <div className="bg-slate-50 rounded-xl p-3 mb-6 text-left">
+                  <p className="text-xs text-slate-400 font-bold mb-1">Enlace:</p>
+                  <p className="text-sm text-slate-700 font-mono break-all">{copiedUrl}</p>
+                </div>
+
+                <button
+                  onClick={() => setShowShareSuccessModal(false)}
+                  className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Trial Activation Confirmation Modal */}
+      {showTrialConfirmModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
-            onClick={() => setShowShareSuccessModal(false)}
+            onClick={() => setShowTrialConfirmModal(false)}
           ></div>
-          
+
           {/* Modal Card */}
-          <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
-            <div className="p-8 text-center">
-              {/* Icon */}
-              <div className="size-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="material-symbols-outlined text-3xl">check_circle</span>
+          <div className="relative bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-br from-primary to-purple-600 p-8 text-center relative overflow-hidden">
+              {/* Decorative circles */}
+              <div className="absolute -top-10 -right-10 size-40 bg-white/10 rounded-full"></div>
+              <div className="absolute -bottom-10 -left-10 size-40 bg-white/10 rounded-full"></div>
+
+              <div className="relative z-10">
+                <div className="size-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <span className="material-symbols-outlined text-white text-5xl">workspace_premium</span>
+                </div>
+                <h2 className="text-2xl font-black text-white mb-2">¡Activa tu Kit PRO!</h2>
+                <p className="text-white/90 text-sm">Desbloquea el poder completo de Emprexa</p>
               </div>
-              
-              <h2 className="text-xl font-bold text-slate-900 mb-2">¡Enlace copiado!</h2>
-              
-              <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-                El enlace de impacto ha sido copiado al portapapeles. Ahora puedes compartir esta historia en cualquier red social.
-              </p>
-              
-              {/* URL Preview */}
-              <div className="bg-slate-50 rounded-xl p-3 mb-6 text-left">
-                <p className="text-xs text-slate-400 font-bold mb-1">Enlace:</p>
-                <p className="text-sm text-slate-700 font-mono break-all">{copiedUrl}</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-8">
+              <div className="space-y-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="size-10 bg-green-50 rounded-lg flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-green-600">check_circle</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">5 Publicaciones PRO</h4>
+                    <p className="text-slate-500 text-xs">Comparte tu impacto con herramientas avanzadas</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="size-10 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-blue-600">calendar_month</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">30 Días de Acceso</h4>
+                    <p className="text-slate-500 text-xs">Disfruta todas las funciones premium</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="size-10 bg-purple-50 rounded-lg flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-purple-600">trending_up</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">Métricas Avanzadas</h4>
+                    <p className="text-slate-500 text-xs">Mide tu impacto real en la comunidad</p>
+                  </div>
+                </div>
               </div>
-              
-              <button
-                onClick={() => setShowShareSuccessModal(false)}
-                className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
-              >
-                Entendido
-              </button>
+
+              {/* Important Note */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-6">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-amber-600 text-lg">info</span>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    <strong>Nota:</strong> Este cupón es único y se activará inmediatamente. Lo que ocurra primero (5 posts o 30 días) determinará cuándo expira.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowTrialConfirmModal(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                >
+                  Más Tarde
+                </button>
+                <button
+                  onClick={() => {
+                    activateTrial();
+                    setShowTrialConfirmModal(false);
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary to-purple-600 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">celebration</span>
+                  Activar Ahora
+                </button>
+              </div>
             </div>
           </div>
         </div>

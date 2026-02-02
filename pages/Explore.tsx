@@ -103,12 +103,81 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
     return () => { mounted = false; };
   }, [user]);
 
+  const [sdgStats, setSdgStats] = useState<Record<number, { projects: number, posts: number }>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchSdgStats = async () => {
+      try {
+        // Fetch ALL projects SDG IDs only
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('sdg_id');
+
+        // Fetch ALL posts SDG IDs only
+        const { data: postData, error: postError } = await supabase
+          .from('posts')
+          .select('sdg_ids');
+
+        if (mounted) {
+          const stats: Record<number, { projects: number, posts: number }> = {};
+
+          // Initialize stats
+          SDGS.forEach(sdg => {
+            stats[sdg.id] = { projects: 0, posts: 0 };
+          });
+
+          // Count Projects
+          if (!projectError && projectData) {
+            projectData.forEach((p: any) => {
+              const id = p.sdg_id;
+              if (stats[id]) {
+                stats[id].projects++;
+              }
+            });
+          } else {
+            // Fallback to constants if DB fetch fails
+            PROJECTS.forEach(p => {
+              if (stats[p.sdgId]) stats[p.sdgId].projects++;
+            })
+          }
+
+          // Count Posts
+          if (!postError && postData) {
+            postData.forEach((p: any) => {
+              const ids: number[] = p.sdg_ids || [];
+              ids.forEach(id => {
+                if (stats[id]) {
+                  stats[id].posts++;
+                }
+              });
+            });
+          } else {
+            // Fallback to constants if DB fetch fails
+            POSTS.forEach(p => {
+              p.sdgIds.forEach(id => {
+                if (stats[id]) stats[id].posts++;
+              })
+            })
+          }
+
+          setSdgStats(stats);
+        }
+      } catch (err) {
+        console.error("Error fetching SDG stats", err);
+      }
+    };
+
+    fetchSdgStats();
+    return () => { mounted = false; };
+  }, []);
+
   const getProjectCount = (sdgId: number) => {
-    return trendingProjects.filter(p => p.sdgId === sdgId).length;
+    return sdgStats[sdgId]?.projects || 0;
   };
 
   const getPostCount = (sdgId: number) => {
-    return POSTS.filter(p => p.sdgIds.includes(sdgId)).length;
+    return sdgStats[sdgId]?.posts || 0;
   };
 
   const getSdgInfo = (id: number) => SDGS.find(s => s.id === id);

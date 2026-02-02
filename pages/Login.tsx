@@ -347,7 +347,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               <span className="text-primary-300">una conexión a la vez.</span>
             </h1>
             <p className="text-lg text-slate-200 font-medium leading-relaxed opacity-90 drop-shadow-md">
-              Únete a la red más grande de emprendedores dedicados a los Objetivos de Desarrollo Sostenible de la ONU.
+              Únete a la red más grande de organizaciones dedicados a los Objetivos de Desarrollo Sostenible de la ONU.
             </p>
           </div>
 
@@ -827,7 +827,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               <div className="space-y-6 text-lg md:text-xl text-slate-600 font-medium leading-[1.6]">
                 <p>
                   Emprexa no es una red social más, acá no se trata de influencers, de gatitos bailando, memes o demás.
-                  Se trata de una <span className="text-primary font-black">red seria, con propósito, con impacto</span>, para que las organizaciones den visibilidad de sus proyectos.
+                  Se trata de una <span className="text-primary font-black">red seria, con propósito, con impacto</span>, para que las organizaciones den visibilidad a sus proyectos.
                 </p>
                 <p>
                   Si hay una sección de pagos es para evitar que cualquiera publique cosas como lo que hoy vemos en las otras redes.

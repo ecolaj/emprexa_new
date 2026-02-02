@@ -29,6 +29,7 @@ interface AuthContextType {
   deleteAccount: () => Promise<void>;
   refreshUserData: () => Promise<void>;
   checkEmailConfirmed: () => Promise<boolean>;
+  activateTrial: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -143,6 +144,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error verificando email confirmado:', error);
       return false;
+    }
+  };
+
+  const checkTrialExpiration = async (currentUser: User) => {
+    if (!currentUser.trialEndsAt && !currentUser.trialPostsRemaining) return;
+
+    const now = new Date();
+    const trialEnd = currentUser.trialEndsAt ? new Date(currentUser.trialEndsAt) : null;
+    let shouldDowngrade = false;
+
+    // Check time expiration
+    if (trialEnd && now > trialEnd) {
+      shouldDowngrade = true;
+    }
+
+    // Check posts expiration (if it reached 0 or less AND was a post-based trial)
+    if (currentUser.trialPostsRemaining !== null && currentUser.trialPostsRemaining !== undefined && currentUser.trialPostsRemaining <= 0) {
+      shouldDowngrade = true;
+    }
+
+    if (shouldDowngrade) {
+      // Update DB to turn off trial flag FIRST
+      await supabase.from('profiles').update({
+        is_trial_active: false,
+        trial_posts_remaining: 0
+      }).eq('id', currentUser.id);
+
+      // THEN update local user state to free
+      await updateUser({ plan: 'free', status: 'active', organizationName: undefined });
+
+      console.log('Trial expired. Downgraded to free.');
+    }
+  };
+
+  const activateTrial = async () => {
+    if (!user) return;
+
+    // 30 days trial or 5 posts
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 30); // 30 days from now
+
+    try {
+      const { error } = await supabase.from('profiles').update({
+        plan: 'pro', // Give them PRO status
+        is_trial_active: true,
+        trial_posts_remaining: 5,
+        trial_ends_at: endDate.toISOString(),
+        has_used_trial: true
+      }).eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      await refreshUserData();
+
+      // Force local update immediately for snappy UI
+      setUser(prev => prev ? ({
+        ...prev,
+        plan: 'pro',
+        isTrialActive: true,
+        trialPostsRemaining: 5,
+        trialEndsAt: endDate.toISOString(),
+        hasUsedTrial: true
+      }) : null);
+
+    } catch (e) {
+      console.error("Error activating trial:", e);
     }
   };
 
@@ -280,9 +348,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               status: profile.status as any,
               username: profile.username,
               website: profile.website,
-              linkedin: profile.linkedin,
               phone: profile.phone,
-              lastSignInAt: session.user.last_sign_in_at
+              lastSignInAt: session.user.last_sign_in_at,
+              joinedAt: profile.created_at,
+              isTrialActive: profile.is_trial_active,
+              trialPostsRemaining: profile.trial_posts_remaining,
+              trialEndsAt: profile.trial_ends_at,
+              hasUsedTrial: profile.has_used_trial
             };
             setUser(formattedUser);
           } else if (mountedRef.current) {
@@ -340,7 +412,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Cargar datos iniciales
+    // Cargar datos iniciales
     loadUserData(user.id);
+
+    // Verificar estado del trial
+    if (user.isTrialActive) {
+      checkTrialExpiration(user);
+    }
 
     // Iniciar polling
     startPolling(user.id);
@@ -396,7 +474,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             website: profile.website,
             linkedin: profile.linkedin,
             phone: profile.phone,
-            lastSignInAt: session.user.last_sign_in_at
+            lastSignInAt: session.user.last_sign_in_at,
+            joinedAt: profile.created_at,
+            isTrialActive: profile.is_trial_active,
+            trialPostsRemaining: profile.trial_posts_remaining,
+            trialEndsAt: profile.trial_ends_at,
+            hasUsedTrial: profile.has_used_trial
           };
           setUser(formattedUser);
         }
@@ -490,7 +573,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           username: data.username,
           website: data.website,
           linkedin: data.linkedin,
-          phone: data.phone
+          phone: data.phone,
+          isTrialActive: data.is_trial_active,
+          trialPostsRemaining: data.trial_posts_remaining,
+          trialEndsAt: data.trial_ends_at,
+          hasUsedTrial: data.has_used_trial
         };
         setUser(formattedUpdatedUser);
 
@@ -724,7 +811,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deactivateAccount,
       deleteAccount,
       refreshUserData,
-      checkEmailConfirmed
+      checkEmailConfirmed,
+      activateTrial
     }}>
       {children}
     </AuthContext.Provider>

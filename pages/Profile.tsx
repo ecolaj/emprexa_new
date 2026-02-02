@@ -72,7 +72,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
           linkedin: profile.linkedin,
           phone: profile.phone,
           plan: profile.plan,
-          status: profile.status
+          status: profile.status,
+          joinedAt: profile.created_at
         });
       } else if (profileError) {
         console.error('Error fetching profile:', profileError);
@@ -357,7 +358,12 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
             )}
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 mt-2">
               <span className="flex items-center gap-1"><span className="material-symbols-outlined text-lg text-slate-400">location_on</span> {user.location}</span>
-              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-lg text-slate-400">calendar_month</span> Se unió en 2023</span>
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-lg text-slate-400">calendar_month</span>
+                {user.joinedAt
+                  ? `Se unió en ${new Date(user.joinedAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`
+                  : 'Se unió en 2023'}
+              </span>
             </div>
           </div>
         </div>

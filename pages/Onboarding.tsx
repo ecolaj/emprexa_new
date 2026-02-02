@@ -1,13 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, NavProps } from '../types';
 import { SDGS } from '../constants';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../utils/supabase';
 
 export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
   const { user, updateUser } = useAuth();
   const [step, setStep] = useState(1);
   const totalSteps = 5;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -15,19 +18,60 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
     role: '',
     identity: '',
     goals: [] as string[],
-    sdgs: [3, 4, 13] as number[]
+    sdgs: [3, 4, 13] as number[],
+    avatar: user?.avatar || ''
   });
 
   const [errors, setErrors] = useState({
     name: ''
   });
 
-  // Sync with user name if it loads later
+  // Sync with user data if it loads later
   useEffect(() => {
-    if (user?.name && !formData.name) {
-      setFormData(prev => ({ ...prev, name: user.name }));
+    if (user) {
+      if (user.name && !formData.name) {
+        setFormData(prev => ({ ...prev, name: user.name }));
+      }
+      if (user.avatar && !formData.avatar) {
+        setFormData(prev => ({ ...prev, avatar: user.avatar }));
+      }
     }
   }, [user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !user) return;
+
+    setIsUploading(true);
+    const file = e.target.files[0];
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update form state
+      setFormData(prev => ({ ...prev, avatar: publicUrl }));
+
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      alert('Error al cargar la imagen. Intenta de nuevo.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const finishOnboarding = async () => {
     try {
@@ -37,7 +81,8 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
         role: formData.role || 'Agente de Cambio',
         sdgInterests: formData.sdgs,
         status: 'active' as const, // Change status to active after completion
-        bio: `Enfocado en: ${formData.goals.join(', ')}. Rol en el ecosistema: ${formData.identity}.`
+        bio: `Enfocado en: ${formData.goals.join(', ')}. Rol en el ecosistema: ${formData.identity}.`,
+        avatar: formData.avatar || user?.avatar || '' // Include avatar
       };
 
       // 2. Save to database
@@ -95,10 +140,40 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
       <p className="text-slate-500 mb-8">Únete como individuo. Si tienes una organización, podrás registrarla más adelante.</p>
 
       <div className="flex flex-col items-center mb-8">
-        <div className="size-24 bg-slate-50 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-primary hover:text-primary transition-colors text-slate-400 mb-2 group">
-          <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">add_a_photo</span>
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleAvatarUpload}
+          className="hidden"
+        />
+
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="size-24 bg-slate-50 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-primary hover:text-primary transition-colors text-slate-400 mb-2 group relative overflow-hidden"
+        >
+          {isUploading ? (
+            <div className="flex items-center justify-center">
+              <span className="material-symbols-outlined text-3xl animate-spin">sync</span>
+            </div>
+          ) : formData.avatar ? (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url("${formData.avatar}")` }}
+              ></div>
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-2xl">edit</span>
+              </div>
+            </>
+          ) : (
+            <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">add_a_photo</span>
+          )}
         </div>
-        <span className="text-xs font-bold text-slate-400 uppercase">Tu Foto</span>
+        <span className="text-xs font-bold text-slate-400 uppercase">
+          {formData.avatar ? 'Cambiar Foto' : 'Tu Foto'}
+        </span>
       </div>
 
       <div className="space-y-6">
@@ -150,8 +225,8 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
             key={type.id}
             onClick={() => setFormData({ ...formData, identity: type.id })}
             className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-4 ${formData.identity === type.id
-                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
+              ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+              : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
               }`}
           >
             <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${formData.identity === type.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'}`}>
