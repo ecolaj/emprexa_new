@@ -1,0 +1,446 @@
+import React, { useState, useEffect } from 'react';
+import { View, NavProps, ID, Post, Project, User } from '../types';
+import { SDGS, POSTS, USERS, PROJECTS } from '../constants';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../utils/supabase';
+
+export const Explore: React.FC<NavProps> = ({ navigate }) => {
+  const { user, followedUserIds, toggleFollowUser } = useAuth();
+
+  type TabType = 'trends' | 'ods' | 'users';
+  const [activeTab, setActiveTab] = useState<TabType>('trends');
+  const [trendingProjects, setTrendingProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [sortedSdgs, setSortedSdgs] = useState<any[]>(SDGS);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // FIX: Safe currentUser reference - never use users[0] when array might be empty
+  const currentUser = user || {
+    id: 'guest',
+    name: 'Usuario',
+    role: 'Invitado',
+    avatar: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+    sdgInterests: [],
+    plan: 'free'
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch Projects
+        const { data: projData, error: projError } = await supabase
+          .from('projects')
+          .select('*, team:project_members(profiles(*))')
+          .order('progress', { ascending: false })
+          .limit(3);
+
+        if (projError) {
+          console.error('Error fetching projects:', projError);
+          // Fallback to mock data if Supabase fails
+          setTrendingProjects(PROJECTS.slice(0, 3));
+        } else if (projData) {
+          const formattedProjects = projData.map(p => ({
+            ...p,
+            id: p.id,
+            sdgId: p.sdg_id || p.sdgId,
+            ownerId: p.owner_id || p.ownerId,
+            orgId: p.org_id || p.orgId,
+            title: p.title || 'Proyecto sin título',
+            description: p.description || '',
+            image: p.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+            progress: p.progress || 0,
+            status: p.status || 'Activo',
+            lookingFor: p.looking_for || [],
+            team: (p.team || []).map((m: any) => m.profiles || {}).filter((t: any) => t && t.id),
+            donationsEnabled: p.donations_enabled || false
+          }));
+          setTrendingProjects(formattedProjects);
+        }
+
+        // Fetch All Users for recommendations
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('*')
+          .select('*')
+          .limit(50);
+
+        if (userError) {
+          console.error('Error fetching users:', userError);
+          // Fallback to mock users
+          setUsers(USERS.filter(u => u.id !== user?.id).slice(0, 8));
+        } else if (userData) {
+          const formattedUsers = userData.map(u => ({
+            id: u.id,
+            name: u.name || 'Usuario',
+            role: u.role || 'Miembro',
+            avatar: u.avatar || 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+            email: u.email,
+            cover: u.cover,
+            bio: u.bio,
+            location: u.location,
+            organizationId: u.organization_id,
+            organizationName: u.organization_name,
+            sdgInterests: u.sdg_interests || [],
+            plan: (u.plan as any) || 'free',
+            status: u.status || 'active'
+          }));
+          setUsers(formattedUsers);
+        }
+      } catch (error) {
+        console.error('Error fetching explore data:', error);
+        if (mounted) {
+          setTrendingProjects(PROJECTS.slice(0, 3));
+          setUsers(USERS.filter(u => u.id !== user?.id).slice(0, 8));
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => { mounted = false; };
+  }, [user]);
+
+  const getProjectCount = (sdgId: number) => {
+    return trendingProjects.filter(p => p.sdgId === sdgId).length;
+  };
+
+  const getPostCount = (sdgId: number) => {
+    return POSTS.filter(p => p.sdgIds.includes(sdgId)).length;
+  };
+
+  const getSdgInfo = (id: number) => SDGS.find(s => s.id === id);
+
+  const getUser = (id: ID) => {
+    const foundUser = users.find(u => u.id === id);
+    if (foundUser) return foundUser;
+
+    // Fallback user object
+    return {
+      id: id,
+      name: 'Usuario',
+      role: 'Miembro',
+      avatar: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+      plan: 'free'
+    };
+  };
+
+  // Mock Trending Hashtags
+  const trendingTags = [
+    { tag: '#ClimateAction', posts: '15.2k', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=400&q=80', color: 'bg-green-600' },
+    { tag: '#Tech4Good', posts: '8.5k', image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400&q=80', color: 'bg-blue-600' },
+    { tag: '#WomenLeaders', posts: '12k', image: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=400&q=80', color: 'bg-purple-600' },
+    { tag: '#CircularEconomy', posts: '5.4k', image: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=400&q=80', color: 'bg-amber-600' },
+  ];
+
+  // Users Logic
+  const otherUsers = users.filter(u => u.id !== user?.id);
+  // Display all fetched users, not just a slice
+  const displayUsers = otherUsers;
+
+  const renderBadge = (plan: string | undefined) => {
+    if (!plan) return null;
+
+    switch (plan) {
+      case 'basic':
+        return <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0">Basic</span>;
+      case 'pro':
+        return <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1 shrink-0"><span className="material-symbols-outlined text-[10px] filled">verified</span> Pro</span>;
+      case 'enterprise':
+        return <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1 shrink-0"><span className="material-symbols-outlined text-[10px] filled">verified_user</span> Enterprise</span>;
+      default:
+        return null; // Free users get no badge
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-slate-500">Cargando contenido de exploración...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-slate-50">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 pt-8 pb-0">
+          <h1 className="text-3xl font-black text-slate-900 mb-2">Explorar el Impacto</h1>
+          <p className="text-slate-500 mb-6">Descubre lo que está moviendo al mundo hoy.</p>
+
+          <div className="flex gap-8">
+            {[
+              { id: 'trends', label: 'Tendencias' },
+              { id: 'ods', label: 'ODS' },
+              { id: 'users', label: 'Usuarios' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as TabType)}
+                className={`pb-3 border-b-2 text-sm font-bold transition-colors ${activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 max-w-7xl mx-auto animate-[fade-in_0.3s_ease-out]">
+
+        {/* --- TENDENCIAS TAB --- */}
+        {activeTab === 'trends' && (
+          <div className="space-y-10">
+            {/* Hero Section: Trending Topics */}
+            <section>
+              <h2 className="font-bold text-slate-900 text-xl mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">trending_up</span> Temas del Momento
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {trendingTags.map((t, i) => (
+                  <div
+                    key={i}
+                    onClick={() => navigate(View.HASHTAG, { tag: t.tag })}
+                    className="group relative h-40 rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+                  >
+                    <img src={t.image} alt={t.tag} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <div className={`absolute inset-0 opacity-60 mix-blend-multiply ${t.color}`}></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <p className="font-bold text-lg leading-tight group-hover:underline">{t.tag}</p>
+                      <p className="text-xs opacity-90 font-medium">{t.posts} publicaciones</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Featured Projects (PROJECT CARDS) */}
+            <section>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
+                  <span className="material-symbols-outlined text-amber-500 filled">star</span> Proyectos Destacados
+                </h2>
+                <button
+                  className="text-sm font-bold text-slate-500 hover:text-primary"
+                  onClick={() => navigate(View.EXPLORE)}
+                >
+                  Ver todos
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {trendingProjects.map(project => {
+                  const sdg = getSdgInfo(project.sdgId);
+                  const owner = getUser(project.ownerId);
+                  return (
+                    <div
+                      key={project.id}
+                      className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer flex flex-col h-full group"
+                      onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })}
+                    >
+                      <div
+                        className="h-48 bg-slate-200 bg-cover bg-center relative"
+                        style={{ backgroundImage: `url("${project.image}")` }}
+                      >
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+                        {sdg && (
+                          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
+                            <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                          </div>
+                        )}
+                        <div className="absolute bottom-3 right-3">
+                          <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide">
+                            {project.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-5 flex-1 flex flex-col">
+                        <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{project.title}</h3>
+                        <p className="text-sm text-slate-500 line-clamp-3 mb-4 flex-1">{project.description}</p>
+
+                        <div className="mt-auto">
+                          <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1">
+                            <span>Meta alcanzada</span>
+                            <span className="text-primary">{project.progress}%</span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
+                            <div className="bg-primary h-full rounded-full" style={{ width: `${project.progress}%` }}></div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="size-6 rounded-full bg-cover bg-center"
+                                style={{ backgroundImage: `url("${owner.avatar}")` }}
+                              ></div>
+                              <span className="text-xs font-bold text-slate-700 truncate max-w-[100px]">{owner.name}</span>
+                            </div>
+                            <div className="flex -space-x-1.5">
+                              {project.team && project.team.slice(0, 3).map((m: any, idx: number) => (
+                                <div
+                                  key={idx}
+                                  className="size-6 rounded-full border-2 border-white bg-cover bg-center bg-slate-200"
+                                  style={{ backgroundImage: `url("${m.avatar}")` }}
+                                ></div>
+                              ))}
+                              {project.team && project.team.length > 3 && (
+                                <div className="size-6 rounded-full border-2 border-white bg-slate-100 text-[9px] flex items-center justify-center font-bold text-slate-500">
+                                  +{project.team.length - 3}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Call to Action */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-center text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <h3 className="text-2xl font-black mb-2">¿Tienes una iniciativa de impacto?</h3>
+                <p className="text-slate-300 mb-6 max-w-xl mx-auto">Comparte tu proyecto con la comunidad y encuentra socios, voluntarios o financiación.</p>
+                <button
+                  onClick={() => navigate(View.CREATE_PROJECT)}
+                  className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/30 flex items-center gap-2 mx-auto"
+                >
+                  <span className="material-symbols-outlined">add_circle</span> Publicar Proyecto
+                </button>
+              </div>
+              <div className="absolute top-0 right-0 -mr-20 -mt-20 size-64 bg-white/5 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-64 bg-primary/20 rounded-full blur-3xl"></div>
+            </div>
+          </div>
+        )}
+
+        {/* --- ODS TAB --- */}
+        {activeTab === 'ods' && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
+            {sortedSdgs.map((sdg) => {
+              const projectCount = getProjectCount(sdg.id);
+              const postCount = getPostCount(sdg.id);
+              return (
+                <div
+                  key={sdg.id}
+                  onClick={() => navigate(View.SDG_FEED, { id: sdg.id })}
+                  className="group relative aspect-[4/5] rounded-xl overflow-hidden cursor-pointer hover:shadow-xl transition-all hover:scale-[1.02] bg-slate-900"
+                  style={{ backgroundColor: sdg.color }}
+                >
+                  <div className="absolute top-4 right-4 text-white opacity-90 text-xl font-black z-20">{sdg.id}</div>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-30 group-hover:opacity-40 transition-opacity">
+                    <span className="material-symbols-outlined text-[120px] text-white">{sdg.icon}</span>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 p-5 w-full z-20">
+                    <h3 className="text-white text-lg font-bold leading-tight mb-2">{sdg.label}</h3>
+                    <div className="flex flex-col gap-1 text-white/90">
+                      <div className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm">folder_open</span>
+                        <span className="text-xs font-bold">{projectCount} proyectos</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm">dynamic_feed</span>
+                        <span className="text-xs font-bold">{postCount} publicaciones</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* --- USUARIOS TAB --- */}
+        {activeTab === 'users' && (
+          <div className="space-y-10">
+            <section>
+              <div className="mb-6">
+                <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">handshake</span> Recomendados para ti
+                </h2>
+                <p className="text-sm text-slate-500">Personas que comparten tus intereses en ODS.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                {displayUsers.map(recUser => {
+                  const commonSdgs = recUser.sdgInterests?.filter(id =>
+                    currentUser.sdgInterests?.includes(id)
+                  ) || [];
+                  return (
+                    <div key={recUser.id} className="bg-white p-5 rounded-xl border border-slate-200 flex items-start gap-4 hover:shadow-md transition-shadow">
+                      <div
+                        className="size-16 rounded-full bg-cover bg-center shrink-0 border border-slate-100 cursor-pointer"
+                        style={{ backgroundImage: `url("${recUser.avatar}")` }}
+                        onClick={() => navigate(View.PROFILE, { userId: recUser.id })}
+                      ></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h3
+                                className="font-bold text-slate-900 truncate cursor-pointer hover:underline"
+                                onClick={() => navigate(View.PROFILE, { userId: recUser.id })}
+                              >
+                                {recUser.name}
+                              </h3>
+                              {renderBadge(recUser.plan)}
+                            </div>
+                            <p className="text-sm text-slate-500 truncate mb-2">{recUser.role}</p>
+                          </div>
+                          <button
+                            onClick={() => toggleFollowUser(recUser.id)}
+                            className={`p-2 rounded-full transition-colors shrink-0 ${followedUserIds.includes(recUser.id)
+                              ? 'text-primary bg-primary/10'
+                              : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                              }`}
+                          >
+                            <span className={`material-symbols-outlined ${followedUserIds.includes(recUser.id) ? 'filled' : ''}`}>
+                              {followedUserIds.includes(recUser.id) ? 'person_check' : 'person_add'}
+                            </span>
+                          </button>
+                        </div>
+                        {commonSdgs.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-400 font-medium shrink-0">Intereses comunes:</span>
+                            <div className="flex -space-x-1">
+                              {commonSdgs.slice(0, 3).map(id => {
+                                const sdg = getSdgInfo(id);
+                                if (!sdg) return null;
+                                return (
+                                  <div
+                                    key={id}
+                                    className="size-5 rounded-full border border-white flex items-center justify-center text-white text-[8px] font-bold"
+                                    style={{ backgroundColor: sdg.color }}
+                                    title={sdg.short}
+                                  >
+                                    {sdg.id}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
