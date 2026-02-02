@@ -243,7 +243,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
     }
   };
 
-    const handleForgotSubmit = async (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!forgotPasswordEmail) {
@@ -255,10 +255,10 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
       // IMPORTANTE: Usar hash para que App.tsx lo detecte
       const baseUrl = getBaseUrl();
       const redirectUrl = `${baseUrl}/#reset-password`;
-      
+
       console.log('📧 Enviando email de recuperación a:', forgotPasswordEmail);
       console.log('🔗 URL de redirección:', redirectUrl);
-      
+
       const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
         redirectTo: redirectUrl,
       });
@@ -583,8 +583,165 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <div className="p-8 overflow-y-auto text-sm text-slate-600 leading-relaxed space-y-6">
-              <p>Bienvenido a Emprexa...</p>
+            <div className="p-8 overflow-y-auto text-sm text-slate-600 leading-relaxed space-y-6 text-justify">
+              <div className="space-y-6">
+                <h4 className="font-bold text-slate-900 text-lg text-center">TÉRMINOS Y CONDICIONES DE USO - EMPREXA.NET</h4>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">1. ACEPTACIÓN DE LOS TÉRMINOS</strong>
+                  <p>Al acceder y utilizar la plataforma Emprexa.net ("la Plataforma"), propiedad de ("Emprexa", "nosotros", "nuestro"), usted ("Usuario", "usted") acepta quedar vinculado por estos Términos y Condiciones de Uso ("Términos"), nuestra Política de Privacidad y todas las leyes y regulaciones aplicables. Si no está de acuerdo con alguno de estos términos, tiene prohibido usar o acceder a esta Plataforma.</p>
+                  <p className="mt-2">La Plataforma es una red social diseñada para visibilizar y documentar la injerencia de organizaciones, empresas, gobiernos y ciudadanos en acciones relacionadas con los Objetivos de Desarrollo Sostenible (ODS) de las Naciones Unidas.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">2. DEFINICIONES</strong>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li><strong>"Contenido":</strong> Cualquier información, texto, gráficos, fotos, videos, documentos u otros materiales cargados, publicados o transmitidos a través de la Plataforma.</li>
+                    <li><strong>"Contenido Generado por el Usuario":</strong> Cualquier Contenido creado, cargado, publicado o transmitido por los Usuarios.</li>
+                    <li><strong>"ODS":</strong> Objetivos de Desarrollo Sostenible establecidos por las Naciones Unidas.</li>
+                    <li><strong>"Cuenta":</strong> El registro único creado por un Usuario para acceder a las funcionalidades de la Plataforma.</li>
+                    <li><strong>"Organización":</strong> Entidad creada dentro de la Plataforma para agrupar acciones, proyectos o iniciativas relacionadas con los ODS.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">3. ELEGIBILIDAD Y REGISTRO</strong>
+                  <p className="mb-2"><strong>3.1.</strong> La Plataforma está abierta a personas naturales y jurídicas comprometidas con el desarrollo sostenible.</p>
+                  <p className="mb-2"><strong>3.2.</strong> Al registrarse, el Usuario declara y garantiza:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
+                    <li>Que toda la información proporcionada es veraz, exacta y completa.</li>
+                    <li>Que mantendrá actualizada su información de registro.</li>
+                    <li>Que es responsable de mantener la confidencialidad de su contraseña.</li>
+                    <li>Que es responsable de todas las actividades que ocurran bajo su Cuenta.</li>
+                  </ul>
+                  <p><strong>3.3.</strong> Emprexa se reserva el derecho de rechazar, suspender o cancelar cualquier registro a su entera discreción.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">4. CONDUCTA DEL USUARIO</strong>
+                  <p className="mb-2"><strong>4.1. Compromiso con los ODS:</strong> El Usuario se compromete a utilizar la Plataforma exclusivamente para fines relacionados con la promoción, documentación, difusión o discusión de acciones vinculadas a los Objetivos de Desarrollo Sostenible.</p>
+                  <p className="mb-2"><strong>4.2. Prohibiciones expresas:</strong> El Usuario NO podrá:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
+                    <li>Publicar contenido difamatorio, obsceno, pornográfico, amenazante, discriminatorio o que promueva la violencia.</li>
+                    <li>Suplantar la identidad de otra persona o entidad.</li>
+                    <li>Utilizar la Plataforma para fines comerciales no autorizados, spam o publicidad no relacionada con ODS.</li>
+                    <li>Violar derechos de propiedad intelectual de terceros.</li>
+                    <li>Interferir con la seguridad o funcionamiento técnico de la Plataforma.</li>
+                    <li>Recopilar datos de otros usuarios sin su consentimiento expreso.</li>
+                    <li>Publicar información falsa o engañosa sobre impactos o logros en ODS.</li>
+                  </ul>
+                  <p><strong>4.3. Veracidad de la información:</strong> El Usuario es el único responsable de la veracidad, exactitud y legalidad del Contenido que publique. Emprexa no verifica ni garantiza la autenticidad de las afirmaciones sobre impactos en ODS.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">5. PROPIEDAD INTELECTUAL Y LICENCIAS</strong>
+                  <p className="mb-2"><strong>5.1. Derechos del Usuario:</strong> El Usuario conserva todos los derechos de propiedad intelectual sobre su Contenido Generado por el Usuario.</p>
+                  <p className="mb-2"><strong>5.2. Licencia otorgada a Emprexa:</strong> Al publicar Contenido en la Plataforma, el Usuario otorga a Emprexa una licencia mundial, no exclusiva, libre de regalías, transferible y sublicenciable para:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
+                    <li>Alojar, almacenar, reproducir, modificar, crear obras derivadas, comunicar, publicar, ejecutar y mostrar dicho Contenido en conexión con la operación y promoción de la Plataforma.</li>
+                    <li>Utilizar el Contenido (incluyendo fotografías y casos de éxito) con fines promocionales, educativos o de divulgación relacionados con los ODS, incluyendo pero no limitado a presentaciones, informes, materiales de marketing y redes sociales de Emprexa.</li>
+                    <li>Esta licencia continúa incluso si el Usuario elimina su Cuenta, según lo establecido en la Sección 9.</li>
+                  </ul>
+                  <p className="mb-2"><strong>5.3. Licencia a otros Usuarios:</strong> El Usuario otorga a otros Usuarios de la Plataforma una licencia no exclusiva para acceder a su Contenido a través de la Plataforma, y para usar, mostrar y compartir dicho Contenido según las funcionalidades permitidas por la Plataforma.</p>
+                  <p><strong>5.4. Contenido de Emprexa:</strong> Todos los derechos de propiedad intelectual sobre la Plataforma, su software, diseño, logotipos y contenido creado por Emprexa pertenecen exclusivamente a Emprexa o a sus licenciantes.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">6. PLANES DE SUSCRIPCIÓN Y PAGOS</strong>
+                  <p className="mb-2"><strong>6.1. Planes disponibles:</strong> Emprexa ofrece planes de suscripción gratuitos, básico, pro y premium. Las características específicas de cada plan se detallan en la sección correspondiente de la Plataforma.</p>
+                  <p className="mb-2"><strong>6.2. Pagos:</strong> Los pagos de suscripciones premium se procesan a través de PayPal. El Usuario acepta cumplir con los Términos de Servicio de PayPal.</p>
+                  <p className="mb-2"><strong>6.3. Renovación automática:</strong> Las suscripciones premium se renuevan automáticamente al final de cada período de facturación, a menos que el Usuario cancele su suscripción antes de la fecha de renovación.</p>
+                  <p className="mb-2"><strong>6.4. Reembolsos:</strong> Todos los pagos son no reembolsables, excepto cuando lo exija la ley aplicable.</p>
+                  <p><strong>6.5. Cambios en los planes:</strong> Emprexa se reserva el derecho de modificar las tarifas y características de los planes con 30 días de notificación previa.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">7. MODERACIÓN Y SANCIONES</strong>
+                  <p className="mb-2"><strong>7.1. Derecho de moderación:</strong> Emprexa se reserva el derecho, pero no la obligación, de:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
+                    <li>Monitorear, revisar y moderar cualquier Contenido.</li>
+                    <li>Eliminar o rechazar cualquier Contenido que, a su exclusivo criterio, viole estos Términos.</li>
+                    <li>Suspender o terminar el acceso de cualquier Usuario que viole estos Términos.</li>
+                  </ul>
+                  <p className="mb-2"><strong>7.2. Sistema de reportes:</strong> Los Usuarios pueden reportar contenido inapropiado mediante las herramientas proporcionadas en la Plataforma.</p>
+                  <p className="mb-2"><strong>7.3. Escala de sanciones:</strong> Dependiendo de la gravedad de la infracción, Emprexa puede aplicar:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
+                    <li>Advertencia escrita.</li>
+                    <li>Eliminación del contenido infractor.</li>
+                    <li>Suspensión temporal de la Cuenta (desde 1 día hasta 30 días).</li>
+                    <li>Terminación permanente de la Cuenta.</li>
+                  </ul>
+                  <p><strong>7.4. Contenido relacionado con ODS falsos:</strong> La publicación deliberada de información falsa sobre logros en ODS será considerada una infracción grave y puede resultar en la terminación inmediata de la Cuenta.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">8. PRIVACIDAD Y PROTECCIÓN DE DATOS</strong>
+                  <p className="mb-2"><strong>8.1. Política de Privacidad:</strong> El tratamiento de datos personales se rige por nuestra Política de Privacidad, que forma parte integral de estos Términos.</p>
+                  <p className="mb-2"><strong>8.2. Datos sensibles:</strong> Dado que la Plataforma trata temas relacionados con ideología (ODS, desarrollo sostenible, impacto social), el Usuario reconoce que puede proporcionar indirectamente datos considerados sensibles según algunas legislaciones. Al proporcionar dicha información, el Usuario consiente expresamente su procesamiento para los fines de la Plataforma.</p>
+                  <p><strong>8.3. Menores de edad:</strong> Si bien no hay restricción de edad, los padres o tutores de menores que utilicen la Plataforma son responsables de su conducta y del contenido que publiquen.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">9. ELIMINACIÓN DE CUENTA Y CONSERVACIÓN DE DATOS</strong>
+                  <p className="mb-2"><strong>9.1. Derecho de eliminación:</strong> El Usuario puede solicitar la eliminación de su Cuenta en cualquier momento mediante las herramientas proporcionadas en la Plataforma.</p>
+                  <p className="mb-2"><strong>9.2. Contenido post-eliminación:</strong> Cuando un Usuario elimina su Cuenta:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
+                    <li>Su nombre de usuario y datos personales serán desvinculados del Contenido que haya creado.</li>
+                    <li>Dicho Contenido será reasignado a un usuario genérico identificado como "ex-miembro de Emprexa".</li>
+                    <li>El Contenido permanecerá en la Plataforma para mantener la trazabilidad histórica de las acciones documentadas en relación con los ODS.</li>
+                    <li>La licencia otorgada según la Sección 5.2 continúa vigente.</li>
+                  </ul>
+                  <p><strong>9.3. Excepción:</strong> Emprexa se reserva el derecho de eliminar completamente el Contenido de Usuarios que hayan violado gravemente estos Términos.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">10. LIMITACIÓN DE RESPONSABILIDAD</strong>
+                  <p className="mb-2"><strong>10.1. Plataforma "tal cual":</strong> La Plataforma se proporciona "tal cual" y "según disponibilidad". Emprexa no garantiza que la Plataforma será ininterrumpida, segura o libre de errores.</p>
+                  <p className="mb-2"><strong>10.2. Contenido de terceros:</strong> Emprexa no respalda, garantiza ni asume responsabilidad por ningún Contenido Generado por el Usuario. El Usuario entiende que al usar la Plataforma puede estar expuesto a Contenido que es inexacto, ofensivo o inapropiado.</p>
+                  <p className="mb-2"><strong>10.3. Impactos y logros en ODS:</strong> Emprexa no verifica ni garantiza las afirmaciones sobre impactos en ODS realizadas por los Usuarios. Cada organización/usuario es responsable de sus propias declaraciones y compromisos.</p>
+                  <p className="mb-2"><strong>10.4. Limitación máxima:</strong> En la máxima medida permitida por la ley, la responsabilidad total de Emprexa hacia cualquier Usuario por todas las reclamaciones derivadas o relacionadas con la Plataforma no excederá el monto pagado por el Usuario a Emprexa en los últimos 6 meses.</p>
+                  <p><strong>10.5. Exclusión de daños indirectos:</strong> Emprexa no será responsable por daños indirectos, incidentales, especiales, consecuentes o punitivos, incluyendo pero no limitado a pérdida de beneficios, datos, uso, buena voluntad u otras pérdidas intangibles.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">11. INDEMNIZACIÓN</strong>
+                  <p className="mb-2">El Usuario acepta indemnizar, defender y mantener indemne a Emprexa, sus directores, empleados y agentes de y contra cualquier reclamación, responsabilidad, daño, pérdida y gasto, incluidos los honorarios razonables de abogados, que surjan de o estén relacionados con:</p>
+                  <ul className="list-[lower-alpha] pl-5 space-y-1">
+                    <li>Su uso de la Plataforma.</li>
+                    <li>Su violación de estos Términos.</li>
+                    <li>Su violación de cualquier derecho de un tercero, incluyendo derechos de propiedad intelectual.</li>
+                    <li>Cualquier Contenido que publique en la Plataforma.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">12. LEY APLICABLE Y JURISDICCIÓN</strong>
+                  <p className="mb-2"><strong>12.1. Legislación aplicable:</strong> Estos Términos se regirán e interpretarán de acuerdo con las leyes de Guatemala, sin tener en cuenta sus principios de conflicto de leyes.</p>
+                  <p className="mb-2"><strong>12.2. Foro:</strong> Cualquier disputa que surja de o esté relacionada con estos Términos se someterá a la jurisdicción exclusiva de los tribunales competentes de la Ciudad de Guatemala, Guatemala.</p>
+                  <p><strong>12.3. Usuarios internacionales:</strong> Los Usuarios fuera de Guatemala son responsables del cumplimiento de todas las leyes locales aplicables en relación con su uso de la Plataforma.</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">13. DISPOSICIONES GENERALES</strong>
+                  <p className="mb-2"><strong>13.1. Modificaciones:</strong> Emprexa se reserva el derecho de modificar estos Términos en cualquier momento. Las modificaciones entrarán en vigor 30 días después de su publicación en la Plataforma. El uso continuado de la Plataforma después de dichas modificaciones constituye la aceptación de los Términos revisados.</p>
+                  <p className="mb-2"><strong>13.2. Transferibilidad:</strong> El Usuario no puede ceder ni transferir sus derechos u obligaciones bajo estos Términos sin el consentimiento previo por escrito de Emprexa.</p>
+                  <p className="mb-2"><strong>13.3. Divisibilidad:</strong> Si cualquier disposición de estos Términos se considera inválida o inaplicable, las disposiciones restantes continuarán en pleno vigor y efecto.</p>
+                  <p className="mb-2"><strong>13.4. Acuerdo completo:</strong> Estos Términos, junto con la Política de Privacidad, constituyen el acuerdo completo entre el Usuario y Emprexa con respecto a la Plataforma.</p>
+                  <p className="mb-2"><strong>13.5. Renuncia:</strong> La falta de Emprexa para hacer cumplir cualquier derecho o disposición de estos Términos no constituirá una renuncia a dicho derecho o disposición.</p>
+                  <p><strong>13.6. Notificaciones:</strong> Las notificaciones a los Usuarios se harán por correo electrónico o mediante publicación en la Plataforma. Las notificaciones a Emprexa deben enviarse a: hola@emprexa.net</p>
+                </div>
+
+                <div>
+                  <strong className="block text-slate-900 text-base mb-2">14. CONTACTO</strong>
+                  <p>Para preguntas sobre estos Términos y Condiciones, por favor contacte a:</p>
+                  <p className="font-bold mt-2">Emprexa.net</p>
+                  <p>Correo electrónico: hola@emprexa.net</p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200">
+                  <p className="text-xs text-slate-400">Fecha de última actualización: Febrero 2026</p>
+                </div>
+              </div>
             </div>
             <div className="p-4 border-t border-slate-100 bg-white rounded-b-2xl flex justify-end">
               <button onClick={() => setIsTermsOpen(false)} className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800">Cerrar</button>
