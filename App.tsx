@@ -73,6 +73,14 @@ function AppContent() {
       return;
     }
 
+    // REGLA DE ORO: Si estamos en el callback de autenticación, NO REDIRIGIR A NINGÚN LADO
+    // Esto permite que AuthCallback.tsx haga su trabajo sin interferencia.
+    if (window.location.pathname === '/auth/callback') {
+      console.log('🛑 App.tsx: Detectada ruta de callback, deteniendo redirecciones automáticas.');
+      setInitialCheckDone(true);
+      return;
+    }
+
     // REGLA 2: Si acaba de terminar el loading y no hay usuario, quedarse en LOGIN
     if (!isLoading && !initialCheckDone && !user) {
       setCurrentView(View.LOGIN);
