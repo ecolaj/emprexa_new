@@ -143,9 +143,11 @@ export const AuthCallback: React.FC = () => {
                     setStatus('success');
                     setMessage('¡Autenticación exitosa! Redirigiendo...');
 
-                    // Redirigir al feed después de 2 segundos
+                    // Redirigir al inicio después de 2 segundos (solo si no es recovery)
                     setTimeout(() => {
-                        window.location.href = '/';
+                        if (window.location.hash !== '#reset-password') {
+                            window.location.href = '/';
+                        }
                     }, 2000);
                 } else {
                     console.log('⚠️ No se encontró sesión en el callback');
