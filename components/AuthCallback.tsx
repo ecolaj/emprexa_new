@@ -23,52 +23,65 @@ export const AuthCallback: React.FC = () => {
                 console.log('🔐 Search:', search);
 
                 // ========== MANEJAR RECOVERY PRIMERO ==========
-if (hash && hash.includes('type=recovery')) {
-  console.log('🔐 RECOVERY CALLBACK DETECTADO - Procesando...');
-  
-  // 1. Esperar a que Supabase procese el hash automáticamente
-  // (Supabase auth ya detectó el hash y procesó la sesión)
-  
-  // 2. Verificar si hay sesión válida
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
-  if (error) {
-    console.error('❌ Error en recovery session:', error);
-    setStatus('error');
-    setMessage('Error en recuperación de contraseña');
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 2000);
-    return;
-  }
-  
-  if (session) {
-    console.log('✅ Recovery session válida para:', session.user.email);
-    
-    // Redirigir a reset-password CON EL HASH correcto
-    setStatus('success');
-    setMessage('Redirigiendo a cambio de contraseña...');
-    
-    // IMPORTANTE: Usar replaceState para cambiar el hash sin recargar
-    window.history.replaceState(null, '', '/#reset-password');
-    
-    // Forzar redirección después de un breve delay
-    setTimeout(() => {
-      window.location.href = '/#reset-password';
-    }, 500);
-    return;
-  } else {
-    console.log('⚠️ No hay sesión en recovery callback');
-    setStatus('error');
-    setMessage('No se pudo validar el enlace. Intenta nuevamente.');
-    
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 3000);
-    return;
-  }
-}
-// ========== FIN MANEJAR RECOVERY ==========
+                if (hash && hash.includes('type=recovery')) {
+                    console.log('🔐 RECOVERY CALLBACK DETECTADO - Procesando...');
+                    
+                    // 1. Verificar si hay sesión válida (usando nombre diferente para evitar conflicto)
+                    const { data: { session: recoverySession }, error } = await supabase.auth.getSession();
+                    
+                    if (error) {
+                        console.error('❌ Error en recovery session:', error);
+                        setStatus('error');
+                        setMessage('Error en recuperación de contraseña');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                        return;
+                    }
+                    
+                    if (recoverySession) {
+                        console.log('✅ Recovery session válida para:', recoverySession.user.email);
+                        console.log('🔑 Session details:', {
+                            user: recoverySession.user.email,
+                            expiresAt: recoverySession.expires_at ? new Date(recoverySession.expires_at * 1000) : 'N/A',
+                            accessToken: recoverySession.access_token ? recoverySession.access_token.substring(0, 20) + '...' : 'N/A'
+                        });
+                        
+                        // Redirigir a reset-password CON EL HASH correcto
+                        setStatus('success');
+                        setMessage('Redirigiendo a cambio de contraseña...');
+                        
+                        // IMPORTANTE: Usar replaceState para cambiar el hash sin recargar
+                        window.history.replaceState(null, '', '/#reset-password');
+                        
+                        // Forzar redirección después de un breve delay
+                        setTimeout(() => {
+                            window.location.href = '/#reset-password';
+                        }, 500);
+                        return;
+                    } else {
+                        console.log('⚠️ No hay sesión en recovery callback');
+                        console.log('🔍 Debug info:', {
+                            hash: hash,
+                            hasAccessToken: hash?.includes('access_token'),
+                            hasRefreshToken: hash?.includes('refresh_token'),
+                            fullUrl: window.location.href
+                        });
+                        
+                        // También intentar obtener usuario directamente
+                        const { data: { user } } = await supabase.auth.getUser();
+                        console.log('👤 Usuario obtenido directamente:', user?.email);
+                        
+                        setStatus('error');
+                        setMessage('No se pudo validar el enlace. Intenta nuevamente.');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 3000);
+                        return;
+                    }
+                }
+                // ========== FIN MANEJAR RECOVERY ==========
 
                 // Verificar si hay un hash en la URL (callback de Supabase)
                 if (hash) {
