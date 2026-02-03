@@ -303,6 +303,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     mountedRef.current = true;
     isAppVisibleRef.current = !document.hidden;
 
+    // A. ESCUCHAR EVENTOS (Hacerlo de primero)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔔 Evento de Auth detectado:', event);
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('🔑 Modo recuperación de contraseña detectado por evento!');
+        window.location.hash = 'reset-password';
+      }
+    });
+
+    // B. DETECTAR URL MANUAL (Por si Supabase limpia el hash antes de disparar el evento)
+    const rawHash = window.location.hash;
+    const rawSearch = window.location.search;
+    if (rawHash.includes('type=recovery') || rawSearch.includes('type=recovery')) {
+      console.log('🕵️‍♂️ Detección manual de recuperación detectada en URL');
+      window.location.hash = 'reset-password';
+    }
+
     const initializeAuth = async () => {
       try {
         // PRIMERO: Intentar obtener la sesión actual
@@ -321,6 +338,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (session?.user && mountedRef.current) {
           console.log('✅ Sesión válida encontrada:', session.user.email);
+
+          // Si acabamos de detectar recovery, asegurar que no nos movamos de ahí
+          if (window.location.hash === '#reset-password') {
+            console.log('🛑 Saltando carga normal para dar prioridad a RESET_PASSWORD');
+          }
 
           // Cargar perfil del usuario
           const { data: profile } = await supabase
@@ -387,15 +409,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initializeAuth();
-
-    // NUEVO: Escuchar eventos de autenticación globales para detectar recuperación de contraseña
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🔔 Evento de Auth detectado:', event);
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('🔑 Modo recuperación de contraseña detectado por evento!');
-        window.location.hash = 'reset-password';
-      }
-    });
 
     // Manejar visibilidad de la app
     const handleVisibilityChange = () => {
