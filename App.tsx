@@ -235,7 +235,7 @@ function AppContent() {
     (search && (search.includes('code=') || search.includes('token=')));
 
   // Si es un callback de autenticación, mostrar componente especial
-  if (isAuthCallback) {
+  if (isAuthCallback && currentView !== View.RESET_PASSWORD) {
     return <AuthCallback />;
   }
 
