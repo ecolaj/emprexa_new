@@ -23,6 +23,7 @@ export const AuthCallback: React.FC = () => {
                 console.log('🔐 Search:', search);
 
                 // ========== MANEJAR RECOVERY PRIMERO ==========
+                                // ========== MANEJAR RECOVERY PRIMERO ==========
                 if (hash && hash.includes('type=recovery')) {
                     console.log('🔐 RECOVERY CALLBACK DETECTADO - Procesando...');
                     
@@ -41,23 +42,16 @@ export const AuthCallback: React.FC = () => {
                     
                     if (recoverySession) {
                         console.log('✅ Recovery session válida para:', recoverySession.user.email);
-                        console.log('🔑 Session details:', {
-                            user: recoverySession.user.email,
-                            expiresAt: recoverySession.expires_at ? new Date(recoverySession.expires_at * 1000) : 'N/A',
-                            accessToken: recoverySession.access_token ? recoverySession.access_token.substring(0, 20) + '...' : 'N/A'
-                        });
+                        console.log('🔑 Redirigiendo a RESET PASSWORD (no al feed)');
                         
-                        // Redirigir a reset-password CON EL HASH correcto
-                        setStatus('success');
-                        setMessage('Redirigiendo a cambio de contraseña...');
+                        // 1. Primero limpiar la URL actual
+                        window.history.replaceState(null, '', '/');
                         
-                        // IMPORTANTE: Usar replaceState para cambiar el hash sin recargar
-                        window.history.replaceState(null, '', '/#reset-password');
-                        
-                        // Forzar redirección después de un breve delay
+                        // 2. Redirigir a reset-password CON hash
                         setTimeout(() => {
                             window.location.href = '/#reset-password';
-                        }, 500);
+                        }, 100);
+                        
                         return;
                     } else {
                         console.log('⚠️ No hay sesión en recovery callback');
