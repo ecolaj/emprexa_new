@@ -81,9 +81,11 @@ function AppContent() {
     }
 
     // REGLA 3: Si ya terminó el loading inicial y hay usuario, decidir entre FEED o ONBOARDING
-    // EXCEPCIÓN: Si estamos en proceso de recuperación de contraseña (#reset-password)
     if (!isLoading && !initialCheckDone && user) {
-      if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD) {
+      const isRecovery = window.location.hash === '#reset-password' ||
+        sessionStorage.getItem('is_recovery_active') === 'true';
+
+      if (isRecovery || currentView === View.RESET_PASSWORD) {
         setCurrentView(View.RESET_PASSWORD);
       } else if (user.status === 'onboarding' || !user.sdgInterests || user.sdgInterests.length === 0) {
         setCurrentView(View.ONBOARDING);
