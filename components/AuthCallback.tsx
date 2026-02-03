@@ -12,7 +12,7 @@ export const AuthCallback: React.FC = () => {
     useEffect(() => {
         const handleAuthCallback = async () => {
             try {
-                                // Obtener información de la URL
+                // Obtener información de la URL
                 const hash = window.location.hash;
                 const search = window.location.search;
                 const fullUrl = window.location.href;
@@ -30,32 +30,30 @@ export const AuthCallback: React.FC = () => {
                 // Si hay token de recovery en query params
                 if (token && recoveryType === 'recovery') {
                     console.log('🔐 Token de recovery recibido en query params:', token.substring(0, 20) + '...');
-                    
+
                     try {
                         // 1. Verificar el token manualmente
                         const { data, error } = await supabase.auth.verifyOtp({
                             token_hash: token,
                             type: 'recovery'
                         });
-                        
+
                         if (error) {
                             console.error('❌ Error verificando token:', error);
                             setStatus('error');
                             setMessage('El enlace ha expirado o es inválido. Solicita uno nuevo.');
                             return;
                         }
-                        
+
                         console.log('✅ Token verificado exitosamente');
-                        
-                        // 2. Esperar un momento y redirigir a reset-password
+
+                        // 2. Redirigir a reset-password inmediatamente
                         setStatus('success');
                         setMessage('Redirigiendo para cambiar contraseña...');
-                        
-                        setTimeout(() => {
-                            window.location.href = '/#reset-password';
-                        }, 1000);
+
+                        window.location.hash = 'reset-password';
                         return;
-                        
+
                     } catch (err: any) {
                         console.error('❌ Error procesando token:', err);
                         setStatus('error');
@@ -66,13 +64,13 @@ export const AuthCallback: React.FC = () => {
                 // ========== FIN MANEJO TOKEN EN QUERY PARAMS ==========
 
                 // ========== MANEJAR RECOVERY PRIMERO ==========
-                                // ========== MANEJAR RECOVERY PRIMERO ==========
+                // ========== MANEJAR RECOVERY PRIMERO ==========
                 if (hash && hash.includes('type=recovery')) {
                     console.log('🔐 RECOVERY CALLBACK DETECTADO - Procesando...');
-                    
+
                     // 1. Verificar si hay sesión válida (usando nombre diferente para evitar conflicto)
                     const { data: { session: recoverySession }, error } = await supabase.auth.getSession();
-                    
+
                     if (error) {
                         console.error('❌ Error en recovery session:', error);
                         setStatus('error');
@@ -82,19 +80,16 @@ export const AuthCallback: React.FC = () => {
                         }, 2000);
                         return;
                     }
-                    
+
                     if (recoverySession) {
                         console.log('✅ Recovery session válida para:', recoverySession.user.email);
                         console.log('🔑 Redirigiendo a RESET PASSWORD (no al feed)');
-                        
+
                         // 1. Primero limpiar la URL actual
                         window.history.replaceState(null, '', '/');
-                        
-                        // 2. Redirigir a reset-password CON hash
-                        setTimeout(() => {
-                            window.location.href = '/#reset-password';
-                        }, 100);
-                        
+
+                        // 2. Redirigir a reset-password vía hash (más rápido)
+                        window.location.hash = 'reset-password';
                         return;
                     } else {
                         console.log('⚠️ No hay sesión en recovery callback');
@@ -104,14 +99,14 @@ export const AuthCallback: React.FC = () => {
                             hasRefreshToken: hash?.includes('refresh_token'),
                             fullUrl: window.location.href
                         });
-                        
+
                         // También intentar obtener usuario directamente
                         const { data: { user } } = await supabase.auth.getUser();
                         console.log('👤 Usuario obtenido directamente:', user?.email);
-                        
+
                         setStatus('error');
                         setMessage('No se pudo validar el enlace. Intenta nuevamente.');
-                        
+
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 3000);

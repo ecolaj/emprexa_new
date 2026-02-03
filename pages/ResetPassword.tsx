@@ -10,84 +10,80 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isValidSession, setIsValidSession] = useState(false);
 
-    useEffect(() => {
+  useEffect(() => {
     const checkRecoverySession = async () => {
-    setIsLoading(true);
-  
-  // PRIMERO: Verificar si hay token en la URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlToken = urlParams.get('token');
-  const urlType = urlParams.get('type');
-  
-  if (urlToken && urlType === 'recovery') {
-    console.log('🔐 Token recibido directamente en URL, redirigiendo a procesador...');
-    
-    // Redirigir a una página que procese el token
-    window.location.href = `/process-recovery?token=${urlToken}&type=${urlType}`;
-    setIsLoading(false);
-    return;
-  }
-  
-  try {
-    console.log('🔐 ResetPassword: Verificando sesión de recovery...');
-    
-    // 1. Primero intentar obtener sesión actual
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('❌ Error obteniendo sesión:', sessionError);
-      setMessage({
-        type: 'error',
-        text: 'Error al verificar la sesión. Por favor, solicita un nuevo enlace.'
-      });
-      setIsValidSession(false);
-      return;
-    }
-    
-    // 2. Si hay sesión, es válida
-    if (session?.user) {
-      console.log('✅ Sesión de recovery válida encontrada para:', session.user.email);
-      setIsValidSession(true);
-      setMessage(null);
-      return;
-    }
-    
-    // 3. Si NO hay sesión pero hay hash #reset-password, forzar recarga
-    if (window.location.hash === '#reset-password' && !session) {
-      console.log('🔄 Hash #reset-password detectado sin sesión, forzando recarga...');
-      // Esperar un momento y recargar para dar chance a Supabase
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-      return;
-    }
-    
-    // 4. Si no hay sesión y no hay hash, mostrar error
-    console.log('⚠️ No hay sesión de recovery activa');
-    setMessage({
-      type: 'error',
-      text: 'No hay una sesión de recuperación activa. Por favor, solicita un nuevo enlace desde el login.'
-    });
-    setIsValidSession(false);
-    
-  } catch (err: any) {
-    console.error('❌ Error en checkRecoverySession:', err);
-    setMessage({
-      type: 'error',
-      text: 'Error al procesar la solicitud. Intenta nuevamente.'
-    });
-    setIsValidSession(false);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setIsLoading(true);
+
+      // PRIMERO: Verificar si hay token en la URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get('token');
+      const urlType = urlParams.get('type');
+
+      if (urlToken && urlType === 'recovery') {
+        console.log('🔐 Token recibido directamente en URL, redirigiendo a procesador...');
+
+        // Redirigir a una página que procese el token
+        window.location.href = `/process-recovery?token=${urlToken}&type=${urlType}`;
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log('🔐 ResetPassword: Verificando sesión de recovery...');
+
+        // 1. Primero intentar obtener sesión actual
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('❌ Error obteniendo sesión:', sessionError);
+          setMessage({
+            type: 'error',
+            text: 'Error al verificar la sesión. Por favor, solicita un nuevo enlace.'
+          });
+          setIsValidSession(false);
+          return;
+        }
+
+        // 2. Si hay sesión, es válida
+        if (session?.user) {
+          console.log('✅ Sesión de recovery válida encontrada para:', session.user.email);
+          setIsValidSession(true);
+          setMessage(null);
+          return;
+        }
+
+        // 3. Si NO hay sesión y hay hash #reset-password, esperar un momento
+        if (window.location.hash === '#reset-password' && !session) {
+          console.log('⏳ Esperando que la sesión se sincronice...');
+          return;
+        }
+
+        // 4. Si no hay sesión y no hay hash, mostrar error
+        console.log('⚠️ No hay sesión de recovery activa');
+        setMessage({
+          type: 'error',
+          text: 'No hay una sesión de recuperación activa. Por favor, solicita un nuevo enlace desde el login.'
+        });
+        setIsValidSession(false);
+
+      } catch (err: any) {
+        console.error('❌ Error en checkRecoverySession:', err);
+        setMessage({
+          type: 'error',
+          text: 'Error al procesar la solicitud. Intenta nuevamente.'
+        });
+        setIsValidSession(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
     checkRecoverySession();
   }, []);
 
-    const handleResetPassword = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       setMessage({
         type: 'error',
@@ -143,8 +139,8 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
           <Logo className="h-12 mx-auto mb-6" />
           <h1 className="text-2xl font-bold text-slate-900">Restablecer Contraseña</h1>
           <p className="text-slate-500 mt-2">
-            {isValidSession 
-              ? 'Ingresa tu nueva contraseña' 
+            {isValidSession
+              ? 'Ingresa tu nueva contraseña'
               : 'Esperando validación...'
             }
           </p>
@@ -216,11 +212,11 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
             <div className="size-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="material-symbols-outlined text-3xl">link_off</span>
             </div>
-            
+
             <p className="text-slate-600 mb-6">
               {message?.text || 'Validando enlace de recuperación...'}
             </p>
-            
+
             {message?.type === 'error' && message.text.includes('expirado') && (
               <div className="mt-6 space-y-3">
                 <p className="text-sm text-slate-500 text-center">
@@ -234,7 +230,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
                 </button>
               </div>
             )}
-            
+
             {(!message || !message.text.includes('expirado')) && (
               <button
                 onClick={() => navigate(View.LOGIN)}
