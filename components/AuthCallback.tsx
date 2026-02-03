@@ -143,10 +143,13 @@ export const AuthCallback: React.FC = () => {
                     setStatus('success');
                     setMessage('¡Autenticación exitosa! Redirigiendo...');
 
-                    // Redirigir al inicio después de 2 segundos (solo si no es recovery)
+                    // Redirigir al inicio después de 2 segundos (solo si NO es recovery)
                     setTimeout(() => {
-                        if (window.location.hash !== '#reset-password') {
+                        const isRecovery = window.location.hash === '#reset-password' || sessionStorage.getItem('is_recovery_active') === 'true';
+                        if (!isRecovery) {
                             window.location.href = '/';
+                        } else {
+                            console.log('🛑 AuthCallback: Recovery detectado, cancelando redirección al feed');
                         }
                     }, 2000);
                 } else {

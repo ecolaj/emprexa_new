@@ -8,15 +8,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // CONFIGURACIÓN CORREGIDA PARA SOPORTAR CALLBACKS
-// INTERCEPTOR: Detectar recuperación ANTES de que Supabase limpie la URL
-const checkRecovery = () => {
-    const url = window.location.href;
-    if (url.includes('type=recovery') || url.includes('recovery')) {
-        console.log('🚨 DETECTADO MODO RECUPERACIÓN EN NIVEL 0');
-        sessionStorage.setItem('is_recovery_flow', 'true');
-    }
+// INTERCEPTOR DE NIVEL 0: Capturar recuperación antes de que el cliente limpie la URL
+const detectRecoveryOnLoad = () => {
+    try {
+        const url = window.location.href;
+        if (url.includes('recovery') || url.includes('type=recovery')) {
+            console.log('🚀 [Nivel 0] Detección de recuperación confirmada');
+            sessionStorage.setItem('is_recovery_active', 'true');
+        }
+    } catch (e) {}
 };
-checkRecovery();
+detectRecoveryOnLoad();
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
