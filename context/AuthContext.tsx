@@ -576,12 +576,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updates.paypalSubscriptionId !== undefined) supabaseUpdates.paypal_subscription_id = updates.paypalSubscriptionId;
       if (updates.planUpdatedAt !== undefined) supabaseUpdates.plan_updated_at = updates.planUpdatedAt;
 
-      // Actualizar en Supabase
+      // Actualizar o crear en Supabase (Upsert)
       const { data, error } = await supabase
         .from('profiles')
-        .update(supabaseUpdates)
-        .eq('id', user.id)
-        .select('*, organization:organizations(name)')
+        .upsert({
+          id: user.id,
+          ...supabaseUpdates,
+          updated_at: new Date().toISOString()
+        })
+        .select('*')
         .single();
 
       if (error) {
