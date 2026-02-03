@@ -254,7 +254,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
     try {
       // IMPORTANTE: Usar hash para que App.tsx lo detecte
       const baseUrl = getBaseUrl();
-const redirectUrl = `https://emprexa.net/#reset-password`;
+const redirectUrl = `${baseUrl}/auth/callback`;
 
       console.log('📧 Enviando email de recuperación a:', forgotPasswordEmail);
       console.log('🔗 URL de redirección:', redirectUrl);

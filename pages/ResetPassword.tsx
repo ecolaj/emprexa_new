@@ -38,7 +38,17 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
       return;
     }
     
-    // 3. Si no hay sesión, mostrar mensaje claro
+    // 3. Si NO hay sesión pero hay hash #reset-password, forzar recarga
+    if (window.location.hash === '#reset-password' && !session) {
+      console.log('🔄 Hash #reset-password detectado sin sesión, forzando recarga...');
+      // Esperar un momento y recargar para dar chance a Supabase
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      return;
+    }
+    
+    // 4. Si no hay sesión y no hay hash, mostrar error
     console.log('⚠️ No hay sesión de recovery activa');
     setMessage({
       type: 'error',

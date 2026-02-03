@@ -12,7 +12,7 @@ export const AuthCallback: React.FC = () => {
     useEffect(() => {
         const handleAuthCallback = async () => {
             try {
-                // Obtener información de la URL
+                                // Obtener información de la URL
                 const hash = window.location.hash;
                 const search = window.location.search;
                 const fullUrl = window.location.href;
@@ -21,6 +21,49 @@ export const AuthCallback: React.FC = () => {
                 console.log('🔐 URL completa:', fullUrl);
                 console.log('🔐 Hash:', hash);
                 console.log('🔐 Search:', search);
+
+                // ========== MANEJAR TOKEN DE RECOVERY EN QUERY PARAMS ==========
+                const urlParams = new URLSearchParams(search);
+                const token = urlParams.get('token');
+                const recoveryType = urlParams.get('type');
+
+                // Si hay token de recovery en query params
+                if (token && recoveryType === 'recovery') {
+                    console.log('🔐 Token de recovery recibido en query params:', token.substring(0, 20) + '...');
+                    
+                    try {
+                        // 1. Verificar el token manualmente
+                        const { data, error } = await supabase.auth.verifyOtp({
+                            token_hash: token,
+                            type: 'recovery'
+                        });
+                        
+                        if (error) {
+                            console.error('❌ Error verificando token:', error);
+                            setStatus('error');
+                            setMessage('El enlace ha expirado o es inválido. Solicita uno nuevo.');
+                            return;
+                        }
+                        
+                        console.log('✅ Token verificado exitosamente');
+                        
+                        // 2. Esperar un momento y redirigir a reset-password
+                        setStatus('success');
+                        setMessage('Redirigiendo para cambiar contraseña...');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/#reset-password';
+                        }, 1000);
+                        return;
+                        
+                    } catch (err: any) {
+                        console.error('❌ Error procesando token:', err);
+                        setStatus('error');
+                        setMessage('Error al procesar el enlace. Intenta nuevamente.');
+                        return;
+                    }
+                }
+                // ========== FIN MANEJO TOKEN EN QUERY PARAMS ==========
 
                 // ========== MANEJAR RECOVERY PRIMERO ==========
                                 // ========== MANEJAR RECOVERY PRIMERO ==========
