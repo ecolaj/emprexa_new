@@ -352,6 +352,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (profile && mountedRef.current) {
+            // REACTIVACIÓN: Si el usuario estaba 'deleted', se vuelve 'active' al entrar
+            if (profile.status === 'deleted') {
+              console.log('🔄 Reactivando cuenta de ex-miembro en inicialización...');
+              await supabase.from('profiles').update({ status: 'active' }).eq('id', profile.id);
+              profile.status = 'active'; // Actualizar copia local para el estado inicial
+            }
             const formattedUser: User = {
               id: profile.id,
               name: profile.name,
@@ -477,6 +483,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
 
         if (profile) {
+          // REACTIVACIÓN: Si el usuario estaba 'deleted', se vuelve 'active' al loguearse
+          if (profile.status === 'deleted') {
+            console.log('🔄 Reactivando cuenta de ex-miembro durante login...');
+            await supabase.from('profiles').update({ status: 'active' }).eq('id', profile.id);
+            profile.status = 'active'; // Actualizar copia local
+          }
           const formattedUser: User = {
             id: profile.id,
             name: profile.name,
@@ -751,7 +763,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       if (user) {
+        // 1. Actualizar estado en la base de datos
         await updateUser({ status: 'deactivated' });
+
+        // 2. Cerrar sesión oficial en Supabase
+        await supabase.auth.signOut();
       }
       if (mountedRef.current) {
         setUser(null);
@@ -769,36 +785,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       if (user) {
-        const EX_USER: User = {
-          id: 'ex-member',
-          name: 'Ex-miembro de Emprexa',
-          role: 'Antiguo Agente de Cambio',
-          avatar: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
-          plan: 'free'
-        };
+        // 1. ANONIMIZACIÓN (Borrado Lógico)
+        // Sobrescribimos datos privados con información genérica
+        const { error: anonError } = await supabase
+          .from('profiles')
+          .update({
+            name: 'Ex-miembro de Emprexa',
+            avatar: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+            bio: '',
+            role: 'Antiguo Agente de Cambio',
+            website: '',
+            linkedin: '',
+            phone: '',
+            status: 'deleted', // Bandera para saber que fue "borrado"
+            username: `user_${Math.floor(Math.random() * 1000000)}` // Liberar su username original
+          })
+          .eq('id', user.id);
 
-        const { POSTS: postItems, USERS: userList } = await import('../constants');
+        if (anonError) throw anonError;
 
-        postItems.forEach((p: any) => {
-          if (p.user.id === user.id) {
-            p.user = EX_USER;
-          }
-          if (p.recentComments) {
-            p.recentComments.forEach((c: any) => {
-              if (c.userId === user.id) c.userId = 'ex-member';
-            });
-          }
-        });
-
-        const uIdx = userList.findIndex((u: any) => u.id === user.id);
-        if (uIdx !== -1) userList.splice(uIdx, 1);
+        // 2. CERRAR SESIÓN
+        // Esto es lo que evita que al refrescar siga logueado
+        await supabase.auth.signOut();
       }
 
       if (mountedRef.current) {
         setUser(null);
       }
     } catch (err) {
-      console.error('AuthContext: Error deleting account:', err);
+      console.error('AuthContext: Error anonymizing account:', err);
+      alert('Hubo un error al procesar la solicitud.');
     } finally {
       if (mountedRef.current) {
         setIsLoading(false);
