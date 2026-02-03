@@ -53,10 +53,18 @@ function AppContent() {
       return;
     }
 
-    // REGLA 0: PRIORIDAD ABSOLUTA - Si el hash es reset-password, NO MOVER DE AHÍ
-    if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD) {
+    // REGLA 0: PRIORIDAD ABSOLUTA - Si el hash es reset-password o venimos de un flow de recuperación
+    const isRecoveryFlow = sessionStorage.getItem('is_recovery_flow') === 'true';
+
+    if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD || isRecoveryFlow) {
       if (currentView !== View.RESET_PASSWORD) {
         setCurrentView(View.RESET_PASSWORD);
+        if (isRecoveryFlow) {
+          console.log('🏁 Recuperando usuario desde flow de emergencia');
+          sessionStorage.removeItem('is_recovery_flow');
+          // Asegurar que el hash se ponga para siguientes checks
+          window.location.hash = 'reset-password';
+        }
       }
       setInitialCheckDone(true);
       return;

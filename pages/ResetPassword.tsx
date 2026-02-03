@@ -14,18 +14,21 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
     const checkRecoverySession = async () => {
       setIsLoading(true);
 
-      // PRIMERO: Verificar si hay token en la URL
+      // PRIMERO: Verificar si hay token en la URL o bandera de emergencia
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('token');
       const urlType = urlParams.get('type');
+      const isEmergencyRecovery = sessionStorage.getItem('is_recovery_flow') === 'true';
 
-      if (urlToken && urlType === 'recovery') {
-        console.log('🔐 Token recibido directamente en URL, redirigiendo a procesador...');
-
-        // Redirigir a una página que procese el token
-        window.location.href = `/process-recovery?token=${urlToken}&type=${urlType}`;
-        setIsLoading(false);
-        return;
+      if ((urlToken && urlType === 'recovery') || isEmergencyRecovery) {
+        if (isEmergencyRecovery) sessionStorage.removeItem('is_recovery_flow');
+        console.log('🔐 Modo recuperación detectado, procediendo...');
+        // Si viene por URL directa, procesar, si no (si ya hay sesión), dejar que el flujo continúe
+        if (urlToken) {
+          window.location.href = `/process-recovery?token=${urlToken}&type=${urlType}`;
+          setIsLoading(false);
+          return;
+        }
       }
 
       try {
