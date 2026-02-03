@@ -18,7 +18,7 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
     role: '',
     identity: '',
     goals: [] as string[],
-    sdgs: [3, 4, 13] as number[],
+    sdgs: [] as number[],
     avatar: user?.avatar || ''
   });
 
@@ -29,10 +29,11 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
   // Sync with user data if it loads later
   useEffect(() => {
     if (user) {
-      if (user.name && !formData.name) {
+      // Solo actualizar si el nombre es diferente al correo o al valor por defecto
+      if (user.name && user.name !== user.email?.split('@')[0]) {
         setFormData(prev => ({ ...prev, name: user.name }));
       }
-      if (user.avatar && !formData.avatar) {
+      if (user.avatar) {
         setFormData(prev => ({ ...prev, avatar: user.avatar }));
       }
     }
