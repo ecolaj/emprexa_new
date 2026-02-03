@@ -388,6 +388,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
+    // NUEVO: Escuchar eventos de autenticación globales para detectar recuperación de contraseña
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔔 Evento de Auth detectado:', event);
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('🔑 Modo recuperación de contraseña detectado por evento!');
+        window.location.hash = 'reset-password';
+      }
+    });
+
     // Manejar visibilidad de la app
     const handleVisibilityChange = () => {
       isAppVisibleRef.current = !document.hidden;
@@ -399,6 +408,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Limpieza
     return () => {
       mountedRef.current = false;
+      subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       stopPolling();
     };

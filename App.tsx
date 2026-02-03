@@ -53,6 +53,15 @@ function AppContent() {
       return;
     }
 
+    // REGLA 0: PRIORIDAD ABSOLUTA - Si el hash es reset-password, NO MOVER DE AHÍ
+    if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD) {
+      if (currentView !== View.RESET_PASSWORD) {
+        setCurrentView(View.RESET_PASSWORD);
+      }
+      setInitialCheckDone(true);
+      return;
+    }
+
     // REGLA 1: No hacer nada durante loading inicial
     if (isLoading && !initialCheckDone) {
       return;
