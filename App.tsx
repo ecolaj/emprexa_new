@@ -207,11 +207,17 @@ function AppContent() {
 
   // --- VERIFICAR SI ES CALLBACK DE AUTENTICACIÓN ---
   const hash = window.location.hash;
-  const isAuthCallback = hash && (
-    (hash.includes('access_token') && !hash.includes('#reset-password')) ||
-    (hash.includes('type=recovery') && !hash.includes('#reset-password')) ||
-    hash.includes('error=')
-  );
+  const search = window.location.search;
+  const pathname = window.location.pathname;
+
+  const isAuthCallback =
+    pathname.includes('/auth/callback') ||
+    (hash && (
+      (hash.includes('access_token') && !hash.includes('#reset-password')) ||
+      (hash.includes('type=recovery') && !hash.includes('#reset-password')) ||
+      hash.includes('error=')
+    )) ||
+    (search && (search.includes('code=') || search.includes('token=')));
 
   // Si es un callback de autenticación, mostrar componente especial
   if (isAuthCallback) {
