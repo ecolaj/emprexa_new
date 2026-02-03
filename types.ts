@@ -1,4 +1,3 @@
-
 export enum View {
   LOGIN = 'LOGIN',
   ONBOARDING = 'ONBOARDING',
@@ -19,11 +18,9 @@ export enum View {
   PROJECT_DETAILS = 'PROJECT_DETAILS',
   CREATE_PROJECT = 'CREATE_PROJECT',
   SINGLE_POST = 'SINGLE_POST',
-  SAVED = 'SAVED'
-}
-
-export enum View {
+  SAVED = 'SAVED',
   RESET_PASSWORD = 'reset_password',
+  PROCESS_RECOVERY = 'process_recovery'  // AÑADE ESTA LÍNEA
 }
 
 export interface NavProps {

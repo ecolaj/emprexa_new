@@ -12,7 +12,21 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
 
     useEffect(() => {
     const checkRecoverySession = async () => {
-  setIsLoading(true);
+    setIsLoading(true);
+  
+  // PRIMERO: Verificar si hay token en la URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get('token');
+  const urlType = urlParams.get('type');
+  
+  if (urlToken && urlType === 'recovery') {
+    console.log('🔐 Token recibido directamente en URL, redirigiendo a procesador...');
+    
+    // Redirigir a una página que procese el token
+    window.location.href = `/process-recovery?token=${urlToken}&type=${urlType}`;
+    setIsLoading(false);
+    return;
+  }
   
   try {
     console.log('🔐 ResetPassword: Verificando sesión de recovery...');

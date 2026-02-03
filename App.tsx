@@ -28,6 +28,7 @@ import { Logo } from './components/Logo';
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { AuthCallback } from './components/AuthCallback';
 import { ResetPassword } from './pages/ResetPassword';
+import { ProcessRecovery } from './pages/ProcessRecovery';
 
 
 function AppContent() {
@@ -217,6 +218,7 @@ useEffect(() => {
   if (currentView === View.CHECKOUT) return <Checkout currentView={currentView} navigate={navigate} params={navParams} />;
   if (currentView === View.SUCCESS) return <Success currentView={currentView} navigate={navigate} params={navParams} />;
   if (currentView === View.RESET_PASSWORD) return <ResetPassword currentView={currentView} navigate={navigate} />;
+  if (currentView === View.PROCESS_RECOVERY) return <ProcessRecovery currentView={currentView} navigate={navigate} />;
   // Public Post View - SIEMPRE visible, con o sin usuario
   if (currentView === View.SINGLE_POST) {
     return <SinglePost currentView={currentView} navigate={navigate} params={navParams} />;
