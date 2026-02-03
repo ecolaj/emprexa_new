@@ -151,37 +151,40 @@ function AppContent() {
     }
   }, []);
 
-  // Agrega este código aquí:
-// Manejar rutas hash para reset-password
+// Manejar rutas hash para reset-password - VERSIÓN CORREGIDA
 useEffect(() => {
   const handleHashRoute = () => {
     const hash = window.location.hash;
     
-    if (hash === '#reset-password') {
-      console.log('📍 Hash #reset-password detectado, navegando a vista de reset');
-      setCurrentView(View.RESET_PASSWORD);
-      setInitialCheckDone(true);
-      
-      // Limpiar el hash para evitar problemas de navegación
-      window.history.replaceState(null, '', window.location.pathname);
+    // IGNORAR si hay tokens de autenticación en el hash
+    // (AuthCallback se encargará de ellos)
+    if (hash && (
+      hash.includes('access_token') || 
+      hash.includes('refresh_token') ||
+      hash.includes('type=recovery')
+    )) {
+      console.log('📍 App.tsx: Hash contiene tokens - dejando que AuthCallback maneje');
       return;
     }
     
-    // También manejar caso con parámetros (por si acaso)
-    if (hash.includes('#reset-password')) {
-      console.log('📍 Hash con reset-password detectado');
+    // Solo procesar #reset-password si NO hay tokens
+    if (hash === '#reset-password') {
+      console.log('📍 App.tsx: Hash #reset-password detectado, navegando');
       setCurrentView(View.RESET_PASSWORD);
       setInitialCheckDone(true);
+      
+      // Limpiar el hash para evitar problemas
       window.history.replaceState(null, '', window.location.pathname);
     }
   };
 
-  // Ejecutar al cargar
-  handleHashRoute();
-
+  // Ejecutar después de un pequeño delay para asegurar que AuthCallback tuvo tiempo
+  setTimeout(handleHashRoute, 100);
+  
   // También escuchar cambios en el hash
   const handleHashChange = () => {
-    handleHashRoute();
+    // Esperar un momento antes de procesar para dar tiempo a AuthCallback
+    setTimeout(handleHashRoute, 50);
   };
 
   window.addEventListener('hashchange', handleHashChange);

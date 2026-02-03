@@ -12,51 +12,51 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
 
     useEffect(() => {
     const checkRecoverySession = async () => {
-      setIsLoading(true);
-      
-      try {
-        console.log('🔐 ResetPassword: Verificando sesión de recovery...');
-        
-        // 1. Primero intentar obtener sesión actual
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('❌ Error obteniendo sesión:', sessionError);
-          setMessage({
-            type: 'error',
-            text: 'Error al verificar la sesión. Por favor, solicita un nuevo enlace.'
-          });
-          setIsValidSession(false);
-          return;
-        }
-        
-        // 2. Si hay sesión, es válida
-        if (session?.user) {
-          console.log('✅ Sesión de recovery válida encontrada para:', session.user.email);
-          setIsValidSession(true);
-          setMessage(null);
-          return;
-        }
-        
-        // 3. Si no hay sesión, mostrar mensaje claro
-        console.log('⚠️ No hay sesión de recovery activa');
-        setMessage({
-          type: 'error',
-          text: 'No hay una sesión de recuperación activa. Por favor, solicita un nuevo enlace desde el login.'
-        });
-        setIsValidSession(false);
-        
-      } catch (err: any) {
-        console.error('❌ Error en checkRecoverySession:', err);
-        setMessage({
-          type: 'error',
-          text: 'Error al procesar la solicitud. Intenta nuevamente.'
-        });
-        setIsValidSession(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  setIsLoading(true);
+  
+  try {
+    console.log('🔐 ResetPassword: Verificando sesión de recovery...');
+    
+    // 1. Primero intentar obtener sesión actual
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('❌ Error obteniendo sesión:', sessionError);
+      setMessage({
+        type: 'error',
+        text: 'Error al verificar la sesión. Por favor, solicita un nuevo enlace.'
+      });
+      setIsValidSession(false);
+      return;
+    }
+    
+    // 2. Si hay sesión, es válida
+    if (session?.user) {
+      console.log('✅ Sesión de recovery válida encontrada para:', session.user.email);
+      setIsValidSession(true);
+      setMessage(null);
+      return;
+    }
+    
+    // 3. Si no hay sesión, mostrar mensaje claro
+    console.log('⚠️ No hay sesión de recovery activa');
+    setMessage({
+      type: 'error',
+      text: 'No hay una sesión de recuperación activa. Por favor, solicita un nuevo enlace desde el login.'
+    });
+    setIsValidSession(false);
+    
+  } catch (err: any) {
+    console.error('❌ Error en checkRecoverySession:', err);
+    setMessage({
+      type: 'error',
+      text: 'Error al procesar la solicitud. Intenta nuevamente.'
+    });
+    setIsValidSession(false);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
     checkRecoverySession();
   }, []);

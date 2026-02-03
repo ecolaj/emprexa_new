@@ -23,45 +23,52 @@ export const AuthCallback: React.FC = () => {
                 console.log('🔐 Search:', search);
 
                 // ========== MANEJAR RECOVERY PRIMERO ==========
-                if (hash && hash.includes('type=recovery')) {
-                    console.log('🔐 RECOVERY CALLBACK DETECTADO - Procesando...');
-
-                    // 1. Procesar la sesión de recovery
-                    const { data: { session }, error } = await supabase.auth.getSession();
-
-                    if (error) {
-                        console.error('❌ Error en recovery session:', error);
-                        setStatus('error');
-                        setMessage('Error en recuperación de contraseña');
-                        setTimeout(() => {
-                            window.location.href = '/reset-password';
-                        }, 2000);
-                        return;
-                    }
-
-                                    if (session) {
-                    console.log('✅ Recovery session válida para:', session.user.email);
-
-                    // Mostrar mensaje de éxito y redirigir INMEDIATAMENTE
-                    setStatus('success');
-                    setMessage('Redirigiendo a cambio de contraseña...');
-
-                    // Redirigir INMEDIATAMENTE sin delay
-                    // Usar location.replace para no guardar en historial
-                    window.location.replace('/#reset-password');
-                    return;
-                    } else {
-                        console.log('⚠️ No hay sesión en recovery callback');
-                        // Aún así redirigir a reset-password
-                        setStatus('loading');
-                        setMessage('Redirigiendo...');
-                        setTimeout(() => {
-                            window.location.href = '/reset-password';
-                        }, 1000);
-                        return;
-                    }
-                }
-                // ========== FIN MANEJAR RECOVERY ==========
+if (hash && hash.includes('type=recovery')) {
+  console.log('🔐 RECOVERY CALLBACK DETECTADO - Procesando...');
+  
+  // 1. Esperar a que Supabase procese el hash automáticamente
+  // (Supabase auth ya detectó el hash y procesó la sesión)
+  
+  // 2. Verificar si hay sesión válida
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error) {
+    console.error('❌ Error en recovery session:', error);
+    setStatus('error');
+    setMessage('Error en recuperación de contraseña');
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 2000);
+    return;
+  }
+  
+  if (session) {
+    console.log('✅ Recovery session válida para:', session.user.email);
+    
+    // Redirigir a reset-password CON EL HASH correcto
+    setStatus('success');
+    setMessage('Redirigiendo a cambio de contraseña...');
+    
+    // IMPORTANTE: Usar replaceState para cambiar el hash sin recargar
+    window.history.replaceState(null, '', '/#reset-password');
+    
+    // Forzar redirección después de un breve delay
+    setTimeout(() => {
+      window.location.href = '/#reset-password';
+    }, 500);
+    return;
+  } else {
+    console.log('⚠️ No hay sesión en recovery callback');
+    setStatus('error');
+    setMessage('No se pudo validar el enlace. Intenta nuevamente.');
+    
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 3000);
+    return;
+  }
+}
+// ========== FIN MANEJAR RECOVERY ==========
 
                 // Verificar si hay un hash en la URL (callback de Supabase)
                 if (hash) {
