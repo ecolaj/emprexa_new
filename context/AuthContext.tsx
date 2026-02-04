@@ -581,6 +581,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .upsert({
           id: user.id,
+          email: user.email, // Nueva columna sincronizada
           ...supabaseUpdates,
           updated_at: new Date().toISOString()
         })
