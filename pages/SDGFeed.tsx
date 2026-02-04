@@ -5,7 +5,10 @@ import { SDGS, POSTS, USERS, PROJECTS } from '../constants';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { renderBadge, renderContent } from '../utils/renderers';
 import { PostCard } from '../components/PostCard';
+import { ShareSuccessModal } from '../components/ShareSuccessModal';
+import { ComingSoonModal } from '../components/ComingSoonModal';
 import { usePostInteractions } from '../hooks/usePostInteractions';
+import { ProjectCard } from '../components/ProjectCard';
 
 export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const { followedSdgIds, toggleFollowSdg, sendMentionNotifications } = useAuth();
@@ -31,6 +34,9 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const [relevantPosts, setRelevantPosts] = useState<any[]>([]);
   const [relevantProjects, setRelevantProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [globalStats, setGlobalStats] = useState({ totalPosts: 0, totalProjects: 0, totalInteractions: 0 });
+  const [activeFeedTab, setActiveFeedTab] = useState<'posts' | 'projects'>('posts');
 
   // Use the interaction hook
   const {
@@ -51,7 +57,10 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
     handleToggleCommentLike,
     handleAddCommentReply,
     handleDeleteComment,
-    onSaveEditComment
+    onSaveEditComment,
+    showShareModal,
+    setShowShareModal,
+    copiedUrl
   } = usePostInteractions(relevantPosts, setRelevantPosts, currentUser, sendMentionNotifications);
 
   React.useEffect(() => {
@@ -68,6 +77,29 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
             .contains('sdg_ids', [targetSdgId])
             .order('created_at', { ascending: false })
           );
+
+        // Fetch Global Counts and Metrics for this SDG
+        const supabase = (await import('../utils/supabase')).supabase;
+
+        const [postsCountRes, projectsCountRes, interactionsRes] = await Promise.all([
+          // Total global posts for this SDG
+          supabase.from('posts').select('*', { count: 'exact', head: true }).contains('sdg_ids', [targetSdgId]),
+          // Total global projects for this SDG
+          supabase.from('projects').select('*', { count: 'exact', head: true }).eq('sdg_id', targetSdgId),
+          // Total global interactions (sum of likes and comments from all posts of this SDG)
+          supabase.from('posts').select('likes_count, comments_count').contains('sdg_ids', [targetSdgId])
+        ]);
+
+        const totalInteractions = (interactionsRes.data || []).reduce(
+          (acc, curr) => acc + (Number(curr.likes_count) || 0) + (Number(curr.comments_count) || 0),
+          0
+        );
+
+        setGlobalStats({
+          totalPosts: postsCountRes.count || 0,
+          totalProjects: projectsCountRes.count || 0,
+          totalInteractions: totalInteractions
+        });
 
         if (postsData && !postsError) {
           const formattedPosts = await Promise.all(postsData.map(async (p) => {
@@ -103,7 +135,14 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
           );
 
         if (projectsData) {
-          setRelevantProjects(projectsData);
+          setRelevantProjects(projectsData.map(p => ({
+            ...p,
+            ownerId: p.owner_id,
+            sdgId: p.sdg_id,
+            raisedAmount: p.raised_amount,
+            volunteersCount: p.volunteers_count,
+            lookingFor: p.looking_for || []
+          })));
         }
 
       } catch (error) {
@@ -136,7 +175,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right border-r border-white/20 pr-6">
-                  <span className="block text-2xl font-bold">{relevantPosts.length}</span>
+                  <span className="block text-2xl font-bold">{globalStats.totalPosts}</span>
                   <span className="text-xs opacity-80 uppercase">Publicaciones</span>
                 </div>
                 <button
@@ -159,53 +198,97 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
       <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-6">
           {/* Feed Filter */}
-          <div className="flex gap-6 border-b border-slate-200 pb-1 mb-4">
-            <button className="pb-3 border-b-2 border-primary text-primary font-bold">Recientes</button>
-            <button className="pb-3 border-b-2 border-transparent text-slate-500 font-medium hover:text-slate-800">Populares</button>
+          <div className="flex gap-8 border-b border-slate-200 pb-1 mb-6 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setActiveFeedTab('posts')}
+              className={`pb-3 border-b-2 font-bold transition-all flex items-center gap-2 ${activeFeedTab === 'posts' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined text-xl">feed</span>
+              Publicaciones
+            </button>
+            <button
+              onClick={() => setActiveFeedTab('projects')}
+              className={`pb-3 border-b-2 font-bold transition-all flex items-center gap-2 ${activeFeedTab === 'projects' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}
+            >
+              <span className="material-symbols-outlined text-xl">rocket_launch</span>
+              Proyectos de Impacto
+            </button>
           </div>
 
-          {/* Posts List */}
-          {relevantPosts.length > 0 ? (
-            relevantPosts.map(post => (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUser={currentUser}
-                onNavigate={navigate}
-                onToggleLike={handleToggleLike}
-                onShare={handleShare}
-                onToggleSavedPost={() => { }} // Not implemented here yet
-                isSaved={false}
-                activeCommentSectionId={activeCommentSectionId}
-                onToggleCommentSection={(id) => setActiveCommentSectionId(activeCommentSectionId === id ? null : id)}
-                onOpenLightbox={openLightbox}
-                onToggleCommentLike={handleToggleCommentLike}
-                onAddCommentReply={handleAddCommentReply}
-                onDeleteComment={handleDeleteComment}
-                onStartEditComment={(postId, comment) => setEditingComment({ postId, commentId: comment.id, text: comment.text })}
-                onSaveEditComment={onSaveEditComment}
-                onAddComment={handleAddComment}
-                activeReplyToId={activeReplyToId}
-                setActiveReplyToId={setActiveReplyToId}
-                editingComment={editingComment}
-                setEditingComment={setEditingComment}
-                activeMenuCommentId={activeMenuCommentId}
-                setActiveMenuCommentId={setActiveMenuCommentId}
-                isOwner={currentUser.id === post.user.id}
-                activeMenuPostId={activeMenuPostId}
-                setActiveMenuPostId={setActiveMenuPostId}
-                onStartEditPost={() => { }} // Need modal logic if we want edit
-                onDeletePost={handleDeletePost}
-              />
-            ))
-          ) : (
-            <div className="text-center py-12 bg-white rounded-xl border border-slate-200 border-dashed">
-              <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                <span className="material-symbols-outlined text-3xl">post_add</span>
+          {activeFeedTab === 'posts' ? (
+            relevantPosts.length > 0 ? (
+              relevantPosts.map(post => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  currentUser={currentUser}
+                  onNavigate={navigate}
+                  onToggleLike={handleToggleLike}
+                  onShare={handleShare}
+                  onToggleSavedPost={() => { }} // Not implemented here yet
+                  isSaved={false}
+                  activeCommentSectionId={activeCommentSectionId}
+                  onToggleCommentSection={(id) => setActiveCommentSectionId(activeCommentSectionId === id ? null : id)}
+                  onOpenLightbox={openLightbox}
+                  onToggleCommentLike={handleToggleCommentLike}
+                  onAddCommentReply={handleAddCommentReply}
+                  onDeleteComment={handleDeleteComment}
+                  onStartEditComment={(postId, comment) => setEditingComment({ postId, commentId: comment.id, text: comment.text })}
+                  onSaveEditComment={onSaveEditComment}
+                  onAddComment={handleAddComment}
+                  activeReplyToId={activeReplyToId}
+                  setActiveReplyToId={setActiveReplyToId}
+                  editingComment={editingComment}
+                  setEditingComment={setEditingComment}
+                  activeMenuCommentId={activeMenuCommentId}
+                  setActiveMenuCommentId={setActiveMenuCommentId}
+                  isOwner={currentUser.id === post.user.id}
+                  activeMenuPostId={activeMenuPostId}
+                  setActiveMenuPostId={setActiveMenuPostId}
+                  onStartEditPost={() => { }} // Need modal logic if we want edit
+                  onDeletePost={handleDeletePost}
+                />
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white rounded-xl border border-slate-200 border-dashed">
+                <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                  <span className="material-symbols-outlined text-3xl">post_add</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Aún no hay publicaciones</h3>
+                <p className="text-slate-500 mb-4">Sé el primero en compartir un proyecto sobre {sdg.label}.</p>
+                <button
+                  onClick={() => navigate(View.FEED)} // Just a redirect to start posting
+                  className="text-primary font-bold hover:underline"
+                >
+                  Ir al Feed
+                </button>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-1">Aún no hay publicaciones</h3>
-              <p className="text-slate-500 mb-4">Sé el primero en compartir un proyecto sobre {sdg.label}.</p>
-              <button className="text-primary font-bold hover:underline">Crear Publicación</button>
+            )
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-[fade-in_0.3s_ease-out]">
+              {relevantProjects.length > 0 ? (
+                relevantProjects.map(proj => (
+                  <ProjectCard
+                    key={proj.id}
+                    project={proj}
+                    onNavigate={navigate}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12 bg-white rounded-xl border border-slate-200 border-dashed">
+                  <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                    <span className="material-symbols-outlined text-3xl">rocket_launch</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">No hay proyectos activos</h3>
+                  <p className="text-slate-500 mb-4">¿Tienes una iniciativa para el ODS {sdg.id}? ¡Iníciala hoy!</p>
+                  <button
+                    onClick={() => navigate(View.CREATE_PROJECT)}
+                    className="bg-primary text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-primary/20"
+                  >
+                    Crear Proyecto
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -218,11 +301,11 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-green-50 p-4 rounded-lg">
-                <span className="block text-2xl font-bold text-green-700">+{relevantProjects.length}</span>
+                <span className="block text-2xl font-bold text-green-700">+{globalStats.totalProjects}</span>
                 <span className="text-xs font-bold text-slate-600">Proyectos</span>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
-                <span className="block text-2xl font-bold text-blue-700">{totalInteractions}</span>
+                <span className="block text-2xl font-bold text-blue-700">{globalStats.totalInteractions}</span>
                 <span className="text-xs font-bold text-slate-600">Interacciones</span>
               </div>
             </div>
@@ -231,7 +314,12 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
           <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
             <h4 className="font-bold text-slate-900 mb-2">¿Trabajas en el ODS {sdg.id}?</h4>
             <p className="text-sm text-slate-600 mb-4">Únete a la red de expertos y consigue financiación para tu proyecto.</p>
-            <button className="w-full py-2 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800">Aplicar a Grants</button>
+            <button
+              onClick={() => setShowComingSoon(true)}
+              className="w-full py-2 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors"
+            >
+              Aplicar a Grants
+            </button>
           </div>
         </div>
       </div>
@@ -241,6 +329,20 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
         onClose={() => setIsLightboxOpen(false)}
         images={lightboxImages}
         initialIndex={lightboxIndex}
+      />
+
+      <ShareSuccessModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        copiedUrl={copiedUrl}
+      />
+
+      <ComingSoonModal
+        isOpen={showComingSoon}
+        onClose={() => setShowComingSoon(false)}
+        title="Beneficio Enterprise"
+        message="Próximamente más funcionalidades de financiación y grants disponibles para usuarios Enterprise."
+        icon="stars"
       />
     </div>
   );

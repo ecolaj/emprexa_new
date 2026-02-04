@@ -5,6 +5,7 @@ import { ImageLightbox } from '../components/ImageLightbox';
 import { PostCard } from '../components/PostCard';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useAuth } from '../context/AuthContext';
+import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { renderContent } from '../utils/renderers'; // Keep renderContent if needed for other things, but PostCard handles post content.
 
 export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
@@ -110,7 +111,10 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
     handleToggleCommentLike,
     handleAddCommentReply,
     handleDeleteComment,
-    onSaveEditComment
+    onSaveEditComment,
+    showShareModal,
+    setShowShareModal,
+    copiedUrl
   } = usePostInteractions(relevantPosts, setRelevantPosts, currentUser, sendMentionNotifications);
 
   // Lightbox
@@ -216,8 +220,8 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
             onClick={toggleFollow}
             disabled={followLoading}
             className={`mt-8 px-8 py-3 rounded-full font-bold transition-all shadow-lg flex items-center gap-2 ${isFollowing
-                ? 'bg-primary text-white shadow-primary/30 hover:bg-primary-dark'
-                : 'bg-white text-slate-900 hover:bg-slate-100 hover:shadow-xl hover:-translate-y-1'
+              ? 'bg-primary text-white shadow-primary/30 hover:bg-primary-dark'
+              : 'bg-white text-slate-900 hover:bg-slate-100 hover:shadow-xl hover:-translate-y-1'
               } ${followLoading ? 'opacity-70 cursor-wait' : ''}`}
           >
             {followLoading ? (
@@ -294,6 +298,12 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
         onClose={() => setIsLightboxOpen(false)}
         images={lightboxImages}
         initialIndex={lightboxIndex}
+      />
+
+      <ShareSuccessModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        copiedUrl={copiedUrl}
       />
     </div>
   );

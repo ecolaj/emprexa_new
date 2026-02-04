@@ -72,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('notifications')
           .select('*, notifier:profiles!notifications_notifier_id_fkey(*)')
           .eq('user_id', userId)
+          .in('type', ['like', 'comment', 'mention', 'follow'])
           .order('created_at', { ascending: false })
           .limit(50), // Limitar para performance
         supabase
@@ -258,6 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('*, notifier:profiles!notifications_notifier_id_fkey(*)')
           .eq('user_id', userId)
           .eq('read', false)
+          .in('type', ['like', 'comment', 'mention', 'follow'])
           .order('created_at', { ascending: false })
           .limit(20);
 
@@ -724,7 +726,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const markAllNotificationsAsRead = async () => {
     if (!user) return;
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    await supabase.from('notifications').update({ read: true }).eq('user_id', user.id);
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', user.id)
+      .in('type', ['like', 'comment', 'mention', 'follow']);
   };
 
   const sendMentionNotifications = async (text: string) => {

@@ -15,6 +15,8 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, markAsRead, unreadConversations, followedUserIds } = useAuth();
   const currentUser = authUser;
 
+  if (!authUser) return null;
+
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -402,10 +404,10 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
               <div className="flex justify-center"><span className="bg-slate-200 text-slate-500 text-xs px-2 py-1 rounded">Hoy</span></div>
 
               {messages.map((msg) => {
-                const isMe = msg.senderId === currentUser.id;
+                const isMe = msg.senderId === currentUser?.id;
                 return (
                   <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className="size-8 rounded-full bg-cover bg-center shrink-0 mt-auto mb-5" style={{ backgroundImage: `url("${isMe ? currentUser.avatar : activeUser.avatar}")` }}></div>
+                    <div className="size-8 rounded-full bg-cover bg-center shrink-0 mt-auto mb-5" style={{ backgroundImage: `url("${isMe ? currentUser?.avatar : activeUser.avatar}")` }}></div>
 
                     <div className="flex flex-col max-w-[75%] gap-1">
                       <div className={`p-4 rounded-2xl shadow-sm text-sm border whitespace-pre-wrap ${isMe ? 'bg-primary text-white rounded-br-none border-primary' : 'bg-white text-slate-800 rounded-bl-none border-slate-200'}`}>

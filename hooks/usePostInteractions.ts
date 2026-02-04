@@ -69,10 +69,26 @@ export const usePostInteractions = (
         }
     };
 
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [copiedUrl, setCopiedUrl] = useState('');
+
     const handleShare = (postId: ID) => {
-        const shareUrl = `${window.location.origin}${window.location.pathname}?view=post&id=${postId}`;
+        // Dynamic URL check
+        const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=post&id=${postId}`;
+        
         navigator.clipboard.writeText(shareUrl).then(() => {
-            alert("¡Enlace de impacto copiado! Ahora puedes compartir esta historia en cualquier red social.");
+            setCopiedUrl(shareUrl);
+            setShowShareModal(true);
+            
+            // Auto close after 3 seconds
+            setTimeout(() => {
+                setShowShareModal(false);
+            }, 3000);
+        }).catch(err => {
+            console.error('Error copying to clipboard:', err);
+            // Even if clipboard fails, we try to show the modal (or we could show an error, but usually it works)
+            setCopiedUrl(shareUrl);
+            setShowShareModal(true);
         });
     };
 
@@ -189,6 +205,8 @@ export const usePostInteractions = (
         activeMenuCommentId,
         activeReplyToId,
         editingComment,
+        showShareModal,
+        copiedUrl,
 
         // Setters (if needed directly)
         setActiveCommentSectionId,
@@ -196,6 +214,7 @@ export const usePostInteractions = (
         setActiveMenuCommentId,
         setActiveReplyToId,
         setEditingComment,
+        setShowShareModal,
 
         // Handlers
         handleToggleLike,

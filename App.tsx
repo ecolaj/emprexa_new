@@ -324,7 +324,7 @@ function AppContent() {
         )}
 
         {currentView === View.PROJECT_DETAILS && <ProjectDetails currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.CREATE_PROJECT && <CreateProject currentView={currentView} navigate={navigate} params={navParams} />}
+        {(currentView === View.CREATE_PROJECT || currentView === View.EDIT_PROJECT) && <CreateProject currentView={currentView} navigate={navigate} params={navParams} />}
       </div>
     </div>
   );

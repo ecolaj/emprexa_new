@@ -17,6 +17,7 @@ export enum View {
   SUCCESS = 'SUCCESS',
   PROJECT_DETAILS = 'PROJECT_DETAILS',
   CREATE_PROJECT = 'CREATE_PROJECT',
+  EDIT_PROJECT = 'EDIT_PROJECT',
   SINGLE_POST = 'SINGLE_POST',
   SAVED = 'SAVED',
   RESET_PASSWORD = 'reset_password',
@@ -119,6 +120,21 @@ export interface Project {
   lookingFor: string[];
   team: User[]; // In DB this is a relation table 'project_members'
   donationsEnabled: boolean;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  gallery?: string[];
+  raisedAmount?: number;
+  volunteersCount?: number;
+}
+
+export interface ProjectUpdate {
+  id: string;
+  projectId: number;
+  title: string;
+  content: string;
+  image?: string;
+  createdAt: string;
 }
 
 export interface Notification {

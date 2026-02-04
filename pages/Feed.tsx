@@ -8,6 +8,7 @@ import { getSdgInfo } from '../utils/sdgUtils';
 import { PostCard } from '../components/PostCard';
 import { PostFormModal } from '../components/PostFormModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
 import { getBaseUrl } from '../utils/environment';
 
@@ -482,8 +483,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
       }, 3000);
     }).catch(err => {
       console.error('Error copying to clipboard:', err);
-      // Fallback al alert si clipboard falla
-      alert("¡Enlace de impacto copiado! Ahora puedes compartir esta historia en cualquier red social.");
+      setCopiedUrl(shareUrl);
+      setShowShareSuccessModal(true);
     });
   };
 
@@ -865,47 +866,11 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         cancelText="Cancelar"
         icon="comment_bank"
       />
-      {/* Share Success Modal */}
-      {
-        showShareSuccessModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
-              onClick={() => setShowShareSuccessModal(false)}
-            ></div>
-
-            {/* Modal Card */}
-            <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
-              <div className="p-8 text-center">
-                {/* Icon */}
-                <div className="size-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="material-symbols-outlined text-3xl">check_circle</span>
-                </div>
-
-                <h2 className="text-xl font-bold text-slate-900 mb-2">¡Enlace copiado!</h2>
-
-                <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-                  El enlace de impacto ha sido copiado al portapapeles. Ahora puedes compartir esta historia en cualquier red social.
-                </p>
-
-                {/* URL Preview */}
-                <div className="bg-slate-50 rounded-xl p-3 mb-6 text-left">
-                  <p className="text-xs text-slate-400 font-bold mb-1">Enlace:</p>
-                  <p className="text-sm text-slate-700 font-mono break-all">{copiedUrl}</p>
-                </div>
-
-                <button
-                  onClick={() => setShowShareSuccessModal(false)}
-                  className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
-                >
-                  Entendido
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
+      <ShareSuccessModal
+        isOpen={showShareSuccessModal}
+        onClose={() => setShowShareSuccessModal(false)}
+        copiedUrl={copiedUrl}
+      />
 
       {/* Trial Activation Confirmation Modal */}
       {showTrialConfirmModal && (

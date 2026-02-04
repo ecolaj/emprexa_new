@@ -7,6 +7,7 @@ import { renderBadge, renderContent } from '../utils/renderers';
 import { getSdgInfo } from '../utils/sdgUtils';
 import { PostCard } from '../components/PostCard';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
 
 export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
@@ -150,6 +151,9 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState('');
+
   const openLightbox = (images: string[], index: number) => {
     if (!images.length) return;
     setLightboxImages(images);
@@ -186,9 +190,15 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   const handleShare = (postId: ID) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?view=post&id=${postId}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=post&id=${postId}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
-      alert("¡Enlace de impacto copiado! Ahora puedes compartir esta historia en cualquier red social.");
+      setCopiedUrl(shareUrl);
+      setShowShareModal(true);
+      setTimeout(() => setShowShareModal(false), 3000);
+    }).catch(err => {
+      console.error('Error copying link:', err);
+      setCopiedUrl(shareUrl);
+      setShowShareModal(true);
     });
   };
 
@@ -517,6 +527,12 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
         confirmText="Eliminar"
         cancelText="Cancelar"
         icon="comment_bank"
+      />
+
+      <ShareSuccessModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        copiedUrl={copiedUrl}
       />
     </div>
   );

@@ -12,6 +12,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
   const [trendingProjects, setTrendingProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [sortedSdgs, setSortedSdgs] = useState<any[]>(SDGS);
+  const [trendingTopics, setTrendingTopics] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // FIX: Safe currentUser reference - never use users[0] when array might be empty
@@ -87,6 +88,105 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             status: u.status || 'active'
           }));
           setUsers(formattedUsers);
+        }
+
+        // --- NEW: FETCH TRENDING TOPICS ---
+        // We look for posts with high engagement
+        const { data: popularPosts } = await supabase
+          .from('posts')
+          .select('*')
+          .order('likes_count', { ascending: false })
+          .limit(20);
+
+        if (popularPosts) {
+          // Algorithm: 
+          // 1. Get most active SDGs (from posts)
+          // 2. Identify hashtags in content
+          // 3. Balance between user interests and "Discovery" (popular items outside interests)
+
+          const interests = currentUser.sdgInterests || [];
+
+          // Count SDG occurrences in popular posts
+          const sdgWeight: Record<number, number> = {};
+          popularPosts.forEach(p => {
+            (p.sdg_ids || []).forEach((id: number) => {
+              sdgWeight[id] = (sdgWeight[id] || 0) + (p.likes_count || 0) + (p.comments_count || 0) + 5;
+            });
+          });
+
+          // SOCIAL SIGNAL: Boost SDGs from people the user follows
+          (followedUserIds || []).forEach(followedId => {
+            const followedProfile = users.find(u => u.id === followedId);
+            if (followedProfile) {
+              (followedProfile.sdgInterests || []).forEach(id => {
+                sdgWeight[id] = (sdgWeight[id] || 0) + 15; // Higher weight for network connections
+              });
+            }
+          });
+
+          // Sort SDGs by weight
+          const topSdgs = Object.entries(sdgWeight)
+            .map(([id, weight]) => ({ id: Number(id), weight }))
+            .sort((a, b) => b.weight - a.weight);
+
+          const topics = [];
+
+          // Slot 1: Top Interest SDG (Discovery)
+          const interestSdgs = topSdgs.filter(s => interests.includes(s.id));
+          const discoverySdgs = topSdgs.filter(s => !interests.includes(s.id));
+
+          // Fill 4 slots
+          // Slot 1 & 2: Interests (if any)
+          if (interestSdgs[0]) topics.push(interestSdgs[0].id);
+          if (interestSdgs[1]) topics.push(interestSdgs[1].id);
+
+          // Slot 3 & 4: Discovery (Popular things the user doesn't follow yet)
+          if (discoverySdgs[0]) topics.push(discoverySdgs[0].id);
+          if (discoverySdgs[1]) topics.push(discoverySdgs[1].id);
+
+          // Fill remaining from topSdgs if not enough
+          topSdgs.forEach(s => {
+            if (topics.length < 4 && !topics.includes(s.id)) topics.push(s.id);
+          });
+
+          // Final Fallback if empty
+          if (topics.length < 4) {
+            [13, 7, 5, 2].forEach(id => {
+              if (topics.length < 4 && !topics.includes(id)) topics.push(id);
+            });
+          }
+
+          // Map to UI format
+          const formattedTopics = topics.map(id => {
+            const sdg = SDGS.find(s => s.id === id);
+            const count = sdgWeight[id] || Math.floor(Math.random() * 100);
+            return {
+              id: id,
+              tag: sdg?.label || `ODS ${id}`,
+              short: sdg?.short || 'Impacto',
+              posts: count > 1000 ? `${(count / 1000).toFixed(1)}k` : count,
+              image: `https://images.unsplash.com/photo-${1500000000 + id}?auto=format&fit=crop&w=400&q=80`, // Dynamic-ish image
+              color: sdg?.color || '#000',
+              icon: sdg?.icon || 'grade',
+              isInterest: interests.includes(id)
+            };
+          });
+
+          // Overwrite images with specific beautiful ones for top SDGs
+          const customImages: any = {
+            13: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
+            7: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e',
+            5: 'https://images.unsplash.com/photo-1573164713988-8665fc963095',
+            2: 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad',
+            1: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c',
+            4: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b'
+          };
+
+          formattedTopics.forEach(t => {
+            if (customImages[t.id]) t.image = customImages[t.id] + '?auto=format&fit=crop&w=400&q=80';
+          });
+
+          setTrendingTopics(formattedTopics);
         }
       } catch (error) {
         console.error('Error fetching explore data:', error);
@@ -274,18 +374,36 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                 <span className="material-symbols-outlined text-primary">trending_up</span> Temas del Momento
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {trendingTags.map((t, i) => (
+                {(trendingTopics.length > 0 ? trendingTopics : trendingTags).map((t, i) => (
                   <div
                     key={i}
-                    onClick={() => navigate(View.HASHTAG, { tag: t.tag })}
-                    className="group relative h-40 rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+                    onClick={() => t.id ? navigate(View.SDG_FEED, { id: t.id }) : navigate(View.HASHTAG, { tag: t.tag })}
+                    className="group relative h-40 rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 border border-slate-100"
                   >
                     <img src={t.image} alt={t.tag} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    <div className={`absolute inset-0 opacity-60 mix-blend-multiply ${t.color}`}></div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <p className="font-bold text-lg leading-tight group-hover:underline">{t.tag}</p>
-                      <p className="text-xs opacity-90 font-medium">{t.posts} publicaciones</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+
+                    {/* Badge for interests */}
+                    {t.isInterest && (
+                      <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg animate-pulse">
+                        Para ti
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-sm opacity-80">{t.icon || 'trending_up'}</span>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{t.short || 'Tendencia'}</p>
+                      </div>
+                      <p className="font-bold text-lg leading-tight group-hover:underline line-clamp-2">{t.tag}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex -space-x-1">
+                          {[1, 2, 3].map(dot => (
+                            <div key={dot} className="size-3 rounded-full border border-white/20 bg-slate-400/50"></div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] opacity-70 font-bold uppercase">{t.posts} interacciones</p>
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, NavProps } from '../types';
 import { SDGS, POSTS, USERS } from '../constants';
 import { PostCard } from '../components/PostCard';
+import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useAuth } from '../context/AuthContext';
 import { ImageLightbox } from '../components/ImageLightbox';
@@ -62,7 +63,10 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
     handleToggleCommentLike,
     handleAddCommentReply,
     handleDeleteComment,
-    onSaveEditComment
+    onSaveEditComment,
+    showShareModal,
+    setShowShareModal,
+    copiedUrl
   } = usePostInteractions(dbProjects, setDbProjects, currentUser, sendMentionNotifications);
 
   // Lightbox needed for PostCard
@@ -420,6 +424,12 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
 
       </div>
       <ImageLightbox isOpen={isLightboxOpen} onClose={() => setIsLightboxOpen(false)} images={lightboxImages} initialIndex={lightboxIndex} />
+
+      <ShareSuccessModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        copiedUrl={copiedUrl}
+      />
     </div>
   );
 };

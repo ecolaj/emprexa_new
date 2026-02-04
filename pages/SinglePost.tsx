@@ -6,6 +6,7 @@ import { ImageLightbox } from '../components/ImageLightbox';
 import { useAuth } from '../context/AuthContext';
 import { renderBadge, renderContent } from '../utils/renderers';
 import { Logo } from '../components/Logo';
+import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { getBaseUrl } from '../utils/environment';
 
 export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
@@ -28,7 +29,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
 
             try {
                 setIsLoading(true);
-                
+
                 // Buscar post en Supabase
                 const { data: postData, error } = await supabase
                     .from('posts')
@@ -62,7 +63,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         comments: postData.comments_count || 0,
                         recentComments: []
                     };
-                    
+
                     setPost(formattedPost);
                 }
             } catch (error) {
@@ -140,19 +141,19 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
 
     const handleShare = (postId: ID) => {
         const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
-        
+
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopiedUrl(shareUrl);
             setShowShareSuccessModal(true);
-            
+
             // Auto cerrar después de 3 segundos
             setTimeout(() => {
                 setShowShareSuccessModal(false);
             }, 3000);
         }).catch(err => {
             console.error('Error copying to clipboard:', err);
-            // Fallback al alert si clipboard falla
-            alert("¡Enlace de impacto copiado! Ahora puedes compartir esta historia en cualquier red social.");
+            setCopiedUrl(shareUrl);
+            setShowShareSuccessModal(true);
         });
     };
 
@@ -289,13 +290,13 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                             {/* Author Header */}
                             <div className="flex justify-between items-start mb-6">
                                 <div className="flex items-center gap-3">
-                                    <div 
-                                        className="size-12 rounded-full bg-cover bg-center border border-slate-100 cursor-pointer hover:opacity-80 transition-opacity" 
+                                    <div
+                                        className="size-12 rounded-full bg-cover bg-center border border-slate-100 cursor-pointer hover:opacity-80 transition-opacity"
                                         style={{ backgroundImage: `url("${(post.user.id === user?.id ? user : post.user).avatar}")` }}
                                         onClick={handleProfileClick}
                                     ></div>
                                     <div>
-                                        <h3 
+                                        <h3
                                             className="font-bold text-slate-900 text-lg cursor-pointer hover:text-primary hover:underline"
                                             onClick={handleProfileClick}
                                         >
@@ -352,7 +353,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                         onClick={handleLike}
                                         className={`flex items-center gap-2 text-sm transition-all group ${isLiked ? 'text-red-500 font-bold' : 'hover:text-red-500'}`}
                                     >
-                                        <span className={`material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform ${isLiked ? 'filled animate-[pulse_0.2s_ease-out]' : ''}`}>favorite</span> 
+                                        <span className={`material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform ${isLiked ? 'filled animate-[pulse_0.2s_ease-out]' : ''}`}>favorite</span>
                                         {likesCount} {isLiked ? 'Te gusta' : 'Me gusta'}
                                     </button>
                                     <button
@@ -558,52 +559,51 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             {showLoginModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     {/* Backdrop */}
-                    <div 
+                    <div
                         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
                         onClick={() => setShowLoginModal(false)}
                     ></div>
-                    
+
                     {/* Modal Card */}
                     <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
                         <div className="p-8 text-center">
                             {/* Icon based on action */}
-                            <div className={`size-16 rounded-full flex items-center justify-center mx-auto mb-6 ${
-                                actionRequiringLogin === 'like' ? 'bg-red-50 text-red-500' :
+                            <div className={`size-16 rounded-full flex items-center justify-center mx-auto mb-6 ${actionRequiringLogin === 'like' ? 'bg-red-50 text-red-500' :
                                 actionRequiringLogin === 'comment' ? 'bg-blue-50 text-blue-500' :
-                                actionRequiringLogin === 'view_profile' ? 'bg-purple-50 text-purple-500' :
-                                actionRequiringLogin === 'view_sdg' ? 'bg-green-50 text-green-500' :
-                                'bg-indigo-50 text-indigo-500'
-                            }`}>
+                                    actionRequiringLogin === 'view_profile' ? 'bg-purple-50 text-purple-500' :
+                                        actionRequiringLogin === 'view_sdg' ? 'bg-green-50 text-green-500' :
+                                            'bg-indigo-50 text-indigo-500'
+                                }`}>
                                 <span className="material-symbols-outlined text-3xl">
                                     {actionRequiringLogin === 'like' ? 'favorite' :
-                                     actionRequiringLogin === 'comment' ? 'chat_bubble' :
-                                     actionRequiringLogin === 'view_profile' ? 'person' :
-                                     actionRequiringLogin === 'view_sdg' ? 'target' :
-                                     'bookmark'}
+                                        actionRequiringLogin === 'comment' ? 'chat_bubble' :
+                                            actionRequiringLogin === 'view_profile' ? 'person' :
+                                                actionRequiringLogin === 'view_sdg' ? 'target' :
+                                                    'bookmark'}
                                 </span>
                             </div>
-                            
+
                             <h2 className="text-xl font-bold text-slate-900 mb-2">
                                 {actionRequiringLogin === 'like' ? 'Me gusta esta publicación' :
-                                 actionRequiringLogin === 'comment' ? 'Comentar en esta publicación' :
-                                 actionRequiringLogin === 'view_profile' ? 'Ver perfil del usuario' :
-                                 actionRequiringLogin === 'view_sdg' ? 'Explorar ODS' :
-                                 'Guardar esta publicación'}
+                                    actionRequiringLogin === 'comment' ? 'Comentar en esta publicación' :
+                                        actionRequiringLogin === 'view_profile' ? 'Ver perfil del usuario' :
+                                            actionRequiringLogin === 'view_sdg' ? 'Explorar ODS' :
+                                                'Guardar esta publicación'}
                             </h2>
-                            
+
                             <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                                {actionRequiringLogin === 'like' 
+                                {actionRequiringLogin === 'like'
                                     ? 'Únete a Emprexa para apoyar esta historia de impacto y conectar con otros agentes de cambio.'
                                     : actionRequiringLogin === 'comment'
-                                    ? 'Regístrate para compartir tu perspectiva y construir comunidad alrededor de este proyecto.'
-                                    : actionRequiringLogin === 'view_profile'
-                                    ? 'Crea una cuenta para ver perfiles de otros agentes de cambio y conectar con ellos.'
-                                    : actionRequiringLogin === 'view_sdg'
-                                    ? 'Únete a la comunidad para explorar más proyectos relacionados con los Objetivos de Desarrollo Sostenible.'
-                                    : 'Crea una cuenta para guardar esta publicación y revisarla más tarde.'
+                                        ? 'Regístrate para compartir tu perspectiva y construir comunidad alrededor de este proyecto.'
+                                        : actionRequiringLogin === 'view_profile'
+                                            ? 'Crea una cuenta para ver perfiles de otros agentes de cambio y conectar con ellos.'
+                                            : actionRequiringLogin === 'view_sdg'
+                                                ? 'Únete a la comunidad para explorar más proyectos relacionados con los Objetivos de Desarrollo Sostenible.'
+                                                : 'Crea una cuenta para guardar esta publicación y revisarla más tarde.'
                                 }
                             </p>
-                            
+
                             <div className="space-y-3">
                                 <button
                                     onClick={() => {
@@ -614,7 +614,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                 >
                                     Iniciar Sesión
                                 </button>
-                                
+
                                 <button
                                     onClick={() => {
                                         setShowLoginModal(false);
@@ -624,7 +624,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                 >
                                     Crear Cuenta Gratis
                                 </button>
-                                
+
                                 <button
                                     onClick={() => setShowLoginModal(false)}
                                     className="w-full py-3 text-slate-500 hover:text-slate-900 font-medium"
@@ -637,45 +637,11 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                 </div>
             )}
 
-            {/* Share Success Modal */}
-            {showShareSuccessModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    {/* Backdrop */}
-                    <div 
-                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
-                        onClick={() => setShowShareSuccessModal(false)}
-                    ></div>
-                    
-                    {/* Modal Card */}
-                    <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
-                        <div className="p-8 text-center">
-                            {/* Icon */}
-                            <div className="size-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <span className="material-symbols-outlined text-3xl">check_circle</span>
-                            </div>
-                            
-                            <h2 className="text-xl font-bold text-slate-900 mb-2">¡Enlace copiado!</h2>
-                            
-                            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-                                El enlace de impacto ha sido copiado al portapapeles. Ahora puedes compartir esta historia en cualquier red social.
-                            </p>
-                            
-                            {/* URL Preview */}
-                            <div className="bg-slate-50 rounded-xl p-3 mb-6 text-left">
-                                <p className="text-xs text-slate-400 font-bold mb-1">Enlace:</p>
-                                <p className="text-sm text-slate-700 font-mono break-all">{copiedUrl}</p>
-                            </div>
-                            
-                            <button
-                                onClick={() => setShowShareSuccessModal(false)}
-                                className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
-                            >
-                                Entendido
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ShareSuccessModal
+                isOpen={showShareSuccessModal}
+                onClose={() => setShowShareSuccessModal(false)}
+                copiedUrl={copiedUrl}
+            />
         </div>
     );
 };
