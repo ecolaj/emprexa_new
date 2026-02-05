@@ -11,7 +11,7 @@ export const Success: React.FC<NavProps> = ({ navigate, params }) => {
   const formattedNextCharge = nextCharge.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-background-light flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="flex-1 overflow-y-auto bg-background-light flex items-center justify-center p-4 relative overflow-hidden">
       {/* Confetti simulation dots */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(20)].map((_, i) => (

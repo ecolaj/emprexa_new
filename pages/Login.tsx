@@ -21,94 +21,8 @@ interface BackgroundState {
   loaded: boolean;
 }
 
-const IMAGES_BY_SDG: Record<number, string[]> = {
-  1: [
-    "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=2070&auto=format&fit=crop"
-  ],
-  2: [
-    "https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1621451537084-482c73073a0f?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2069&auto=format&fit=crop"
-  ],
-  3: [
-    "https://images.unsplash.com/photo-1571772996211-2f02c9727629?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?q=80&w=2089&auto=format&fit=crop"
-  ],
-  4: [
-    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2018&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=2073&auto=format&fit=crop"
-  ],
-  5: [
-    "https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=2069&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1590650516494-0c8e4a4dd67e?q=80&w=2071&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1607748862156-7c548e7e98f4?q=80&w=2070&auto=format&fit=crop"
-  ],
-  6: [
-    "https://images.unsplash.com/photo-1520699918507-3c3e05c46b90?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1538300342682-cf57afb97285?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1617155093730-a8bf47be792d?q=80&w=2070&auto=format&fit=crop"
-  ],
-  7: [
-    "https://images.unsplash.com/photo-1509391366360-2e959784a276?q=80&w=2072&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1466611653911-95081537e5b7?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?q=80&w=1974&auto=format&fit=crop"
-  ],
-  8: [
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?q=80&w=2072&auto=format&fit=crop"
-  ],
-  9: [
-    "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?q=80&w=2049&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop"
-  ],
-  10: [
-    "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=2070&auto=format&fit=crop"
-  ],
-  11: [
-    "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=2144&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1449824913929-49aa7115669f?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1445964047600-cdbdb873673d?q=80&w=2000&auto=format&fit=crop"
-  ],
-  12: [
-    "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1605600659908-0ef719419d41?q=80&w=2073&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1526951521990-620dc14c2103?q=80&w=1978&auto=format&fit=crop"
-  ],
-  13: [
-    "https://images.unsplash.com/photo-1611273426761-53c8577a3c18?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=2074&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=2000&auto=format&fit=crop"
-  ],
-  14: [
-    "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1582967788606-a171f1080ca8?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=2070&auto=format&fit=crop"
-  ],
-  15: [
-    "https://images.unsplash.com/photo-1448375240586-dfd8d395ea6c?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=2070&auto=format&fit=crop"
-  ],
-  16: [
-    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1575505586569-646b2ca898fc?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1555374018-13a8994ab246?q=80&w=1915&auto=format&fit=crop"
-  ],
-  17: [
-    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2084&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=2069&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2032&auto=format&fit=crop"
-  ]
-};
+// La selección de imágenes ahora se hace dinámicamente desde /public/assets/sdgs/
+
 
 export const Login: React.FC<NavProps> = ({ navigate }) => {
   const { login, isLoading } = useAuth(); // Use Auth Context
@@ -148,13 +62,21 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
     registerData.acceptedTerms;
 
   useEffect(() => {
+    // Generar un ID de ODS aleatorio (1-17)
     const randomSdgId = Math.floor(Math.random() * 17) + 1;
-    const imagesForSdg = IMAGES_BY_SDG[randomSdgId] || IMAGES_BY_SDG[13];
-    const randomUrl = imagesForSdg[Math.floor(Math.random() * imagesForSdg.length)];
+    // Generar un número de foto aleatorio (1-3)
+    const randomPhotoNum = Math.floor(Math.random() * 3) + 1;
+
+    // Formatear con ceros a la izquierda para coincidir con la nomenclatura (ej: 01-01)
+    const sdgStr = randomSdgId.toString().padStart(2, '0');
+    const photoStr = randomPhotoNum.toString().padStart(2, '0');
+
+    // URL local basada en tu nomenclatura y formato .avif
+    const imageUrl = `/assets/sdgs/${sdgStr}-${photoStr}.avif`;
 
     setBackground({
       sdgId: randomSdgId,
-      url: randomUrl,
+      url: imageUrl,
       loaded: false
     });
   }, []);

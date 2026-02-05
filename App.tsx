@@ -252,8 +252,6 @@ function AppContent() {
   // --- FULL SCREEN VIEWS (No Sidebar) ---
   if (currentView === View.LOGIN) return <Login currentView={currentView} navigate={navigate} />;
   if (currentView === View.ONBOARDING) return <Onboarding currentView={currentView} navigate={navigate} />;
-  if (currentView === View.CHECKOUT) return <Checkout currentView={currentView} navigate={navigate} params={navParams} />;
-  if (currentView === View.SUCCESS) return <Success currentView={currentView} navigate={navigate} params={navParams} />;
   if (currentView === View.RESET_PASSWORD) return <ResetPassword currentView={currentView} navigate={navigate} />;
   if (currentView === View.PROCESS_RECOVERY) return <ProcessRecovery currentView={currentView} navigate={navigate} />;
   // Public Post View - SIEMPRE visible, con o sin usuario
@@ -307,6 +305,8 @@ function AppContent() {
         {currentView === View.SEARCH && <Search currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.FEED && <Feed currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.PRICING && <Pricing currentView={currentView} navigate={navigate} params={navParams} />}
+        {currentView === View.CHECKOUT && <Checkout currentView={currentView} navigate={navigate} params={navParams} />}
+        {currentView === View.SUCCESS && <Success currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.EXPLORE && <Explore currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.SDG_FEED && <SDGFeed currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.HASHTAG && <HashtagFeed currentView={currentView} navigate={navigate} params={navParams} />}

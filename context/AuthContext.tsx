@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { User, ID, Notification } from '../types';
 import { USERS } from '../constants';
 import { supabase } from '../utils/supabase';
+import { formatRelativeTime } from '../utils/timeUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -97,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNotifications(notificationsResult.data.map(n => ({
           ...n,
           user: n.notifier,
-          time: n.created_at ? formatTimeAgo(new Date(n.created_at)) : 'Reciente',
+          time: n.created_at ? formatRelativeTime(n.created_at) : 'Reciente',
           linkId: n.link_id
         })));
       }
@@ -116,20 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Función auxiliar para formatear tiempo
-  const formatTimeAgo = (date: Date): string => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Ahora mismo';
-    if (diffMins < 60) return `Hace ${diffMins} min`;
-    if (diffHours < 24) return `Hace ${diffHours} h`;
-    if (diffDays < 7) return `Hace ${diffDays} d`;
-    return date.toLocaleDateString();
-  };
 
   // Función para refrescar datos manualmente
   const refreshUserData = async () => {
@@ -188,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const { error } = await supabase.from('profiles').update({
-        plan: 'pro', // Give them PRO status
+        plan: 'enterprise', // Give them ENTERPRISE status
         is_trial_active: true,
         trial_posts_remaining: 5,
         trial_ends_at: endDate.toISOString(),
@@ -203,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Force local update immediately for snappy UI
       setUser(prev => prev ? ({
         ...prev,
-        plan: 'pro',
+        plan: 'enterprise',
         isTrialActive: true,
         trialPostsRemaining: 5,
         trialEndsAt: endDate.toISOString(),
@@ -258,7 +245,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('notifications')
           .select('*, notifier:profiles!notifications_notifier_id_fkey(*)')
           .eq('user_id', userId)
-          .eq('read', false)
           .in('type', ['like', 'comment', 'mention', 'follow'])
           .order('created_at', { ascending: false })
           .limit(20);
@@ -269,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const newNotifications = notificationsResult.map(n => ({
               ...n,
               user: n.notifier,
-              time: n.created_at ? formatTimeAgo(new Date(n.created_at)) : 'Reciente',
+              time: n.created_at ? formatRelativeTime(n.created_at) : 'Reciente',
               linkId: n.link_id
             }));
 
@@ -516,7 +502,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isTrialActive: profile.is_trial_active,
             trialPostsRemaining: profile.trial_posts_remaining,
             trialEndsAt: profile.trial_ends_at,
-            hasUsedTrial: profile.has_used_trial
+            hasUsedTrial: profile.has_used_trial,
+            isAdmin: profile.is_admin
           };
           setUser(formattedUser);
         }
@@ -618,7 +605,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isTrialActive: data.is_trial_active,
           trialPostsRemaining: data.trial_posts_remaining,
           trialEndsAt: data.trial_ends_at,
-          hasUsedTrial: data.has_used_trial
+          hasUsedTrial: data.has_used_trial,
+          isAdmin: data.is_admin
         };
         setUser(formattedUpdatedUser);
 

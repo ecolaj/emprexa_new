@@ -139,7 +139,7 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
           .then(mod => mod.supabase
             .from('posts')
             .select('*')
-            .or(`content.ilike.%${cleanTag}%,title.ilike.%${cleanTag}%`)
+            .or(`content.ilike.%#${cleanTag}%,title.ilike.%#${cleanTag}%`)
             .order('created_at', { ascending: false })
           );
 

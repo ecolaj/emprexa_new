@@ -52,7 +52,7 @@ export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4">
+    <div className="flex-1 overflow-y-auto bg-[#FDFDFF] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] overflow-hidden relative">
         <button
           onClick={() => navigate(View.PRICING)}

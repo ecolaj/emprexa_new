@@ -18,7 +18,6 @@ interface PostFormModalProps {
     setFormImages: (val: string[]) => void;
     onClose: () => void;
     onSubmit: () => void;
-    onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRemoveImage: (index: number) => void;
 }
 
@@ -35,7 +34,6 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     setFormImages,
     onClose,
     onSubmit,
-    onImageSelect,
     onRemoveImage
 }) => {
     const { user: authUser, followedUserIds } = useAuth();
@@ -52,45 +50,90 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     const handleContentChange = (val: string) => {
         setFormContent(val);
 
-        const lastAtIndex = val.lastIndexOf('@', textareaRef.current?.selectionStart || val.length);
+        const selectionStart = textareaRef.current?.selectionStart || val.length;
+        const textBeforeCursor = val.slice(0, selectionStart);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
         if (lastAtIndex !== -1) {
-            const query = val.slice(lastAtIndex + 1, textareaRef.current?.selectionStart || val.length);
+            const query = textBeforeCursor.slice(lastAtIndex + 1);
+            // Si hay un espacio después del @ el query se rompe (no es mención)
             if (!query.includes(' ')) {
                 setMentionSearchQuery(query);
 
-                // Prioritize followed users, then others
-                const filtered = USERS
-                    .filter(u => u.name.toLowerCase().replace(/\s/g, '').includes(query.toLowerCase()))
-                    .sort((a, b) => {
-                        const aFollowed = followedUserIds.includes(a.id);
-                        const bFollowed = followedUserIds.includes(b.id);
-                        if (aFollowed && !bFollowed) return -1;
-                        if (!aFollowed && bFollowed) return 1;
-                        return 0;
-                    })
-                    .slice(0, 5);
-
-                setMentionSuggestions(filtered);
-
-                // Calc position (simplified for this demo)
-                if (textareaRef.current) {
-                    const rect = textareaRef.current.getBoundingClientRect();
-                    setMentionPosition({ top: rect.top + 40, left: rect.left + 20 });
-                }
+                // Mostrar dropdown aunque query esté vacío (si acaban de poner @)
+                // Usamos un valor especial para trigger el useEffect
                 return;
             }
         }
+        setMentionSearchQuery('');
         setMentionSuggestions([]);
     };
 
-    const handleSelectMention = (user: User) => {
-        const username = user.name.replace(/\s/g, '');
-        const before = formContent.lastIndexOf('@', textareaRef.current?.selectionStart || formContent.length);
-        const after = textareaRef.current?.selectionStart || formContent.length;
+    // Real-time Mentions Search Effect
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            try {
+                // 1. Fetch Users
+                let userQuery = supabase
+                    .from('profiles')
+                    .select('id, name, role, avatar, username, plan')
+                    .order('name', { ascending: true })
+                    .limit(20);
 
-        const newText = formContent.slice(0, before) + `@${username} ` + formContent.slice(after);
+                if (mentionSearchQuery.trim()) {
+                    userQuery = userQuery.or(`name.ilike.%${mentionSearchQuery}%,username.ilike.%${mentionSearchQuery}%`);
+                }
+
+                const { data: userResults, error } = await userQuery;
+
+                if (userResults && !error) {
+                    const mappedResults = userResults.map(u => ({
+                        ...u,
+                        avatar: u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`,
+                    }));
+                    setMentionSuggestions(mappedResults);
+                }
+
+                if (textareaRef.current) {
+                    const rect = textareaRef.current.getBoundingClientRect();
+                    setMentionPosition({ top: rect.top + 40, left: rect.left + 10 });
+                }
+            } catch (err) {
+                console.error("Error fetching mention suggestions:", err);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            const selectionStart = textareaRef.current?.selectionStart || formContent.length;
+            const textBeforeCursor = formContent.slice(0, selectionStart);
+            const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+            if (lastAtIndex !== -1) {
+                const querySinceAt = textBeforeCursor.slice(lastAtIndex + 1);
+                if (!querySinceAt.includes(' ')) {
+                    fetchSuggestions();
+                    return;
+                }
+            }
+            setMentionSuggestions([]);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [mentionSearchQuery, formContent]);
+
+    const handleSelectMention = (user: any) => {
+        const mentionName = user.username || user.name.replace(/\s/g, '');
+        const selectionStart = textareaRef.current?.selectionStart || formContent.length;
+        const textBeforeCursor = formContent.slice(0, selectionStart);
+        const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+        const before = lastAtIndex;
+        const after = selectionStart;
+
+        const newText = formContent.slice(0, before) + `@${mentionName} ` + formContent.slice(after);
         setFormContent(newText);
         setMentionSuggestions([]);
+        setMentionSearchQuery('');
 
         // Refocus
         setTimeout(() => textareaRef.current?.focus(), 10);
@@ -120,25 +163,38 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         const files = Array.from(e.target.files);
         const uploadedUrls: string[] = [];
 
-        for (const file of files as File[]) {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${authUser.id}/${fileName}`;
+        try {
+            for (const file of files as File[]) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `${authUser.id}/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('post-images')
-                .upload(filePath, file);
+                const { error: uploadError } = await supabase.storage
+                    .from('post-images')
+                    .upload(filePath, file);
 
-            if (!uploadError) {
+                if (uploadError) {
+                    console.error("Error al subir imagen individual:", uploadError);
+                    continue;
+                }
+
                 const { data: { publicUrl } } = supabase.storage
                     .from('post-images')
                     .getPublicUrl(filePath);
+
                 uploadedUrls.push(publicUrl);
             }
-        }
 
-        setFormImages([...formImages, ...uploadedUrls]);
-        setIsUploading(false);
+            if (uploadedUrls.length > 0) {
+                setFormImages([...formImages, ...uploadedUrls]);
+            }
+        } catch (err) {
+            console.error("Error crítico en selección de imágenes:", err);
+            alert("Hubo un problema al subir las imágenes. Por favor, verifica tu conexión.");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
 
     if (!show) return null;

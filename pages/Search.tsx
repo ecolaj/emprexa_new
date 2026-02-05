@@ -10,31 +10,15 @@ import { ImageLightbox } from '../components/ImageLightbox';
 type FilterType = 'all' | 'projects' | 'people' | 'orgs';
 
 export const Search: React.FC<NavProps> = ({ navigate }) => {
-  const { user, sendMentionNotifications, isLoading: authLoading } = useAuth();
+  const { user, sendMentionNotifications, isLoading: authLoading, params } = useAuth();
 
-  // AUDIT FIX: Removed fallback to fake user.
-  if (authLoading) return <div className="p-8 text-center text-slate-400">Cargando...</div>;
-  const currentUser = user;
-
-  // If no user, we might want to allow public search or restrict it. 
-  // For now assuming safe public access or user is required. 
-  // If currentUser is null, we'll handle it gracefully in renders (e.g. not showing "My Profile" actions).
-
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(params?.query || '');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-
-  const ORGS = [
-    { id: 1, name: 'Fundación Vida', category: 'Sin Fines de Lucro', members: '1.2k', img: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=150&q=80' },
-    { id: 2, name: 'EcoSolutions Global', category: 'Empresa', members: '850', img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=150&q=80' },
-    { id: 3, name: 'EduFuture', category: 'EdTech', members: '340', img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=150&q=80' },
-    { id: 4, name: 'Green Architecture', category: 'Estudio', members: '120', img: 'https://images.unsplash.com/photo-1486744390760-d865aa4812a1?auto=format&fit=crop&w=150&q=80' },
-  ];
 
   const filters: { id: FilterType; label: string }[] = [
     { id: 'all', label: 'Todo' },
     { id: 'projects', label: 'Publicaciones' },
     { id: 'people', label: 'Personas' },
-    { id: 'orgs', label: 'Organizaciones' }
   ];
 
   const getSdgInfo = (id: number) => SDGS.find(s => s.id === id);
@@ -42,7 +26,9 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
   // --- FILTERING LOGIC ---
   const [dbPeople, setDbPeople] = useState<any[]>([]);
   const [dbProjects, setDbProjects] = useState<any[]>([]);
+  const [dbOrgs, setDbOrgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const currentUser = user;
 
   // Use interaction hook for posts (stored in dbProjects variable)
   const {
@@ -123,18 +109,25 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
         let matchingUserIds: string[] = [];
 
         // --- 1. SEARCH PEOPLE ---
-        // Run this query if filter is 'all' OR 'people'
         if (activeFilter === 'all' || activeFilter === 'people') {
-          const { data: profiles, error: profilesError } = await supabase
+          let peopleQuery = supabase
             .from('profiles')
-            .select('*')
-            .or(`name.ilike.%${query}%,role.ilike.%${query}%`);
+            .select('*');
+
+          if (query.startsWith('@')) {
+            const handle = query.slice(1);
+            peopleQuery = peopleQuery.ilike('username', `%${handle}%`);
+          } else {
+            peopleQuery = peopleQuery.or(`name.ilike.%${query}%,role.ilike.%${query}%,username.ilike.%${query}%`);
+          }
+
+          const { data: profiles, error: profilesError } = await peopleQuery.limit(20);
 
           if (profiles && !profilesError) {
             profilesFound = profiles.map(p => ({
               ...p,
               id: p.id,
-              img: p.avatar,
+              img: p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`,
               mutual: Math.floor(Math.random() * 20) + 1
             }));
             setDbPeople(profilesFound);
@@ -142,6 +135,31 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
           }
         } else {
           setDbPeople([]);
+        }
+
+        // --- 2. SEARCH ORGANIZATIONS ---
+        if (activeFilter === 'all' || activeFilter === 'orgs') {
+          let orgsQuery = supabase
+            .from('organizations')
+            .select('*');
+
+          if (query.startsWith('@')) {
+            const handle = query.slice(1);
+            orgsQuery = orgsQuery.ilike('handle', `%${handle}%`);
+          } else {
+            orgsQuery = orgsQuery.or(`name.ilike.%${query}%,category.ilike.%${query}%,handle.ilike.%${query}%`);
+          }
+
+          const { data: orgs, error: orgsError } = await orgsQuery.limit(10);
+          if (orgs && !orgsError) {
+            setDbOrgs(orgs.map(o => ({
+              ...o,
+              img: o.logo || 'https://via.placeholder.com/150',
+              members: o.members_count || 'Verificado'
+            })));
+          }
+        } else {
+          setDbOrgs([]);
         }
 
         // --- 2. SEARCH POSTS (PROJECTS) ---
@@ -206,21 +224,8 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
 
   const results = useMemo(() => {
     if (!query) return { people: [], projects: [], orgs: [] };
-
-    const lowerQuery = query.toLowerCase();
-
-    // Org search remains local for now
-    // FILTER LOGIC APPLIED HERE TOO for consistency
-    let filteredOrgs: typeof ORGS = [];
-    if (activeFilter === 'all' || activeFilter === 'orgs') {
-      filteredOrgs = ORGS.filter(o =>
-        o.name.toLowerCase().includes(lowerQuery) ||
-        o.category.toLowerCase().includes(lowerQuery)
-      );
-    }
-
-    return { people: dbPeople, projects: dbProjects, orgs: filteredOrgs };
-  }, [query, dbPeople, dbProjects, activeFilter]);
+    return { people: dbPeople, projects: dbProjects, orgs: dbOrgs };
+  }, [query, dbPeople, dbProjects, dbOrgs]);
 
   const hasResults = results.people.length > 0 || results.projects.length > 0 || results.orgs.length > 0;
 

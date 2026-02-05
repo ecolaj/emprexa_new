@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
 import { PostCard } from '../components/PostCard';
 import { ImageLightbox } from '../components/ImageLightbox';
+import { usePostInteractions } from '../hooks/usePostInteractions';
 
 export const Saved: React.FC<NavProps> = ({ navigate }) => {
     const { savedPostIds, toggleSavedPost, user } = useAuth();
@@ -14,12 +15,31 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
     const [savedPosts, setSavedPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // States for post interactions (same as Feed)
-    const [activeCommentSectionId, setActiveCommentSectionId] = useState<number | null>(null);
-    const [activeReplyToId, setActiveReplyToId] = useState<string | null>(null);
-    const [editingComment, setEditingComment] = useState<{ postId: number; commentId: string; text: string } | null>(null);
-    const [activeMenuCommentId, setActiveMenuCommentId] = useState<string | null>(null);
-    const [activeMenuPostId, setActiveMenuPostId] = useState<number | null>(null);
+    // States for post interactions (using unified hook)
+    const {
+        activeCommentSectionId,
+        setActiveCommentSectionId,
+        activeMenuPostId,
+        setActiveMenuPostId,
+        activeMenuCommentId,
+        setActiveMenuCommentId,
+        activeReplyToId,
+        setActiveReplyToId,
+        editingComment,
+        setEditingComment,
+        handleToggleLike,
+        handleDeletePost,
+        handleShare,
+        handleAddComment,
+        handleToggleCommentLike,
+        handleAddCommentReply,
+        handleDeleteComment,
+        onSaveEditComment,
+    } = usePostInteractions(savedPosts, setSavedPosts, currentUser, () => { });
+
+    const startEditPost = (postId: number) => {
+        console.log('Edit post from saved not implemented yet:', postId);
+    };
 
     // Lightbox states
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -85,43 +105,15 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
                                 };
                             }
 
-                            // Fetch comments for this post
-                            const { data: commentsData } = await supabase
-                                .from('comments')
-                                .select('*')
-                                .eq('post_id', p.id)
-                                .order('created_at', { ascending: true });
-
-                            const recentComments = commentsData ? await Promise.all(
-                                commentsData.slice(0, 2).map(async (c: any) => {
-                                    const { data: commentUser } = await supabase
-                                        .from('profiles')
-                                        .select('*')
-                                        .eq('id', c.user_id)
-                                        .single();
-
-                                    return {
-                                        id: c.id,
-                                        userId: c.user_id,
-                                        text: c.text,
-                                        time: c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Hoy',
-                                        likes: c.likes_count || 0,
-                                        isLiked: false,
-                                        replies: []
-                                    };
-                                })
-                            ) : [];
-
                             return {
                                 ...p,
                                 user: userData,
                                 time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Hoy',
                                 sdgIds: p.sdg_ids || [],
                                 likes: p.likes_count || 0,
-                                comments: p.comments_count || 0,
-                                images: p.images || [],
                                 isLiked: likedPostIds.has(p.id),
-                                recentComments: recentComments
+                                comments: p.comments_count || 0,
+                                recentComments: []
                             };
                         })
                     );
@@ -137,83 +129,6 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
 
         fetchSavedPosts();
     }, [savedPostIds, user]);
-
-    // Handler functions (same as Feed)
-    const handleToggleLike = async (postId: number) => {
-        if (!currentUser || !currentUser.id) return;
-
-        const post = savedPosts.find(p => p.id === postId);
-        if (!post) return;
-
-        const isLiked = post.isLiked;
-
-        if (isLiked) {
-            await supabase.from('post_likes').delete().eq('user_id', currentUser.id).eq('post_id', postId);
-            await supabase.from('posts').update({ likes_count: Math.max(0, post.likes - 1) }).eq('id', postId);
-        } else {
-            await supabase.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
-            await supabase.from('posts').update({ likes_count: post.likes + 1 }).eq('id', postId);
-        }
-
-        setSavedPosts(prev => prev.map(p => p.id === postId ? {
-            ...p,
-            isLiked: !isLiked,
-            likes: isLiked ? Math.max(0, p.likes - 1) : p.likes + 1
-        } : p));
-    };
-
-    const handleShare = (postId: number) => {
-        console.log('Share post:', postId);
-    };
-
-    const handleToggleCommentLike = async (postId: number, commentId: string) => {
-        console.log('Toggle comment like:', postId, commentId);
-    };
-
-    const handleAddCommentReply = async (postId: number, commentId: string, text: string) => {
-        console.log('Add comment reply:', postId, commentId, text);
-    };
-
-    const handleDeleteComment = async (postId: number, commentId: string) => {
-        console.log('Delete comment:', postId, commentId);
-    };
-
-    const onSaveEditComment = async (postId: number, commentId: string, newText: string) => {
-        console.log('Save edit comment:', postId, commentId, newText);
-    };
-
-    const handleAddComment = async (postId: number, text: string) => {
-        if (!currentUser || !currentUser.id || !text.trim()) return;
-
-        const { data, error } = await supabase
-            .from('comments')
-            .insert({
-                post_id: postId,
-                user_id: currentUser.id,
-                text: text.trim()
-            })
-            .select()
-            .single();
-
-        if (!error && data) {
-            await supabase.from('posts').update({
-                comments_count: supabase.rpc('increment', { x: 1 })
-            }).eq('id', postId);
-
-            setSavedPosts(prev => prev.map(p => p.id === postId ? {
-                ...p,
-                comments: p.comments + 1
-            } : p));
-        }
-    };
-
-    const startEditPost = (postId: number) => {
-        console.log('Edit post:', postId);
-    };
-
-    const handleDeletePost = async (postId: number) => {
-        console.log('Delete post:', postId);
-    };
 
     return (
         <div className="flex-1 overflow-y-auto bg-slate-50">

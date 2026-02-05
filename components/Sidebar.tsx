@@ -28,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
 
   const settingsItems = [
     { view: View.SETTINGS, icon: 'settings', label: 'Cuenta' },
-    { view: View.ORG_SETTINGS, icon: 'business', label: 'Organización' },
   ];
 
   const handleLogout = () => {
@@ -126,8 +125,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
         {/* Footer Area */}
         <div className="p-4 border-t border-slate-100 space-y-4 bg-white">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 text-white">
-            <p className="text-xs font-bold text-slate-300 mb-1">Actualizar a Enterprise</p>
-            <p className="text-xs text-slate-400 mb-3 leading-snug">Desbloquea análisis predictivo IA y funciones de equipo.</p>
+            <p className="text-xs font-bold text-slate-300 mb-1">Actualizar tu plan</p>
+            <p className="text-xs text-slate-400 mb-3 leading-snug">Desbloquea función de post, creación de proyectos, dashboards, métricas de impacto.</p>
             <button
               onClick={() => handleNavigation(View.PRICING)}
               className="w-full py-2 bg-white text-slate-900 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors"
