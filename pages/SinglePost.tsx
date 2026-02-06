@@ -528,15 +528,15 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         </div>
                     </article>
 
-                    {/* Comment Section - Only if user is logged in */}
-                    {user ? (
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4 max-w-2xl mx-auto">
-                            <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary">chat_bubble</span>
-                                Comentarios ({localComments.length})
-                            </h3>
+                    {/* Comment Section - Separate Card */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4 max-w-2xl mx-auto">
+                        <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary">chat_bubble</span>
+                            Comentarios ({localComments.length})
+                        </h3>
 
-                            {/* Comment Input */}
+                        {/* Comment Input */}
+                        {user ? (
                             <div className="flex gap-4 mb-8">
                                 <div className="size-10 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${user.avatar}")` }}></div>
                                 <div className="flex-1 relative">
@@ -555,335 +555,327 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                     </button>
                                 </div>
                             </div>
+                        ) : (
+                            <div className="bg-slate-50 rounded-xl p-4 mb-8 border border-slate-200 text-center">
+                                <p className="text-sm text-slate-600">Inicia sesión para dejar un comentario.</p>
+                            </div>
+                        )}
 
-                            {/* Comments List */}
-                            <div className="space-y-6">
-                                {localComments.map((comment: any) => {
-                                    const author = comment.user || (user && comment.userId === user.id ? user : USERS[0]);
-                                    return (
-                                        <div key={comment.id} className="space-y-4 group/comment">
-                                            <div className="flex gap-3 items-start">
-                                                <div
-                                                    className="size-10 rounded-full bg-cover bg-center shrink-0 border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
-                                                    style={{ backgroundImage: `url("${author.avatar}")` }}
-                                                    onClick={() => handleCommenterProfileClick(author.id)}
-                                                ></div>
-                                                <div className="flex-1">
-                                                    <div className="bg-slate-50 rounded-2xl px-4 py-2.5 relative group">
-                                                        <div className="flex justify-between items-start">
-                                                            <p
-                                                                className="text-sm font-bold text-slate-900 cursor-pointer hover:text-primary hover:underline"
-                                                                onClick={() => handleCommenterProfileClick(author.id)}
-                                                            >
-                                                                {author.name}
-                                                            </p>
+                        {/* Comments List */}
+                        <div className="space-y-6">
+                            {localComments.map((comment: any) => {
+                                const author = comment.user || (user && comment.userId === user.id ? user : USERS[0]);
+                                return (
+                                    <div key={comment.id} className="space-y-4 group/comment">
+                                        <div className="flex gap-3 items-start">
+                                            <div
+                                                className="size-10 rounded-full bg-cover bg-center shrink-0 border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
+                                                style={{ backgroundImage: `url("${author.avatar}")` }}
+                                                onClick={() => handleCommenterProfileClick(author.id)}
+                                            ></div>
+                                            <div className="flex-1">
+                                                <div className="bg-slate-50 rounded-2xl px-4 py-2.5 relative group">
+                                                    <div className="flex justify-between items-start">
+                                                        <p
+                                                            className="text-sm font-bold text-slate-900 cursor-pointer hover:text-primary hover:underline"
+                                                            onClick={() => handleCommenterProfileClick(author.id)}
+                                                        >
+                                                            {author.name}
+                                                        </p>
 
-                                                            {user && (author.id === user.id || post.user_id === user.id || user.isAdmin) && (
-                                                                <div className="relative">
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id); }}
-                                                                        className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/comment:opacity-100 transition-opacity"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-sm">more_vert</span>
-                                                                    </button>
-                                                                    {activeMenuCommentId === comment.id && (
-                                                                        <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
-                                                                            {author.id === user.id && (
-                                                                                <button onClick={() => onStartEditComment(comment)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                                    <span className="material-symbols-outlined text-sm">edit</span> Editar
-                                                                                </button>
-                                                                            )}
-                                                                            <button onClick={() => handleDeleteComment(comment.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                                <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                        {user && (author.id === user.id || post.user_id === user.id || user.isAdmin) && (
+                                                            <div className="relative">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id); }}
+                                                                    className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/comment:opacity-100 transition-opacity"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-sm">more_vert</span>
+                                                                </button>
+                                                                {activeMenuCommentId === comment.id && (
+                                                                    <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
+                                                                        {author.id === user.id && (
+                                                                            <button onClick={() => onStartEditComment(comment)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
+                                                                                <span className="material-symbols-outlined text-sm">edit</span> Editar
                                                                             </button>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {editingComment?.id === comment.id ? (
-                                                            <div className="mt-1">
-                                                                <textarea
-                                                                    value={editingComment.text}
-                                                                    onChange={(e) => setEditingComment({ ...editingComment, text: e.target.value })}
-                                                                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary resize-none h-20"
-                                                                />
-                                                                <div className="flex justify-end gap-2 mt-2">
-                                                                    <button onClick={() => setEditingComment(null)} className="text-xs font-bold text-slate-500 hover:underline">Cancelar</button>
-                                                                    <button onClick={() => saveEditedComment(comment.id, editingComment.text)} className="text-xs font-bold text-primary hover:underline">Guardar</button>
-                                                                </div>
+                                                                        )}
+                                                                        <button onClick={() => handleDeleteComment(comment.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
+                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        ) : (
-                                                            <p className="text-sm text-slate-700 mt-1">{comment.text}</p>
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-4 mt-1.5 ml-2 text-xs font-bold text-slate-400">
-                                                        <button
-                                                            onClick={() => handleToggleCommentLike(comment.id)}
-                                                            className={`hover:text-primary transition-colors flex items-center gap-1 ${comment.isLiked ? 'text-primary' : ''}`}
-                                                        >
-                                                            {comment.isLiked ? 'Me gusta' : 'Me gusta'} {comment.likes > 0 && <span>• {comment.likes}</span>}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                if (!user) {
-                                                                    setActionRequiringLogin('comment');
-                                                                    setShowLoginModal(true);
-                                                                    return;
-                                                                }
-                                                                setActiveReplyToId(activeReplyToId === comment.id ? null : comment.id);
-                                                            }}
-                                                            className="hover:text-primary transition-colors"
-                                                        >
-                                                            Responder
-                                                        </button>
-                                                    </div>
+
+                                                    {editingComment?.id === comment.id ? (
+                                                        <div className="mt-1">
+                                                            <textarea
+                                                                value={editingComment.text}
+                                                                onChange={(e) => setEditingComment({ ...editingComment, text: e.target.value })}
+                                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary resize-none h-20"
+                                                            />
+                                                            <div className="flex justify-end gap-2 mt-2">
+                                                                <button onClick={() => setEditingComment(null)} className="text-xs font-bold text-slate-500 hover:underline">Cancelar</button>
+                                                                <button onClick={() => saveEditedComment(comment.id, editingComment.text)} className="text-xs font-bold text-primary hover:underline">Guardar</button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-slate-700 mt-1">{comment.text}</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-4 mt-1.5 ml-2 text-xs font-bold text-slate-400">
+                                                    <button
+                                                        onClick={() => handleToggleCommentLike(comment.id)}
+                                                        className={`hover:text-primary transition-colors flex items-center gap-1 ${comment.isLiked ? 'text-primary' : ''}`}
+                                                    >
+                                                        {comment.isLiked ? 'Me gusta' : 'Me gusta'} {comment.likes > 0 && <span>• {comment.likes}</span>}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (!user) {
+                                                                setActionRequiringLogin('comment');
+                                                                setShowLoginModal(true);
+                                                                return;
+                                                            }
+                                                            setActiveReplyToId(activeReplyToId === comment.id ? null : comment.id);
+                                                        }}
+                                                        className="hover:text-primary transition-colors"
+                                                    >
+                                                        Responder
+                                                    </button>
+                                                    <span>{comment.time}</span>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Replies */}
-                                            {comment.replies && comment.replies.length > 0 && (
-                                                <div className="ml-12 space-y-4 border-l-2 border-slate-100 pl-4">
-                                                    {comment.replies.map((reply: any) => {
-                                                        // FIX: Use enriched user object from DB fetch
-                                                        const replyAuthor = reply.user || (user && reply.userId === user.id ? user : USERS[0]);
-                                                        return (
-                                                            <div key={reply.id} className="flex gap-3 items-start">
-                                                                <div
-                                                                    className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
-                                                                    style={{ backgroundImage: `url("${replyAuthor.avatar}")` }}
-                                                                    onClick={() => handleCommenterProfileClick(replyAuthor.id)}
-                                                                ></div>
-                                                                <div className="flex-1">
-                                                                    <div className="bg-slate-50/50 rounded-xl px-4 py-2 border border-slate-100 relative group/reply">
-                                                                        <div className="flex justify-between items-start">
-                                                                            <p
-                                                                                className="text-xs font-bold text-slate-900 cursor-pointer hover:text-primary hover:underline"
-                                                                                onClick={() => handleCommenterProfileClick(replyAuthor.id)}
-                                                                            >
-                                                                                {replyAuthor.name}
-                                                                            </p>
+                                        {/* Replies */}
+                                        {comment.replies && comment.replies.length > 0 && (
+                                            <div className="ml-12 space-y-4 border-l-2 border-slate-100 pl-4">
+                                                {comment.replies.map((reply: any) => {
+                                                    // FIX: Use enriched user object from DB fetch
+                                                    const replyAuthor = reply.user || (user && reply.userId === user.id ? user : USERS[0]);
+                                                    return (
+                                                        <div key={reply.id} className="flex gap-3 items-start">
+                                                            <div
+                                                                className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                style={{ backgroundImage: `url("${replyAuthor.avatar}")` }}
+                                                                onClick={() => handleCommenterProfileClick(replyAuthor.id)}
+                                                            ></div>
+                                                            <div className="flex-1">
+                                                                <div className="bg-slate-50/50 rounded-xl px-4 py-2 border border-slate-100 relative group/reply">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <p
+                                                                            className="text-xs font-bold text-slate-900 cursor-pointer hover:text-primary hover:underline"
+                                                                            onClick={() => handleCommenterProfileClick(replyAuthor.id)}
+                                                                        >
+                                                                            {replyAuthor.name}
+                                                                        </p>
 
-                                                                            {user && (replyAuthor.id === user.id || post.user_id === user.id || user.isAdmin) && (
-                                                                                <div className="relative">
-                                                                                    <button
-                                                                                        onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
-                                                                                        className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                                                                                    >
-                                                                                        <span className="material-symbols-outlined text-xs">more_vert</span>
-                                                                                    </button>
-                                                                                    {activeMenuCommentId === reply.id && (
-                                                                                        <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
-                                                                                            {replyAuthor.id === user.id && (
-                                                                                                <button onClick={() => onStartEditComment(reply)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                                                    <span className="material-symbols-outlined text-sm">edit</span> Editar
-                                                                                                </button>
-                                                                                            )}
-                                                                                            <button onClick={() => handleDeleteComment(reply.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                                                <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                        {user && (replyAuthor.id === user.id || post.user_id === user.id || user.isAdmin) && (
+                                                                            <div className="relative">
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
+                                                                                    className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-xs">more_vert</span>
+                                                                                </button>
+                                                                                {activeMenuCommentId === reply.id && (
+                                                                                    <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
+                                                                                        {replyAuthor.id === user.id && (
+                                                                                            <button onClick={() => onStartEditComment(reply)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
+                                                                                                <span className="material-symbols-outlined text-sm">edit</span> Editar
                                                                                             </button>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {editingComment?.id === reply.id ? (
-                                                                            <div className="mt-1">
-                                                                                <textarea
-                                                                                    value={editingComment.text}
-                                                                                    onChange={(e) => setEditingComment({ ...editingComment, text: e.target.value })}
-                                                                                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-primary resize-none h-16"
-                                                                                />
-                                                                                <div className="flex justify-end gap-2 mt-2">
-                                                                                    <button onClick={() => setEditingComment(null)} className="text-[10px] font-bold text-slate-500 hover:underline">Cancelar</button>
-                                                                                    <button onClick={() => saveEditedComment(reply.id, editingComment.text)} className="text-[10px] font-bold text-primary hover:underline">Guardar</button>
-                                                                                </div>
+                                                                                        )}
+                                                                                        <button onClick={() => handleDeleteComment(reply.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
+                                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                                        </button>
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
-                                                                        ) : (
-                                                                            <p className="text-xs text-slate-700 mt-1">{reply.text}</p>
                                                                         )}
                                                                     </div>
-                                                                    <div className="flex gap-4 mt-1 ml-1 text-[10px] font-bold text-slate-400">
-                                                                        <button
-                                                                            onClick={() => handleToggleCommentLike(reply.id)}
-                                                                            className={`hover:text-primary transition-colors flex items-center gap-1 ${reply.isLiked ? 'text-primary' : ''}`}
-                                                                        >
-                                                                            {reply.isLiked ? 'Me gusta' : 'Me gusta'} {reply.likes > 0 && <span>• {reply.likes}</span>}
-                                                                        </button>
-                                                                        <span>{reply.time}</span>
-                                                                    </div>
+
+                                                                    {editingComment?.id === reply.id ? (
+                                                                        <div className="mt-1">
+                                                                            <textarea
+                                                                                value={editingComment.text}
+                                                                                onChange={(e) => setEditingComment({ ...editingComment, text: e.target.value })}
+                                                                                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-primary resize-none h-16"
+                                                                            />
+                                                                            <div className="flex justify-end gap-2 mt-2">
+                                                                                <button onClick={() => setEditingComment(null)} className="text-[10px] font-bold text-slate-500 hover:underline">Cancelar</button>
+                                                                                <button onClick={() => saveEditedComment(reply.id, editingComment.text)} className="text-[10px] font-bold text-primary hover:underline">Guardar</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-xs text-slate-700 mt-1">{reply.text}</p>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex gap-4 mt-1 ml-1 text-[10px] font-bold text-slate-400">
+                                                                    <button
+                                                                        onClick={() => handleToggleCommentLike(reply.id)}
+                                                                        className={`hover:text-primary transition-colors flex items-center gap-1 ${reply.isLiked ? 'text-primary' : ''}`}
+                                                                    >
+                                                                        {reply.isLiked ? 'Me gusta' : 'Me gusta'} {reply.likes > 0 && <span>• {reply.likes}</span>}
+                                                                    </button>
+                                                                    <span>{reply.time}</span>
                                                                 </div>
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
 
-                                            {/* Reply Input */}
-                                            {activeReplyToId === comment.id && user && (
-                                                <div className="ml-12 mt-2 flex gap-3 items-start animate-[fade-in_0.2s_ease-out]">
-                                                    <div className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${user.avatar}")` }}></div>
-                                                    <div className="flex-1 relative">
-                                                        <textarea
-                                                            placeholder={`Responde a ${author.name}...`}
-                                                            className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-3 pr-10 text-xs focus:outline-none focus:border-primary resize-none h-10"
-                                                            value={newReplyText[comment.id] || ''}
-                                                            onChange={(e) => setNewReplyText({ ...newReplyText, [comment.id]: e.target.value })}
-                                                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(comment.id); } }}
-                                                        />
-                                                        <button
-                                                            onClick={() => handleAddReply(comment.id)}
-                                                            className="absolute right-2 top-2 text-primary"
-                                                        >
-                                                            <span className="material-symbols-outlined text-base filled">send</span>
-                                                        </button>
-                                                    </div>
+                                        {/* Reply Input */}
+                                        {activeReplyToId === comment.id && user && (
+                                            <div className="ml-12 mt-2 flex gap-3 items-start animate-[fade-in_0.2s_ease-out]">
+                                                <div className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${user.avatar}")` }}></div>
+                                                <div className="flex-1 relative">
+                                                    <textarea
+                                                        placeholder={`Responde a ${author.name}...`}
+                                                        className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-3 pr-10 text-xs focus:outline-none focus:border-primary resize-none h-10"
+                                                        value={newReplyText[comment.id] || ''}
+                                                        onChange={(e) => setNewReplyText({ ...newReplyText, [comment.id]: e.target.value })}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(comment.id); } }}
+                                                    />
+                                                    <button
+                                                        onClick={() => handleAddReply(comment.id)}
+                                                        className="absolute right-2 top-2 text-primary"
+                                                    >
+                                                        <span className="material-symbols-outlined text-base filled">send</span>
+                                                    </button>
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    ) : (
-                        /* Public CTA for non-logged in users */
-                        <div className="bg-white rounded-2xl shadow-xl border-t-4 border-primary p-8 mt-6 text-center max-w-2xl mx-auto animate-in slide-in-from-bottom duration-700">
-                            <div className="size-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <span className="material-symbols-outlined text-3xl text-primary">rocket_launch</span>
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-900 mb-3">¿Te inspira este proyecto?</h3>
-                            <p className="text-slate-600 mb-8 max-w-sm mx-auto leading-relaxed">
-                                Únete a <b>Emprexa</b> para conectar con {post.user.name}, seguir su impacto y colaborar con miles de agentes de cambio en todo el mundo.
-                            </p>
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button
-                                    onClick={() => navigate(View.ONBOARDING)}
-                                    className="bg-primary text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-primary/25 hover:bg-primary-dark hover:-translate-y-1 transition-all active:scale-95"
-                                >
-                                    Crear Mi Cuenta Gratis
-                                </button>
-                                <button
-                                    onClick={() => navigate(View.LOGIN)}
-                                    className="bg-slate-50 text-slate-700 px-8 py-4 rounded-2xl font-black hover:bg-slate-100 transition-all active:scale-95 border border-slate-200"
-                                >
-                                    Ya tengo cuenta
-                                </button>
-                            </div>
-                            <p className="mt-6 text-[10px] uppercase tracking-widest font-black text-slate-400">Impulsando el cambio sostenible juntos</p>
-                        </div>
-                    )}
+
+                    </div>
+
                 </div>
 
-                <ImageLightbox
-                    isOpen={isLightboxOpen}
-                    onClose={() => setIsLightboxOpen(false)}
-                    images={lightboxImages}
-                    initialIndex={lightboxIndex}
-                />
+                {/* Public CTA Footer - Separate Card */}
+                {!user && (
+                    <div className="bg-slate-50 p-6 border border-slate-200 rounded-2xl mt-4 text-center max-w-2xl mx-auto">
+                        <h4 className="font-bold text-slate-900 mb-2">¿Te interesa este proyecto?</h4>
+                        <p className="text-sm text-slate-600 mb-4">Únete a Emprexa para conectar con {post.user.name} y miles de otros agentes de cambio.</p>
+                        <button onClick={() => navigate(View.ONBOARDING)} className="bg-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-primary-dark transition-all">
+                            Crear Cuenta Gratis
+                        </button>
+                    </div>
+                )}
+            </div >
 
-                {/* Elegant Login Modal */}
-                {
-                    showLoginModal && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                            {/* Backdrop */}
-                            <div
-                                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
-                                onClick={() => setShowLoginModal(false)}
-                            ></div>
+            <ImageLightbox
+                isOpen={isLightboxOpen}
+                onClose={() => setIsLightboxOpen(false)}
+                images={lightboxImages}
+                initialIndex={lightboxIndex}
+            />
 
-                            {/* Modal Card */}
-                            <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
-                                <div className="p-8 text-center">
-                                    {/* Icon based on action */}
-                                    <div className={`size-16 rounded-full flex items-center justify-center mx-auto mb-6 ${actionRequiringLogin === 'like' ? 'bg-red-50 text-red-500' :
-                                        actionRequiringLogin === 'comment' ? 'bg-blue-50 text-blue-500' :
-                                            actionRequiringLogin === 'view_profile' ? 'bg-purple-50 text-purple-500' :
-                                                actionRequiringLogin === 'view_sdg' ? 'bg-green-50 text-green-500' :
-                                                    'bg-indigo-50 text-indigo-500'
-                                        }`}>
-                                        <span className="material-symbols-outlined text-3xl">
-                                            {actionRequiringLogin === 'like' ? 'favorite' :
-                                                actionRequiringLogin === 'comment' ? 'chat_bubble' :
-                                                    actionRequiringLogin === 'view_profile' ? 'person' :
-                                                        actionRequiringLogin === 'view_sdg' ? 'target' :
-                                                            'bookmark'}
-                                        </span>
-                                    </div>
+            {/* Elegant Login Modal */}
+            {
+                showLoginModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-[fade-in_0.3s_ease-out]"
+                            onClick={() => setShowLoginModal(false)}
+                        ></div>
 
-                                    <h2 className="text-xl font-bold text-slate-900 mb-2">
-                                        {actionRequiringLogin === 'like' ? 'Me gusta esta publicación' :
-                                            actionRequiringLogin === 'comment' ? 'Comentar en esta publicación' :
-                                                actionRequiringLogin === 'view_profile' ? 'Ver perfil del usuario' :
-                                                    actionRequiringLogin === 'view_sdg' ? 'Explorar ODS' :
-                                                        'Guardar esta publicación'}
-                                    </h2>
+                        {/* Modal Card */}
+                        <div className="relative bg-white w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-[scale-in_0.2s_ease-out]">
+                            <div className="p-8 text-center">
+                                {/* Icon based on action */}
+                                <div className={`size-16 rounded-full flex items-center justify-center mx-auto mb-6 ${actionRequiringLogin === 'like' ? 'bg-red-50 text-red-500' :
+                                    actionRequiringLogin === 'comment' ? 'bg-blue-50 text-blue-500' :
+                                        actionRequiringLogin === 'view_profile' ? 'bg-purple-50 text-purple-500' :
+                                            actionRequiringLogin === 'view_sdg' ? 'bg-green-50 text-green-500' :
+                                                'bg-indigo-50 text-indigo-500'
+                                    }`}>
+                                    <span className="material-symbols-outlined text-3xl">
+                                        {actionRequiringLogin === 'like' ? 'favorite' :
+                                            actionRequiringLogin === 'comment' ? 'chat_bubble' :
+                                                actionRequiringLogin === 'view_profile' ? 'person' :
+                                                    actionRequiringLogin === 'view_sdg' ? 'target' :
+                                                        'bookmark'}
+                                    </span>
+                                </div>
 
-                                    <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                                        {actionRequiringLogin === 'like'
-                                            ? 'Únete a Emprexa para apoyar esta historia de impacto y conectar con otros agentes de cambio.'
-                                            : actionRequiringLogin === 'comment'
-                                                ? 'Regístrate para compartir tu perspectiva y construir comunidad alrededor de este proyecto.'
-                                                : actionRequiringLogin === 'view_profile'
-                                                    ? 'Crea una cuenta para ver perfiles de otros agentes de cambio y conectar con ellos.'
-                                                    : actionRequiringLogin === 'view_sdg'
-                                                        ? 'Únete a la comunidad para explorar más proyectos relacionados con los Objetivos de Desarrollo Sostenible.'
-                                                        : 'Crea una cuenta para guardar esta publicación y revisarla más tarde.'
-                                        }
-                                    </p>
+                                <h2 className="text-xl font-bold text-slate-900 mb-2">
+                                    {actionRequiringLogin === 'like' ? 'Me gusta esta publicación' :
+                                        actionRequiringLogin === 'comment' ? 'Comentar en esta publicación' :
+                                            actionRequiringLogin === 'view_profile' ? 'Ver perfil del usuario' :
+                                                actionRequiringLogin === 'view_sdg' ? 'Explorar ODS' :
+                                                    'Guardar esta publicación'}
+                                </h2>
 
-                                    <div className="space-y-3">
-                                        <button
-                                            onClick={() => {
-                                                setShowLoginModal(false);
-                                                navigate(View.LOGIN);
-                                            }}
-                                            className="w-full py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
-                                        >
-                                            Iniciar Sesión
-                                        </button>
+                                <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                                    {actionRequiringLogin === 'like'
+                                        ? 'Únete a Emprexa para apoyar esta historia de impacto y conectar con otros agentes de cambio.'
+                                        : actionRequiringLogin === 'comment'
+                                            ? 'Regístrate para compartir tu perspectiva y construir comunidad alrededor de este proyecto.'
+                                            : actionRequiringLogin === 'view_profile'
+                                                ? 'Crea una cuenta para ver perfiles de otros agentes de cambio y conectar con ellos.'
+                                                : actionRequiringLogin === 'view_sdg'
+                                                    ? 'Únete a la comunidad para explorar más proyectos relacionados con los Objetivos de Desarrollo Sostenible.'
+                                                    : 'Crea una cuenta para guardar esta publicación y revisarla más tarde.'
+                                    }
+                                </p>
 
-                                        <button
-                                            onClick={() => {
-                                                setShowLoginModal(false);
-                                                navigate(View.ONBOARDING);
-                                            }}
-                                            className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
-                                        >
-                                            Crear Cuenta Gratis
-                                        </button>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => {
+                                            setShowLoginModal(false);
+                                            navigate(View.LOGIN);
+                                        }}
+                                        className="w-full py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
+                                    >
+                                        Iniciar Sesión
+                                    </button>
 
-                                        <button
-                                            onClick={() => setShowLoginModal(false)}
-                                            className="w-full py-3 text-slate-500 hover:text-slate-900 font-medium"
-                                        >
-                                            Seguir viendo como invitado
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setShowLoginModal(false);
+                                            navigate(View.ONBOARDING);
+                                        }}
+                                        className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                                    >
+                                        Crear Cuenta Gratis
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowLoginModal(false)}
+                                        className="w-full py-3 text-slate-500 hover:text-slate-900 font-medium"
+                                    >
+                                        Seguir viendo como invitado
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    )
-                }
+                    </div>
+                )
+            }
 
-                <ShareSuccessModal
-                    isOpen={showShareSuccessModal}
-                    onClose={() => setShowShareSuccessModal(false)}
-                    copiedUrl={copiedUrl}
-                />
+            <ShareSuccessModal
+                isOpen={showShareSuccessModal}
+                onClose={() => setShowShareSuccessModal(false)}
+                copiedUrl={copiedUrl}
+            />
 
-                <ConfirmModal
-                    isOpen={commentToDelete !== null}
-                    onClose={() => setCommentToDelete(null)}
-                    onConfirm={confirmDeleteComment}
-                    title="¿Eliminar comentario?"
-                    description="¿Estás seguro de que quieres borrar este comentario? No podrás recuperarlo."
-                    confirmText="Eliminar"
-                    cancelText="Cancelar"
-                    icon="comment_bank"
-                />
-            </div>
-        </div>
+            <ConfirmModal
+                isOpen={commentToDelete !== null}
+                onClose={() => setCommentToDelete(null)}
+                onConfirm={confirmDeleteComment}
+                title="¿Eliminar comentario?"
+                description="¿Estás seguro de que quieres borrar este comentario? No podrás recuperarlo."
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                icon="comment_bank"
+            />
+        </div >
     );
 };
