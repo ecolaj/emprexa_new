@@ -794,7 +794,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
       {/* --- MODAL: ¿QUÉ ES EMPREXA? --- */}
       {isEmprexaModalOpen && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-[fade-in_0.3s_ease-out] relative">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-[fade-in_0.3s_ease-out] relative">
 
             {/* Fondo con patrón de ODS en diagonal */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
@@ -809,7 +809,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               </div>
             </div>
 
-            <div className="p-8 md:p-12 text-center relative z-10">
+            <div className="p-8 md:p-12 text-center relative z-10 overflow-y-auto custom-scrollbar">
               <div className="size-20 bg-primary/10 text-primary rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 transform -rotate-6">
                 <Logo className="h-8" />
               </div>

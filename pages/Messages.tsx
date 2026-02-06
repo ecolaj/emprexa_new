@@ -335,7 +335,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
   return (
     <div className="flex-1 flex overflow-hidden">
       {/* List */}
-      <div className="w-80 border-r border-slate-200 bg-white flex flex-col hidden md:flex">
+      <div className={`w-full md:w-80 border-r border-slate-200 bg-white flex-col ${!activeUser ? 'flex' : 'hidden md:flex'}`}>
         <div className="p-4 border-b border-slate-100">
           <div className="relative">
             <span className="absolute left-3 top-2.5 text-slate-400 material-symbols-outlined text-sm">search</span>
@@ -407,7 +407,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-slate-50 relative">
+      <div className={`flex-1 flex-col bg-slate-50 relative ${!activeUser ? 'hidden md:flex' : 'flex'}`}>
         {!activeUser ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white">
             <div className="size-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -419,14 +419,22 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
         ) : (
           <>
             <div className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(View.PROFILE, { userId: activeUser.id })}>
-                <div className="size-10 rounded-full bg-cover bg-center" style={{ backgroundImage: `url("${activeUser.avatar}")` }}></div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-slate-900">{activeUser.name}</h3>
-                    {renderBadge(activeUser.plan || 'free')}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveUser(null)}
+                  className="md:hidden p-1 mr-1 text-slate-500 hover:text-slate-700"
+                >
+                  <span className="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(View.PROFILE, { userId: activeUser.id })}>
+                  <div className="size-10 rounded-full bg-cover bg-center" style={{ backgroundImage: `url("${activeUser.avatar}")` }}></div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900">{activeUser.name}</h3>
+                      {renderBadge(activeUser.plan || 'free')}
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-1">{activeUser.role}</p>
                   </div>
-                  <p className="text-xs text-slate-500 line-clamp-1">{activeUser.role}</p>
                 </div>
               </div>
               <div className="flex gap-2 text-slate-400">

@@ -299,10 +299,10 @@ function AppContent() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      <div className="flex-1 flex flex-col overflow-hidden relative pt-16 lg:pt-0">
 
         {/* Mobile Header */}
-        <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 sticky top-0 z-30">
+        <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 fixed top-0 left-0 w-full z-30">
           <div className="flex items-center gap-2">
             <Logo className="h-8" />
           </div>
