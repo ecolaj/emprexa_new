@@ -74,7 +74,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
           .then(mod => mod.supabase
             .from('posts')
             .select('*')
-            .contains('sdg_ids', [targetSdgId])
+            .overlaps('sdg_ids', [targetSdgId])
             .order('created_at', { ascending: false })
           );
 
@@ -83,11 +83,11 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
 
         const [postsCountRes, projectsCountRes, interactionsRes] = await Promise.all([
           // Total global posts for this SDG
-          supabase.from('posts').select('*', { count: 'exact', head: true }).contains('sdg_ids', [targetSdgId]),
+          supabase.from('posts').select('*', { count: 'exact', head: true }).overlaps('sdg_ids', [targetSdgId]),
           // Total global projects for this SDG
           supabase.from('projects').select('*', { count: 'exact', head: true }).eq('sdg_id', targetSdgId),
           // Total global interactions (sum of likes and comments from all posts of this SDG)
-          supabase.from('posts').select('likes_count, comments_count').contains('sdg_ids', [targetSdgId])
+          supabase.from('posts').select('likes_count, comments_count').overlaps('sdg_ids', [targetSdgId])
         ]);
 
         const totalInteractions = (interactionsRes.data || []).reduce(

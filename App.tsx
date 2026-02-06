@@ -302,7 +302,7 @@ function AppContent() {
       <div className="flex-1 flex flex-col overflow-hidden relative pt-16 lg:pt-0">
 
         {/* Mobile Header */}
-        <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 fixed top-0 left-0 w-full z-30">
+        <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 fixed top-0 left-0 w-full z-[50]">
           <div className="flex items-center gap-2">
             <Logo className="h-8" />
           </div>
@@ -325,7 +325,8 @@ function AppContent() {
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="text-slate-500 hover:text-slate-700 p-1"
+              className="text-slate-500 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors z-50 cursor-pointer"
+              aria-label="Abrir menú"
             >
               <span className="material-symbols-outlined text-2xl">menu</span>
             </button>
