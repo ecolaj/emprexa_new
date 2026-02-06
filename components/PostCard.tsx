@@ -90,7 +90,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap justify-end max-w-[200px]">
+                <div className="flex items-center gap-2 flex-wrap justify-end max-w-[200px]" style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}>
                     {post.sdgIds.map(id => (
                         <SdgBadge key={id} sdgId={id} navigate={onNavigate} />
                     ))}
