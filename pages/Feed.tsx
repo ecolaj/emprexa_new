@@ -7,10 +7,12 @@ import { renderBadge, renderContent } from '../utils/renderers';
 import { getSdgInfo } from '../utils/sdgUtils';
 import { PostCard } from '../components/PostCard';
 import { PostFormModal } from '../components/PostFormModal';
+import { UpgradeModal } from '../components/UpgradeModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
 import { getBaseUrl } from '../utils/environment';
+import { formatRelativeTime } from '../utils/timeUtils';
 
 export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const { user, savedPostIds, toggleSavedPost, followedUserIds, followedSdgIds, sendMentionNotifications, isLoading: authLoading, activateTrial } = useAuth();
@@ -79,6 +81,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const [showShareSuccessModal, setShowShareSuccessModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState('');
   const [showTrialConfirmModal, setShowTrialConfirmModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeContent, setUpgradeContent] = useState({ title: '', description: '', plan: '' });
 
 
   // Ref for infinite scroll
@@ -290,13 +294,6 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const [commentToDelete, setCommentToDelete] = useState<{ postId: number, commentId: string } | null>(null);
 
   // --- ACTIONS ---
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      const newPreviewUrls = newFiles.map((file: File) => URL.createObjectURL(file));
-      setFormImages(prev => [...prev, ...newPreviewUrls]);
-    }
-  };
 
   const removeFormImage = (index: number) => {
     setFormImages(prev => prev.filter((_, i) => i !== index));
@@ -366,7 +363,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         const newPost: Post = {
           ...data,
           user: userData,
-          time: 'Ahora mismo',
+          time: formatRelativeTime(new Date()),
           sdgIds: data.sdg_ids || [],
           likes: 0,
           comments: 0,
@@ -488,12 +485,23 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     });
   };
 
+  const handleLockedAction = (reason: 'post' | 'dashboard') => {
+    if (reason === 'post') {
+      setUpgradeContent({
+        title: 'Voz Propia',
+        description: 'Publica tus propios avances y genera un impacto visible con una cuenta Premium.',
+        plan: 'Básico'
+      });
+    }
+    setShowUpgradeModal(true);
+  };
+
   const handleAddComment = (postId: number, text: string) => {
     const newComment = {
       id: `new-${Date.now()}`,
       userId: currentUser.id,
       text: text,
-      time: 'Ahora',
+      time: formatRelativeTime(new Date()),
       likes: 0,
       isLiked: false,
       replies: []
@@ -536,7 +544,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
       id: `reply-${Date.now()}`,
       userId: currentUser.id,
       text: text,
-      time: 'Ahora',
+      time: formatRelativeTime(new Date()),
       likes: 0,
       isLiked: false
     };
@@ -560,9 +568,11 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     setCommentToDelete({ postId, commentId });
   };
 
-  const confirmDeleteComment = () => {
+  const confirmDeleteComment = async () => {
     if (!commentToDelete) return;
     const { postId, commentId } = commentToDelete;
+
+    // Optimistic remove
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId);
@@ -572,9 +582,20 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     }));
     setActiveMenuCommentId(null);
     setCommentToDelete(null);
+
+    // DB Remove
+    try {
+      const { error } = await supabase.from('comments').delete().eq('id', commentId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      alert("No se pudo eliminar el comentario.");
+      // Option: re-fetch posts here if critical
+    }
   };
 
-  const onSaveEditComment = (postId: number, commentId: string, text: string) => {
+  const onSaveEditComment = async (postId: number, commentId: string, text: string) => {
+    // Optimistic update
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         const updatedComments = p.recentComments.map((c: any) => c.id === commentId ? { ...c, text } : c);
@@ -583,6 +604,15 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
       return p;
     }));
     setEditingComment(null);
+
+    // DB update
+    try {
+      const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving comment edit:", error);
+      alert("No se pudo guardar la edición.");
+    }
   };
 
   return (
@@ -619,7 +649,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-black text-white text-sm mb-1">¡Regalo de Bienvenida!</h3>
-                    <p className="text-white/90 text-xs leading-relaxed">Activa tu kit PRO gratis: 5 posts o 30 días</p>
+                    <p className="text-white/90 text-xs leading-relaxed">Activa tu kit ENTERPRISE gratis: 5 posts o 30 días</p>
                   </div>
                 </div>
                 <button
@@ -636,7 +666,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
               <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 shadow-lg border border-green-400/30">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="material-symbols-outlined text-white filled">workspace_premium</span>
-                  <h3 className="font-black text-white text-sm">Modo PRO Activo</h3>
+                  <h3 className="font-black text-white text-sm">Modo ENTERPRISE Activo</h3>
                 </div>
                 <div className="space-y-2">
                   {currentUser.trialPostsRemaining !== undefined && currentUser.trialPostsRemaining > 0 && (
@@ -658,7 +688,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   onClick={() => navigate(View.PRICING)}
                   className="w-full mt-3 bg-white/20 backdrop-blur text-white font-bold py-2 rounded-lg hover:bg-white/30 transition-all text-xs"
                 >
-                  Mantener PRO después
+                  Mantener ENTERPRISE después
                 </button>
               </div>
             )}
@@ -668,29 +698,60 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         <div className="col-span-1 lg:col-span-6 space-y-6 pb-8">
           {/* Create Post Widget */}
           {currentUser.plan !== 'free' ? (
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
-              <div className="flex gap-4">
-                <div className="size-10 rounded-full bg-gray-200 shrink-0 bg-cover bg-center cursor-pointer" style={{ backgroundImage: `url("${currentUser.avatar}")` }} onClick={() => navigate(View.PROFILE, { userId: currentUser.id })}></div>
-                <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="flex-1 bg-slate-100 rounded-full px-4 text-left text-slate-500 text-sm hover:bg-slate-200 transition-colors">Comparte tu impacto...</button>
+            <div className="bg-white rounded-[32px] shadow-sm p-6 border border-slate-100 group hover:shadow-xl transition-all duration-500">
+              <div className="flex gap-5">
+                <div
+                  className="size-14 rounded-2xl bg-slate-200 shrink-0 bg-cover bg-center cursor-pointer border-2 border-white shadow-md group-hover:scale-105 transition-transform"
+                  style={{ backgroundImage: `url("${currentUser.avatar}")` }}
+                  onClick={() => navigate(View.PROFILE, { userId: currentUser.id })}
+                ></div>
+                <button
+                  onClick={() => { resetPostForm(); setShowPostModal(true); }}
+                  className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-6 text-left text-slate-500 text-sm font-medium hover:bg-slate-100 transition-colors"
+                >
+                  ¿Qué impacto has generado hoy, {currentUser.name?.split(' ')[0]}?
+                </button>
               </div>
-              <div className="flex justify-between items-center mt-3 pl-14">
+              <div className="flex justify-between items-center mt-5 pl-1 invisible md:visible">
                 <div className="flex gap-2">
-                  <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="p-2 text-primary hover:bg-primary/5 rounded-full"><span className="material-symbols-outlined text-[20px]">image</span></button>
-                  <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="p-2 text-primary hover:bg-primary/5 rounded-full"><span className="material-symbols-outlined text-[20px]">link</span></button>
+                  <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-50 rounded-xl flex items-center gap-2 text-xs font-black transition-all">
+                    <span className="material-symbols-outlined text-[20px] text-blue-500 filled">image</span>
+                    Multimedia
+                  </button>
+                  <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-50 rounded-xl flex items-center gap-2 text-xs font-black transition-all">
+                    <span className="material-symbols-outlined text-[20px] text-emerald-500 filled">link</span>
+                    Recursos
+                  </button>
                 </div>
-                <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="bg-primary text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-primary-dark">Post</button>
+                <button
+                  onClick={() => { resetPostForm(); setShowPostModal(true); }}
+                  className="bg-slate-900 text-white px-10 py-3 rounded-2xl text-xs font-black hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                >
+                  Publicar Impacto
+                </button>
               </div>
             </div>
           ) : (
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-slate-400">lock</span>
-                <div>
-                  <p className="text-sm font-bold text-slate-700">Modo Observador</p>
-                  <p className="text-xs text-slate-500">Actualiza a Básico para publicar contenido.</p>
+            <div className="bg-gradient-to-br from-slate-900 to-indigo-900 rounded-[40px] p-8 text-white relative overflow-hidden shadow-2xl group border border-white/5">
+              <div className="absolute top-0 right-0 size-48 bg-blue-500/10 blur-[60px] rounded-full group-hover:bg-blue-500/20 transition-all duration-1000"></div>
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="text-center md:text-left">
+                  <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+                    <span className="material-symbols-outlined text-blue-400 text-xl filled">visibility</span>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">Modo Observador</p>
+                  </div>
+                  <h3 className="text-xl font-black tracking-tight mb-2">Únete a la Acción Social</h3>
+                  <p className="text-blue-100/60 text-xs leading-relaxed max-w-sm">
+                    Estás viendo el impacto global, pero para documentar el tuyo necesitas una cuenta activa.
+                  </p>
                 </div>
+                <button
+                  onClick={() => navigate(View.PRICING)}
+                  className="bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-blue-400 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/20 whitespace-nowrap"
+                >
+                  Desbloquear Posts
+                </button>
               </div>
-              <button onClick={() => navigate(View.PRICING)} className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition-colors">Ver Planes</button>
             </div>
           )}
 
@@ -725,6 +786,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
               setActiveMenuPostId={setActiveMenuPostId}
               onStartEditPost={startEditPost}
               onDeletePost={handleDeletePost}
+              onLockedAction={handleLockedAction}
             />
           ))}
 
@@ -842,8 +904,16 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         setFormImages={setFormImages}
         onClose={resetPostForm}
         onSubmit={handleSubmitPost}
-        onImageSelect={handleImageSelect}
         onRemoveImage={removeFormImage}
+      />
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onUpgrade={() => navigate(View.PRICING)}
+        title={upgradeContent.title}
+        description={upgradeContent.description}
+        planName={upgradeContent.plan}
       />
 
       <ConfirmModal
@@ -893,8 +963,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                 <div className="size-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <span className="material-symbols-outlined text-white text-5xl">workspace_premium</span>
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2">¡Activa tu Kit PRO!</h2>
-                <p className="text-white/90 text-sm">Desbloquea el poder completo de Emprexa</p>
+                <h2 className="text-2xl font-black text-white mb-2">¡Activa tu Kit ENTERPRISE!</h2>
+                <p className="text-white/90 text-sm">Desbloquea la experiencia completa de Emprexa</p>
               </div>
             </div>
 
@@ -906,8 +976,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                     <span className="material-symbols-outlined text-green-600">check_circle</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">5 Publicaciones PRO</h4>
-                    <p className="text-slate-500 text-xs">Comparte tu impacto con herramientas avanzadas</p>
+                    <h4 className="font-bold text-slate-900 text-sm">5 Publicaciones Full Access</h4>
+                    <p className="text-slate-500 text-xs">Documenta tu impacto con herramientas de nivel corporativo</p>
                   </div>
                 </div>
 

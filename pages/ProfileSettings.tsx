@@ -363,10 +363,21 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
                     <div
                       key={sdg.id}
                       onClick={() => toggleSdg(sdg.id)}
-                      className={`aspect-square rounded-xl border-2 flex items-center justify-center cursor-pointer transition-all ${isActive ? 'border-primary bg-primary/10 text-primary' : 'border-slate-100 text-slate-300'}`}
+                      className={`group relative aspect-square rounded-xl border-2 flex items-center justify-center cursor-pointer transition-all ${isActive ? 'border-primary bg-primary/10 text-primary' : 'border-slate-100 text-slate-300 hover:border-slate-300 hover:text-slate-400'}`}
                       style={isActive ? { borderColor: sdg.color, color: sdg.color, backgroundColor: `${sdg.color}10` } : {}}
                     >
                       <span className="material-symbols-outlined">{sdg.icon}</span>
+
+                      <div
+                        className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 z-50 whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-xl pointer-events-none"
+                        style={{ backgroundColor: sdg.color }}
+                      >
+                        {sdg.label}
+                        <div
+                          className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-current"
+                          style={{ color: sdg.color }}
+                        ></div>
+                      </div>
                     </div>
                   );
                 })}

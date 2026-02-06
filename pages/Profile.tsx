@@ -9,6 +9,7 @@ import { PostCard } from '../components/PostCard';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
+import { formatRelativeTime } from '../utils/timeUtils';
 
 export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, followedUserIds, toggleFollowUser, sendMentionNotifications } = useAuth();
@@ -35,28 +36,41 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   const [postToDelete, setPostToDelete] = useState<number | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<{ postId: number, commentId: string } | null>(null);
 
-  const profileId = params?.userId !== undefined ? params.userId : authUser?.id;
+  // Lightbox State - Moved up to fix hook ordering
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState('');
+
+  const profileId = params?.userId;
+  const profileUsername = params?.username;
 
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!profileId) return;
+      // Si no hay userId ni username, y hay un authUser, mostrar el perfil propio
+      // Si no, necesitamos uno de los dos para buscar
+      const targetId = profileId || (!profileUsername ? authUser?.id : null);
+
+      if (!targetId && !profileUsername) return;
       setIsLoadingProfile(true);
 
-      console.log('Profile useEffect triggered, authUser:', authUser?.id, 'profileId:', profileId);
-      console.log('Profile user from auth:', authUser);
-
-      console.log('Fetching profile data for:', profileId);
-
       // 1. Fetch Profile
-      const { data: profile, error: profileError } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('*, organization:organizations(*)')
-        .eq('id', profileId)
-        .single();
+        .select('*, organization:organizations(*)');
 
-      console.log('Profile fetch result:', profile, profileError);
+      if (targetId) {
+        query = query.eq('id', targetId);
+      } else {
+        query = query.eq('username', profileUsername);
+      }
+
+      const { data: profile, error: profileError } = await query.single();
 
       if (profile) {
+        const actualProfileId = profile.id;
         setProfileUser({
           id: profile.id,
           name: profile.name,
@@ -78,13 +92,19 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
         });
       } else if (profileError) {
         console.error('Error fetching profile:', profileError);
+        setIsLoadingProfile(false);
+        return;
+      } else {
+        // Profile not found but no error?
+        setIsLoadingProfile(false);
+        return;
       }
 
       // 2. Fetch User Projects
       const { data: projects } = await supabase
         .from('projects')
         .select('*')
-        .eq('owner_id', profileId);
+        .eq('owner_id', profile.id);
 
       if (projects) {
         setUserProjects(projects.map(p => ({ ...p, sdgId: p.sdg_id, team: [] })));
@@ -94,7 +114,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       const { data: posts } = await supabase
         .from('posts')
         .select('*')
-        .eq('user_id', profileId)
+        .eq('user_id', profile.id)
         .order('created_at', { ascending: false });
 
       if (posts) {
@@ -122,7 +142,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       const { count: followersCount } = await supabase
         .from('follows')
         .select('*', { count: 'exact', head: true })
-        .eq('following_id', profileId);
+        .eq('following_id', profile.id);
 
       // 5. Calculate Impact (simplified for now: projects * 100 + posts * 10 + followers * 5)
       const impactScore = ((projects?.length || 0) * 100) + ((posts?.length || 0) * 10) + ((followersCount || 0) * 5);
@@ -138,21 +158,38 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     };
 
     fetchProfileData();
-  }, [profileId, authUser?.id]);
+  }, [profileId, profileUsername, authUser?.id]);
 
-  const isCurrentUser = profileId === authUser?.id;
-  // Cuando es el usuario actual, usa authUser directamente
-  const user = isCurrentUser ? authUser : (profileUser || (USERS[0] as any));
+  const hasParams = !!profileId || !!profileUsername;
+  const isCurrentUser = profileUsername
+    ? (profileUser?.id === authUser?.id)
+    : (profileId ? profileId === authUser?.id : !hasParams);
+
+  // Cuando es el usuario actual, usa authUser directamente para evitar el parpadeo
+  const user = (isCurrentUser && authUser) ? authUser : profileUser;
   const currentUser = authUser || (USERS[0] as any);
+
+  if (!user && !isLoadingProfile) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Usuario no encontrado</h2>
+          <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">Volver al inicio</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-50">
+        <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
   const isFollowing = followedUserIds.includes(user.id);
 
-  // Lightbox State
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [copiedUrl, setCopiedUrl] = useState('');
 
   const openLightbox = (images: string[], index: number) => {
     if (!images.length) return;
@@ -203,7 +240,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   const handleAddComment = (postId: number, text: string) => {
-    const newComment = { id: `new-${Date.now()}`, userId: currentUser.id, text, time: 'Ahora', likes: 0, isLiked: false, replies: [] };
+    const newComment = { id: `new-${Date.now()}`, userId: currentUser.id, text, time: formatRelativeTime(new Date()), likes: 0, isLiked: false, replies: [] };
     setLocalUserPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return { ...p, recentComments: [...(p.recentComments || []), newComment], comments: (p.comments || 0) + 1 };
@@ -230,7 +267,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   const handleAddCommentReply = (postId: number, commentId: string, text: string) => {
-    const newReply = { id: `reply-${Date.now()}`, userId: currentUser.id, text, time: 'Ahora', likes: 0, isLiked: false };
+    const newReply = { id: `reply-${Date.now()}`, userId: currentUser.id, text, time: formatRelativeTime(new Date()), likes: 0, isLiked: false };
     setLocalUserPosts(prev => prev.map(p => {
       if (p.id === postId) {
         const updatedComments = p.recentComments.map((c: any) => {
@@ -250,9 +287,11 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     setCommentToDelete({ postId, commentId });
   };
 
-  const confirmDeleteComment = () => {
+  const confirmDeleteComment = async () => {
     if (!commentToDelete) return;
     const { postId, commentId } = commentToDelete;
+
+    // Optimistic remove
     setLocalUserPosts(prev => prev.map(p => {
       if (p.id === postId) {
         const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId);
@@ -262,9 +301,19 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     }));
     setActiveMenuCommentId(null);
     setCommentToDelete(null);
+
+    // DB Remove
+    try {
+      const { error } = await supabase.from('comments').delete().eq('id', commentId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      alert("No se pudo eliminar el comentario.");
+    }
   };
 
-  const onSaveEditComment = (postId: number, commentId: string, text: string) => {
+  const onSaveEditComment = async (postId: number, commentId: string, text: string) => {
+    // Optimistic update
     setLocalUserPosts(prev => prev.map(p => {
       if (p.id === postId) {
         const updatedComments = p.recentComments.map((c: any) => c.id === commentId ? { ...c, text } : c);
@@ -273,6 +322,15 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       return p;
     }));
     setEditingComment(null);
+
+    // DB update
+    try {
+      const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving comment edit:", error);
+      alert("No se pudo guardar la edición.");
+    }
   };
 
   return (
@@ -354,8 +412,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
             <p className="text-slate-500 font-medium text-lg mb-2">{user.role}</p>
             {user.organizationId ? (
               <div
-                className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full text-sm font-bold text-slate-700 cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all mb-3"
-                onClick={() => navigate(View.ORG_SETTINGS, { orgId: user.organizationId })}
+                className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full text-sm font-bold text-slate-700 mb-3"
               >
                 <span className="material-symbols-outlined text-base">domain</span>
                 {user.organizationName}

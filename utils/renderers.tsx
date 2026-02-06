@@ -49,11 +49,8 @@ export const renderContent = (text: string, navigate: (view: View, params?: any)
           className="text-primary font-bold cursor-pointer hover:underline"
           onClick={(e) => {
             e.stopPropagation();
-            // Look for user by name (mock logic since we don't have handles yet)
-            const user = USERS.find(u => u.name.toLowerCase().replace(/\s/g, '') === username.toLowerCase());
-            if (user) {
-              navigate(View.PROFILE, { userId: user.id });
-            }
+            // NAVEGACIÓN DIRECTA AL PERFIL: Usar el username (handle)
+            navigate(View.PROFILE, { username });
           }}
         >
           {part}

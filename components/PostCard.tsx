@@ -36,6 +36,7 @@ interface PostCardProps {
     setActiveMenuPostId: (id: number | null) => void;
     onStartEditPost: (post: Post) => void;
     onDeletePost: (postId: number) => void;
+    onLockedAction?: (reason: 'comment' | 'post' | 'dashboard') => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -65,7 +66,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     activeMenuPostId,
     setActiveMenuPostId,
     onStartEditPost,
-    onDeletePost
+    onDeletePost,
+    onLockedAction
 }) => {
     const isCommentsOpen = activeCommentSectionId === post.id;
     const postUser = post.user.id === currentUser.id ? currentUser : post.user;

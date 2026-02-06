@@ -52,7 +52,7 @@ export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4">
+    <div className="flex-1 overflow-y-auto bg-[#FDFDFF] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] overflow-hidden relative">
         <button
           onClick={() => navigate(View.PRICING)}
@@ -78,7 +78,6 @@ export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
             </div>
             <div className="text-right">
               <p className="font-bold text-xl text-slate-900">${price}<span className="text-sm font-normal text-slate-500">/mes</span></p>
-              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">AHORRA 20% ANUAL</span>
             </div>
           </div>
 

@@ -3,12 +3,14 @@ import { View, NavProps, ID, User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { MentionDropdown } from '../components/MentionDropdown';
 import { supabase } from '../utils/supabase';
+import { formatMessageTime, formatRelativeTime } from '../utils/timeUtils';
 
 interface Message {
   id: string;
   text: string;
-  senderId: number | string; // 0 for me, other for them
+  senderId: number | string;
   time: string;
+  createdAt: string;
 }
 
 export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
@@ -31,46 +33,75 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
       if (!authUser) return;
 
       // 1. Fetch conversations (Unique senders/receivers I've chatted with)
-      const { data: convData } = await supabase
+      const { data: convData, error: rpcError } = await supabase
         .rpc('get_user_conversations', { p_user_id: authUser.id });
 
-      // If RPC doesn't exist yet, we'll need a fallback or create the RPC.
-      // For now, let's fetch all messages involving me and derive unique users.
-      const { data: allMsgs } = await supabase
-        .from('messages')
-        .select('sender_id, receiver_id')
-        .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
-        .order('created_at', { ascending: false });
-
-      const uniqueUserIds = new Set<string>();
-      if (allMsgs) {
-        allMsgs.forEach(m => {
-          if (m.sender_id !== authUser.id) uniqueUserIds.add(m.sender_id);
-          if (m.receiver_id !== authUser.id) uniqueUserIds.add(m.receiver_id);
-        });
-      }
-
-      const userIdsArray = Array.from(uniqueUserIds);
-
+      let finalConversations = [];
       let targetId = params?.userId;
-      if (targetId && !uniqueUserIds.has(targetId)) {
-        userIdsArray.unshift(targetId);
-      }
 
-      if (userIdsArray.length > 0) {
-        const { data: profiles } = await supabase.from('profiles').select('*').in('id', userIdsArray);
-        if (profiles) {
-          setConversations(profiles);
+      if (convData && !rpcError) {
+        // Use RPC data
+        finalConversations = convData.map((c: any) => ({
+          ...c,
+          lastMessageTime: c.last_message_time
+        }));
+      } else {
+        // Fallback: Fetch all messages involving me and derive unique users.
+        const { data: allMsgs } = await supabase
+          .from('messages')
+          .select('sender_id, receiver_id, created_at')
+          .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+          .order('created_at', { ascending: false });
 
-          // If we have a target ID from params, set it active
-          if (targetId) {
-            const found = profiles.find(p => p.id === targetId);
-            if (found) setActiveUser(found);
-          } else if (!activeUser && profiles.length > 0) {
-            // Otherwise set the most recent if no active user
-            setActiveUser(profiles[0]);
+        const uniqueUserIds = new Map<string, string>(); // userId -> last_created_at
+        if (allMsgs) {
+          allMsgs.forEach(m => {
+            const otherId = m.sender_id === authUser.id ? m.receiver_id : m.sender_id;
+            const currentTimestamp = uniqueUserIds.get(otherId);
+            if (!currentTimestamp || new Date(m.created_at) > new Date(currentTimestamp)) {
+              uniqueUserIds.set(otherId, m.created_at);
+            }
+          });
+        }
+
+        const userIdsArray = Array.from(uniqueUserIds.keys());
+
+        if (targetId && !uniqueUserIds.has(targetId)) {
+          userIdsArray.unshift(targetId);
+        }
+
+        if (userIdsArray.length > 0) {
+          const { data: profiles } = await supabase.from('profiles').select('*').in('id', userIdsArray);
+          if (profiles) {
+            finalConversations = profiles.map(p => ({
+              ...p,
+              lastMessageTime: uniqueUserIds.get(p.id)
+            })).sort((a, b) => {
+              const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+              const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+              return timeB - timeA;
+            });
           }
         }
+      }
+
+      setConversations(finalConversations);
+
+      // Resolve active user
+      if (targetId) {
+        const found = finalConversations.find(p => p.id === targetId);
+        if (found) {
+          setActiveUser(found);
+        } else {
+          // If not in conversations, fetch it
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', targetId).single();
+          if (profile) {
+            setActiveUser(profile);
+            setConversations(prev => [profile, ...prev]);
+          }
+        }
+      } else if (!activeUser && finalConversations.length > 0) {
+        setActiveUser(finalConversations[0]);
       }
       setIsLoading(false);
     };
@@ -112,7 +143,8 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
           id: m.id,
           text: m.content,
           senderId: m.sender_id,
-          time: formatTime(new Date(m.created_at))
+          time: formatMessageTime(m.created_at),
+          createdAt: m.created_at
         })));
       }
       setIsLoading(false);
@@ -138,7 +170,8 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
               id: payload.new.id,
               text: payload.new.content,
               senderId: payload.new.sender_id,
-              time: formatTime(new Date(payload.new.created_at))
+              time: formatMessageTime(payload.new.created_at),
+              createdAt: payload.new.created_at
             }];
           });
         }
@@ -249,7 +282,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return formatMessageTime(date);
   };
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -265,7 +298,8 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
       id: tempId,
       text: textToSend,
       senderId: authUser.id,
-      time: formatTime(new Date())
+      time: formatMessageTime(new Date()),
+      createdAt: new Date().toISOString()
     };
     setMessages(prev => [...prev, optimisticMsg]);
 
@@ -292,7 +326,8 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
         id: data.id,
         text: data.content,
         senderId: data.sender_id,
-        time: formatTime(new Date(data.created_at))
+        time: formatMessageTime(data.created_at),
+        createdAt: data.created_at
       } : m));
     }
   };
@@ -358,7 +393,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
                   <div className="min-w-0 flex-1">
                     <div className="flex justify-between items-baseline mb-1">
                       <span className={`font-bold text-sm truncate ${unreadCount > 0 ? 'text-slate-900' : 'text-slate-700'}`}>{u.name}</span>
-                      <span className="text-[10px] text-slate-400">Ahora</span>
+                      <span className="text-[10px] text-slate-400">{u.lastMessageTime ? formatRelativeTime(u.lastMessageTime) : ''}</span>
                     </div>
                     <p className={`text-xs truncate ${unreadCount > 0 ? 'text-black font-bold' : 'text-slate-500'}`}>
                       {unreadCount > 0 ? 'Mensaje nuevo...' : 'Haz clic para chatear'}
@@ -401,23 +436,35 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
             </div>
 
             <div className="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
-              <div className="flex justify-center"><span className="bg-slate-200 text-slate-500 text-xs px-2 py-1 rounded">Hoy</span></div>
-
-              {messages.map((msg) => {
+              {messages.map((msg, index) => {
                 const isMe = msg.senderId === currentUser?.id;
-                return (
-                  <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className="size-8 rounded-full bg-cover bg-center shrink-0 mt-auto mb-5" style={{ backgroundImage: `url("${isMe ? currentUser?.avatar : activeUser.avatar}")` }}></div>
+                const prevMsg = messages[index - 1];
+                const msgDate = new Date(msg.createdAt).toLocaleDateString();
+                const prevMsgDate = prevMsg ? new Date(prevMsg.createdAt).toLocaleDateString() : null;
+                const showDivider = msgDate !== prevMsgDate;
 
-                    <div className="flex flex-col max-w-[75%] gap-1">
-                      <div className={`p-4 rounded-2xl shadow-sm text-sm border whitespace-pre-wrap ${isMe ? 'bg-primary text-white rounded-br-none border-primary' : 'bg-white text-slate-800 rounded-bl-none border-slate-200'}`}>
-                        <p>{msg.text}</p>
+                return (
+                  <React.Fragment key={msg.id}>
+                    {showDivider && (
+                      <div className="flex justify-center my-4">
+                        <span className="bg-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                          {new Date(msg.createdAt).toDateString() === new Date().toDateString() ? 'Hoy' : msgDate}
+                        </span>
                       </div>
-                      <span className={`text-[10px] text-slate-400 font-bold px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                        {msg.time}
-                      </span>
+                    )}
+                    <div className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className="size-8 rounded-full bg-cover bg-center shrink-0 mt-auto mb-5" style={{ backgroundImage: `url("${isMe ? currentUser?.avatar : activeUser.avatar}")` }}></div>
+
+                      <div className="flex flex-col max-w-[75%] gap-1">
+                        <div className={`p-4 rounded-2xl shadow-sm text-sm border whitespace-pre-wrap ${isMe ? 'bg-primary text-white rounded-br-none border-primary' : 'bg-white text-slate-800 rounded-bl-none border-slate-200'}`}>
+                          <p>{msg.text}</p>
+                        </div>
+                        <span className={`text-[10px] text-slate-400 font-bold px-1 ${isMe ? 'text-right' : 'text-left'}`}>
+                          {msg.time}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
               <div ref={chatEndRef} />

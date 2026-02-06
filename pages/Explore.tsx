@@ -3,6 +3,7 @@ import { View, NavProps, ID, Post, Project, User } from '../types';
 import { SDGS, POSTS, USERS, PROJECTS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
+import { UpgradeModal } from '../components/UpgradeModal';
 
 export const Explore: React.FC<NavProps> = ({ navigate }) => {
   const { user, followedUserIds, toggleFollowUser } = useAuth();
@@ -14,6 +15,8 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
   const [sortedSdgs, setSortedSdgs] = useState<any[]>(SDGS);
   const [trendingTopics, setTrendingTopics] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeContent, setUpgradeContent] = useState({ title: '', description: '', plan: '' });
 
   // FIX: Safe currentUser reference - never use users[0] when array might be empty
   const currentUser = user || {
@@ -160,30 +163,23 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
           const formattedTopics = topics.map(id => {
             const sdg = SDGS.find(s => s.id === id);
             const count = sdgWeight[id] || Math.floor(Math.random() * 100);
+
+            // Lógica para elegir una de las 3 fotos locales (.avif) al azar
+            const randomPhotoNum = Math.floor(Math.random() * 3) + 1;
+            const sdgStr = id.toString().padStart(2, '0');
+            const photoStr = randomPhotoNum.toString().padStart(2, '0');
+            const localImage = `/assets/sdgs/${sdgStr}-${photoStr}.avif`;
+
             return {
               id: id,
               tag: sdg?.label || `ODS ${id}`,
               short: sdg?.short || 'Impacto',
               posts: count > 1000 ? `${(count / 1000).toFixed(1)}k` : count,
-              image: `https://images.unsplash.com/photo-${1500000000 + id}?auto=format&fit=crop&w=400&q=80`, // Dynamic-ish image
+              image: localImage,
               color: sdg?.color || '#000',
               icon: sdg?.icon || 'grade',
               isInterest: interests.includes(id)
             };
-          });
-
-          // Overwrite images with specific beautiful ones for top SDGs
-          const customImages: any = {
-            13: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
-            7: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e',
-            5: 'https://images.unsplash.com/photo-1573164713988-8665fc963095',
-            2: 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad',
-            1: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c',
-            4: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b'
-          };
-
-          formattedTopics.forEach(t => {
-            if (customImages[t.id]) t.image = customImages[t.id] + '?auto=format&fit=crop&w=400&q=80';
           });
 
           setTrendingTopics(formattedTopics);
@@ -494,21 +490,45 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
               </div>
             </section>
 
-            {/* Call to Action */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-center text-white relative overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[48px] p-12 text-center text-white relative overflow-hidden shadow-2xl border border-white/5 group">
+              <div className="absolute top-0 right-0 size-96 bg-blue-500/10 blur-[120px] rounded-full group-hover:bg-blue-500/20 transition-all duration-1000"></div>
               <div className="relative z-10">
-                <h3 className="text-2xl font-black mb-2">¿Tienes una iniciativa de impacto?</h3>
-                <p className="text-slate-300 mb-6 max-w-xl mx-auto">Comparte tu proyecto con la comunidad y encuentra socios, voluntarios o financiación.</p>
+                <div className="size-16 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/10">
+                  <span className="material-symbols-outlined text-3xl text-blue-400">rocket_launch</span>
+                </div>
+                <h3 className="text-3xl font-black mb-4 tracking-tighter">¿Tienes una iniciativa de impacto?</h3>
+                <p className="text-slate-400 mb-8 max-w-xl mx-auto text-lg leading-relaxed">
+                  Conecta con organizaciones, encuentra voluntarios y amplifica tu alcance global.
+                </p>
                 <button
-                  onClick={() => navigate(View.CREATE_PROJECT)}
-                  className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/30 flex items-center gap-2 mx-auto"
+                  onClick={() => {
+                    if (user?.plan === 'enterprise') {
+                      navigate(View.CREATE_PROJECT);
+                    } else {
+                      setUpgradeContent({
+                        title: 'Gestión Institucional',
+                        description: 'La creación de proyectos y equipos está reservada para cuentas Enterprise.',
+                        plan: 'Enterprise'
+                      });
+                      setShowUpgradeModal(true);
+                    }
+                  }}
+                  className="bg-white text-slate-900 px-12 py-4 rounded-2xl font-black hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center gap-3 mx-auto"
                 >
-                  <span className="material-symbols-outlined">add_circle</span> Publicar Proyecto
+                  <span className="material-symbols-outlined font-black">add_circle</span> Empezar Proyecto
                 </button>
               </div>
-              <div className="absolute top-0 right-0 -mr-20 -mt-20 size-64 bg-white/5 rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 -ml-20 -mb-20 size-64 bg-primary/20 rounded-full blur-3xl"></div>
             </div>
+
+            <UpgradeModal
+              isOpen={showUpgradeModal}
+              onClose={() => setShowUpgradeModal(false)}
+              onUpgrade={() => navigate(View.PRICING)}
+              title={upgradeContent.title}
+              description={upgradeContent.description}
+              planName={upgradeContent.plan}
+              icon="domain"
+            />
           </div>
         )}
 

@@ -23,23 +23,31 @@ export const MentionDropdown: React.FC<MentionDropdownProps> = ({ suggestions, o
             <div className="px-3 py-1 mb-1 border-b border-slate-50">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sugerencias</span>
             </div>
-            {suggestions.map((user, index) => (
+            {suggestions.map((item: any, index) => (
                 <div
-                    key={user.id}
-                    onClick={() => onSelect(user)}
+                    key={`${item.type}-${item.id}`}
+                    onClick={() => onSelect(item)}
                     className={`px-3 py-2 flex items-center gap-3 cursor-pointer transition-colors ${index === activeIndex ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                 >
                     <div
-                        className="size-8 rounded-full bg-cover bg-center border border-slate-100"
-                        style={{ backgroundImage: `url("${user.avatar}")` }}
+                        className="size-8 rounded-full bg-cover bg-center border border-slate-100 shrink-0"
+                        style={{ backgroundImage: `url("${item.avatar || 'https://via.placeholder.com/150'}")` }}
                     ></div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <p className="font-bold text-xs truncate">{user.name}</p>
-                            {renderBadge(user.plan || 'free')}
+                            <p className="font-bold text-xs truncate">{item.name}</p>
+                            {item.type === 'org' ? (
+                                <span className="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-1 border border-indigo-100">
+                                    <span className="material-symbols-outlined text-[10px] filled">domain</span> ORG
+                                </span>
+                            ) : renderBadge(item.plan || 'free')}
                         </div>
-                        <p className="text-[10px] text-slate-500 truncate">{user.role}</p>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black text-slate-400">@{item.username || item.handle || item.name.toLowerCase().replace(/\s/g, '')}</span>
+                            <span className="text-slate-300">•</span>
+                            <p className="text-[10px] text-slate-500 truncate">{item.role}</p>
+                        </div>
                     </div>
                 </div>
             ))}

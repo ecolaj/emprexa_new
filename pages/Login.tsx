@@ -21,94 +21,8 @@ interface BackgroundState {
   loaded: boolean;
 }
 
-const IMAGES_BY_SDG: Record<number, string[]> = {
-  1: [
-    "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=2070&auto=format&fit=crop"
-  ],
-  2: [
-    "https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1621451537084-482c73073a0f?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2069&auto=format&fit=crop"
-  ],
-  3: [
-    "https://images.unsplash.com/photo-1571772996211-2f02c9727629?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?q=80&w=2089&auto=format&fit=crop"
-  ],
-  4: [
-    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2018&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=2073&auto=format&fit=crop"
-  ],
-  5: [
-    "https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=2069&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1590650516494-0c8e4a4dd67e?q=80&w=2071&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1607748862156-7c548e7e98f4?q=80&w=2070&auto=format&fit=crop"
-  ],
-  6: [
-    "https://images.unsplash.com/photo-1520699918507-3c3e05c46b90?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1538300342682-cf57afb97285?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1617155093730-a8bf47be792d?q=80&w=2070&auto=format&fit=crop"
-  ],
-  7: [
-    "https://images.unsplash.com/photo-1509391366360-2e959784a276?q=80&w=2072&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1466611653911-95081537e5b7?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?q=80&w=1974&auto=format&fit=crop"
-  ],
-  8: [
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?q=80&w=2072&auto=format&fit=crop"
-  ],
-  9: [
-    "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?q=80&w=2049&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop"
-  ],
-  10: [
-    "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=2070&auto=format&fit=crop"
-  ],
-  11: [
-    "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=2144&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1449824913929-49aa7115669f?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1445964047600-cdbdb873673d?q=80&w=2000&auto=format&fit=crop"
-  ],
-  12: [
-    "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1974&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1605600659908-0ef719419d41?q=80&w=2073&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1526951521990-620dc14c2103?q=80&w=1978&auto=format&fit=crop"
-  ],
-  13: [
-    "https://images.unsplash.com/photo-1611273426761-53c8577a3c18?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=2074&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=2000&auto=format&fit=crop"
-  ],
-  14: [
-    "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1582967788606-a171f1080ca8?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=2070&auto=format&fit=crop"
-  ],
-  15: [
-    "https://images.unsplash.com/photo-1448375240586-dfd8d395ea6c?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=2070&auto=format&fit=crop"
-  ],
-  16: [
-    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1575505586569-646b2ca898fc?q=80&w=2070&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1555374018-13a8994ab246?q=80&w=1915&auto=format&fit=crop"
-  ],
-  17: [
-    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2084&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=2069&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2032&auto=format&fit=crop"
-  ]
-};
+// La selección de imágenes ahora se hace dinámicamente desde /public/assets/sdgs/
+
 
 export const Login: React.FC<NavProps> = ({ navigate }) => {
   const { login, isLoading } = useAuth(); // Use Auth Context
@@ -123,6 +37,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
   const [selectedSdg, setSelectedSdg] = useState<typeof SDGS[0] | null>(null);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerMessage, setRegisterMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [sdgStats, setSdgStats] = useState<Record<number, { projects: number, posts: number }>>({});
 
   // Controlled Inputs
   const [loginEmail, setLoginEmail] = useState("");
@@ -143,20 +58,62 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
   const isRegisterValid =
     registerData.name.trim() !== '' &&
     registerData.email.trim() !== '' &&
-    registerData.password.trim() !== '' &&
+    registerData.password.length >= 6 &&
     registerData.password === registerData.confirmPassword &&
     registerData.acceptedTerms;
 
   useEffect(() => {
+    // Generar un ID de ODS aleatorio (1-17)
     const randomSdgId = Math.floor(Math.random() * 17) + 1;
-    const imagesForSdg = IMAGES_BY_SDG[randomSdgId] || IMAGES_BY_SDG[13];
-    const randomUrl = imagesForSdg[Math.floor(Math.random() * imagesForSdg.length)];
+    // Generar un número de foto aleatorio (1-3)
+    const randomPhotoNum = Math.floor(Math.random() * 3) + 1;
+
+    // Formatear con ceros a la izquierda para coincidir con la nomenclatura (ej: 01-01)
+    const sdgStr = randomSdgId.toString().padStart(2, '0');
+    const photoStr = randomPhotoNum.toString().padStart(2, '0');
+
+    // URL local basada en tu nomenclatura y formato .avif
+    const imageUrl = `/assets/sdgs/${sdgStr}-${photoStr}.avif`;
 
     setBackground({
       sdgId: randomSdgId,
-      url: randomUrl,
+      url: imageUrl,
       loaded: false
     });
+  }, []);
+
+  useEffect(() => {
+    const fetchSdgStats = async () => {
+      try {
+        const { data: projectsData } = await supabase.from('projects').select('sdg_id');
+        const { data: postsData } = await supabase.from('posts').select('sdg_ids');
+
+        const stats: Record<number, { projects: number, posts: number }> = {};
+
+        // Initialize with 0
+        SDGS.forEach(sdg => { stats[sdg.id] = { projects: 0, posts: 0 }; });
+
+        // Count Projects
+        projectsData?.forEach((p: any) => {
+          if (stats[p.sdg_id]) stats[p.sdg_id].projects++;
+        });
+
+        // Count Posts
+        postsData?.forEach((p: any) => {
+          if (Array.isArray(p.sdg_ids)) {
+            p.sdg_ids.forEach((id: number) => {
+              if (stats[id]) stats[id].posts++;
+            });
+          }
+        });
+
+        setSdgStats(stats);
+      } catch (error) {
+        console.error('Error fetching SDG stats:', error);
+      }
+    };
+
+    fetchSdgStats();
   }, []);
 
   const handleImageLoad = () => {
@@ -327,10 +284,10 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
 
           {activeSdgInfo && (
             <div className={`flex flex-col items-end transition-all duration-700 ${background?.loaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl text-white shadow-lg transition-transform hover:scale-105">
+              <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/20 px-5 py-3 rounded-2xl text-white shadow-lg transition-transform hover:scale-105 max-w-sm">
                 <div className="text-right">
-                  <span className="block text-[10px] font-bold uppercase tracking-widest opacity-80">Objetivo {activeSdgInfo.id}</span>
-                  <span className="block text-sm font-bold leading-none">{activeSdgInfo.short}</span>
+                  <span className="block text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Objetivo {activeSdgInfo.id}</span>
+                  <span className="block text-sm font-black leading-tight">{activeSdgInfo.label}</span>
                 </div>
                 <div className="w-px h-8 bg-white/20"></div>
                 <span className="material-symbols-outlined text-3xl">{activeSdgInfo.icon}</span>
@@ -347,7 +304,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               <span className="text-primary-300">una conexión a la vez.</span>
             </h1>
             <p className="text-lg text-slate-200 font-medium leading-relaxed opacity-90 drop-shadow-md">
-              Únete a la red más grande de organizaciones dedicados a los Objetivos de Desarrollo Sostenible de la ONU.
+              Únete a la red más grande de organizaciones dedicados a los Objetivos de Desarrollo Sostenible.
             </p>
           </div>
 
@@ -478,7 +435,10 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-bold text-slate-700 block mb-1">Contraseña</label>
+                    <div className="flex justify-between items-end mb-1">
+                      <label className="text-sm font-bold text-slate-700">Contraseña</label>
+                      <span className="text-[10px] text-slate-400 font-medium">Mínimo 6 caracteres</span>
+                    </div>
                     <input
                       type="password"
                       required
@@ -754,21 +714,24 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
       {isSdgModalOpen && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
           <div className="bg-slate-50 rounded-[2.5rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-[fade-in_0.3s_ease-out]">
-            <div className="p-8 md:p-10 flex flex-col h-full">
-              <div className="flex justify-between items-start mb-8">
+            <div className="p-6 md:p-8 flex flex-col h-full">
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">Objetivos de Desarrollo Sostenible</h3>
-                  <p className="text-slate-500 font-medium mt-1">Conoce las metas globales para transformar nuestro mundo.</p>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Objetivos de Desarrollo Sostenible</h3>
+                  <p className="text-slate-400 font-medium mt-1 text-sm leading-relaxed max-w-4xl">
+                    Los Objetivos de Desarrollo Sostenible (ODS), también conocidos como Objetivos Globales, fueron adoptados por las Naciones Unidas en 2015 como un llamamiento universal para poner fin a la pobreza, proteger el planeta y garantizar que para el 2030 todas las personas disfruten de paz y prosperidad.
+                    <span className="hidden md:inline"> Los 17 ODS están integrados y reconocen que la acción en un área afectará los resultados en otras.</span>
+                  </p>
                 </div>
-                <button onClick={() => { setIsSdgModalOpen(false); setSelectedSdg(null); }} className="size-12 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all">
-                  <span className="material-symbols-outlined text-2xl">close</span>
+                <button onClick={() => { setIsSdgModalOpen(false); setSelectedSdg(null); }} className="size-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0 ml-4">
+                  <span className="material-symbols-outlined text-xl">close</span>
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
+              <div className="flex-1 flex flex-col justify-center min-h-0 relative">
                 {selectedSdg ? (
                   <div
-                    className="h-full rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col justify-end min-h-[400px] animate-[fade-in_0.4s_ease-out]"
+                    className="h-full rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col justify-end animate-[fade-in_0.4s_ease-out]"
                     style={{ backgroundColor: selectedSdg.color }}
                   >
                     <span className="absolute -top-10 -right-10 material-symbols-outlined text-[300px] text-white/20 pointer-events-none select-none">
@@ -784,8 +747,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                       <div className="flex items-center gap-4 mb-4">
                         <span className="inline-block bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em]">Meta {selectedSdg.id}</span>
                         <div className="flex gap-4 text-xs font-bold text-white/90">
-                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">folder_open</span> {PROJECTS.filter(p => p.sdgId === selectedSdg.id).length} Proyectos</span>
-                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">dynamic_feed</span> {POSTS.filter(p => p.sdgIds.includes(selectedSdg.id)).length} Publicaciones</span>
+                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">folder_open</span> {sdgStats[selectedSdg.id]?.projects || 0} Proyectos</span>
+                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">dynamic_feed</span> {sdgStats[selectedSdg.id]?.posts || 0} Publicaciones</span>
                         </div>
                       </div>
                       <h4 className="text-4xl md:text-5xl font-black mb-6 leading-[1.1]">{selectedSdg.label}</h4>
@@ -793,19 +756,32 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4 p-1">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 gap-2 sm:gap-3 p-1">
                     {SDGS.map(sdg => (
-                      <button
-                        key={sdg.id}
-                        onClick={() => setSelectedSdg(sdg)}
-                        className="aspect-square rounded-[1.5rem] p-4 flex flex-col justify-between items-start text-left text-white shadow-sm hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all relative overflow-hidden group"
-                        style={{ backgroundColor: sdg.color }}
-                      >
-                        <span className="text-[10px] font-black opacity-80 z-10">0{sdg.id}</span>
-                        <span className="material-symbols-outlined text-3xl md:text-4xl font-light z-10">{sdg.icon}</span>
-                        <span className="text-[10px] font-black leading-tight z-10 line-clamp-2">{sdg.short}</span>
-                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      </button>
+                      <div key={sdg.id} className="relative group aspect-square">
+                        <button
+                          onClick={() => setSelectedSdg(sdg)}
+                          className="w-full h-full rounded-[1.2rem] p-3 flex flex-col justify-between items-start text-left text-white shadow-sm hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all relative overflow-hidden"
+                          style={{ backgroundColor: sdg.color }}
+                        >
+                          <span className="text-[9px] font-black opacity-80 z-10">0{sdg.id}</span>
+                          <span className="material-symbols-outlined text-2xl md:text-3xl font-light z-10">{sdg.icon}</span>
+                          <span className="text-[9px] font-black leading-tight z-10 line-clamp-2">{sdg.short}</span>
+                          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </button>
+
+                        {/* Tooltip */}
+                        <div
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 z-50 whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-xl pointer-events-none"
+                          style={{ backgroundColor: sdg.color }}
+                        >
+                          {sdg.label}
+                          <div
+                            className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-current"
+                            style={{ color: sdg.color }}
+                          ></div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -819,29 +795,62 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
       {isEmprexaModalOpen && (
         <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-[fade-in_0.3s_ease-out] relative">
-            <div className="p-10 md:p-14 text-center">
-              <div className="size-24 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center mx-auto mb-10 transform -rotate-6">
-                <Logo className="h-10" />
+
+            {/* Fondo con patrón de ODS en diagonal */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] grid grid-cols-6 gap-12 -rotate-45 opacity-[0.07]">
+                {[...SDGS, ...SDGS, ...SDGS].map((sdg, i) => (
+                  <div key={i} className="flex items-center justify-center">
+                    <span className="material-symbols-outlined text-7xl" style={{ color: sdg.color }}>
+                      {sdg.icon}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <h3 className="text-4xl font-black text-slate-900 mb-8 tracking-tight">El Propósito detras de Emprexa</h3>
-              <div className="space-y-6 text-lg md:text-xl text-slate-600 font-medium leading-[1.6]">
-                <p>
-                  Emprexa no es una red social más, acá no se trata de influencers, de gatitos bailando, memes o demás.
-                  Se trata de una <span className="text-primary font-black">red seria, con propósito, con impacto</span>, para que las organizaciones den visibilidad a sus proyectos.
-                </p>
-                <p>
-                  Si hay una sección de pagos es para evitar que cualquiera publique cosas como lo que hoy vemos en las otras redes.
-                  Así que las personas adquieren un <span className="text-slate-900 font-black">compromiso serio al pagar</span> para publicar y dar visibilidad a sus proyectos.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsEmprexaModalOpen(false)}
-                className="mt-12 w-full py-4 bg-slate-950 text-white rounded-2xl font-black text-base hover:bg-slate-800 shadow-xl transition-all active:scale-95"
-              >
-                Entendido, quiero impactar
-              </button>
             </div>
-            <button onClick={() => setIsEmprexaModalOpen(false)} className="absolute top-6 right-6 text-slate-300 hover:text-slate-900 transition-colors">
+
+            <div className="p-8 md:p-12 text-center relative z-10">
+              <div className="size-20 bg-primary/10 text-primary rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 transform -rotate-6">
+                <Logo className="h-8" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-6 tracking-tight">Emprexa no es una red social.</h3>
+              <div className="space-y-4 text-sm md:text-base text-slate-600 font-medium leading-relaxed text-left">
+                <p>
+                  No. Es una <span className="text-primary font-black">red de impacto</span>.
+                  <br />
+                  Aquí las historias no compiten por atención.
+                </p>
+
+                <div>
+                  <p className="font-bold text-slate-900 mb-1">Construyen cambio.</p>
+                  <p>
+                    Emprexa es el espacio donde organizaciones, empresas y personas con propósito dan visibilidad a sus acciones alineadas a los Objetivos de Desarrollo Sostenible.
+                  </p>
+                  <ul className="list-disc pl-5 mt-2 space-y-0.5 text-slate-500 text-xs md:text-sm">
+                    <li>Un lugar sin ruido.</li>
+                    <li>Sin contenido irrelevante.</li>
+                    <li>Sin autopromoción vacía.</li>
+                    <li><strong className="text-slate-700">Solo impacto real.</strong></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="font-bold text-slate-900">¿Por qué existe?</p>
+                  <p>Porque el impacto aislado se pierde. El impacto conectado se multiplica.</p>
+                </div>
+
+                <div>
+                  <p className="font-bold text-slate-900">¿Por qué publicar es de pago?</p>
+                  <p>Para proteger la calidad, la credibilidad y el propósito. Quien publica aquí asume un compromiso con el valor que entrega.</p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 mt-2">
+                  <p className="text-slate-900 font-black text-lg">Bienvenido a Emprexa.</p>
+                  <p className="text-primary font-bold">Donde el impacto deja de ser invisible.</p>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setIsEmprexaModalOpen(false)} className="absolute top-6 right-6 text-slate-300 hover:text-slate-900 transition-colors z-50">
               <span className="material-symbols-outlined text-2xl">close</span>
             </button>
           </div>

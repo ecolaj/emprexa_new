@@ -61,6 +61,7 @@ export interface User {
   trialPostsRemaining?: number;
   trialEndsAt?: string;
   hasUsedTrial?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface Organization {

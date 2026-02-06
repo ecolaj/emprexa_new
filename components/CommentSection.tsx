@@ -7,7 +7,7 @@ import { supabase } from '../utils/supabase';
 
 interface CommentSectionProps {
     post: Post;
-    currentUser: User;
+    currentUser: User | null; // Allow null for public views
     onNavigate: (view: View, params?: any) => void;
     onToggleCommentLike: (postId: number, commentId: string) => void;
     onAddCommentReply: (postId: number, commentId: string, text: string) => void;
@@ -97,7 +97,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 const replies = data.filter(c => c.parent_id);
 
                 const combined = mainComments.map(c => {
-                    let userData = usersMap[c.user_id] || USERS.find(u => u.id === c.user_id) || currentUser;
+                    let userData = usersMap[c.user_id] || USERS.find(u => u.id === c.user_id) || (currentUser && currentUser.id === c.user_id ? currentUser : USERS[0]);
 
                     // Force usage of authUser if IDs match
                     if (authUser && c.user_id === authUser.id) {
@@ -113,7 +113,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                         likes: c.likes_count || c.likes || 0,
                         isLiked: userLikesSet.has(c.id),
                         replies: replies.filter(r => r.parent_id === c.id).map(r => {
-                            let replyUser = usersMap[r.user_id] || USERS.find(u => u.id === r.user_id) || currentUser;
+                            let replyUser = usersMap[r.user_id] || USERS.find(u => u.id === r.user_id) || (currentUser && currentUser.id === r.user_id ? currentUser : USERS[0]);
 
                             // Force usage of authUser if IDs match
                             if (authUser && r.user_id === authUser.id) {
@@ -389,7 +389,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 <div className="space-y-4 mb-4">
                     {comments.map((comment: any) => {
                         const author = comment.user;
-                        const isCommentOwner = currentUser.id === comment.userId;
+                        const isCommentOwner = authUser?.id === comment.user_id;
+                        const isPostOwner = authUser?.id === post.user_id || authUser?.id === post.user?.id;
+                        const isAdmin = currentUser?.isAdmin;
+                        const canDelete = isCommentOwner || isPostOwner || isAdmin;
+                        const canEdit = isCommentOwner;
                         const isCommentEditing = editingComment?.commentId === comment.id;
 
                         return (
@@ -411,7 +415,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                 </p>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] text-slate-400 font-medium">{comment.time}</span>
-                                                    {(isCommentOwner) && (
+                                                    {(canDelete || canEdit) && (
                                                         <div className="relative">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id); }}
@@ -420,9 +424,17 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                 <span className="material-symbols-outlined text-sm">more_vert</span>
                                                             </button>
                                                             {activeMenuCommentId === comment.id && (
-                                                                <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
-                                                                    <button onClick={() => onStartEditComment(post.id, comment)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700">Editar</button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); onDeleteComment(post.id, comment.id); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600">Eliminar</button>
+                                                                <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.1s_ease-out]">
+                                                                    {canEdit && (
+                                                                        <button onClick={() => { onStartEditComment(post.id, comment); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
+                                                                            <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                        </button>
+                                                                    )}
+                                                                    {canDelete && (
+                                                                        <button onClick={(e) => { e.stopPropagation(); onDeleteComment(post.id, comment.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
+                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -468,30 +480,72 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                 {comment.replies && comment.replies.length > 0 && (
                                     <div className="ml-10 space-y-3 border-l-2 border-slate-100 pl-4 mt-2">
                                         {comment.replies.map((reply: any) => {
-                                            const rawReplyAuthor = USERS.find(u => u.id === reply.userId) || USERS[0];
-                                            let replyAuthor = rawReplyAuthor.id === currentUser.id ? currentUser : rawReplyAuthor;
+                                            // FIX: Use the enriched user object directly from the reply
+                                            // This ensures we use the loaded profile from Supabase instead of falling back to hardcoded USERS[0]
+                                            const replyAuthor = reply.user || USERS[0];
 
-                                            // Force authUser usage for correct profile image
-                                            if (authUser && reply.userId === authUser.id) {
-                                                replyAuthor = authUser;
-                                            }
+                                            const isReplyOwner = (authUser?.id === reply.user_id) || (authUser?.id === reply.userId);
+                                            const isReplyEditing = editingComment?.commentId === reply.id;
+                                            const canDeleteReply = isReplyOwner || isPostOwner || isAdmin;
+                                            const canEditReply = isReplyOwner;
 
                                             return (
-                                                <div key={reply.id} className="flex gap-2 items-start">
+                                                <div key={reply.id} className="flex gap-2 items-start group/reply">
                                                     <div
                                                         className="size-6 rounded-full bg-cover bg-center shrink-0 border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
                                                         style={{ backgroundImage: `url("${replyAuthor.avatar}")` }}
                                                         onClick={(e) => { e.stopPropagation(); onNavigate(View.PROFILE, { userId: replyAuthor.id }); }}
                                                     ></div>
                                                     <div className="flex-1">
-                                                        <div className="bg-white/50 border border-slate-100 rounded-xl px-3 py-1.5 shadow-sm">
-                                                            <p
-                                                                className="text-[10px] font-bold text-slate-900 cursor-pointer hover:text-primary hover:underline"
-                                                                onClick={(e) => { e.stopPropagation(); onNavigate(View.PROFILE, { userId: replyAuthor.id }); }}
-                                                            >
-                                                                {replyAuthor.name}
-                                                            </p>
-                                                            <p className="text-xs text-slate-600 mt-0.5">{reply.text}</p>
+                                                        <div className="bg-white/50 border border-slate-100 rounded-xl px-3 py-1.5 shadow-sm relative group">
+                                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                                <p
+                                                                    className="text-[10px] font-bold text-slate-900 cursor-pointer hover:text-primary hover:underline"
+                                                                    onClick={(e) => { e.stopPropagation(); onNavigate(View.PROFILE, { userId: replyAuthor.id }); }}
+                                                                >
+                                                                    {replyAuthor.name}
+                                                                </p>
+
+                                                                {(canDeleteReply || canEditReply) && (
+                                                                    <div className="relative">
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
+                                                                            className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-xs">more_vert</span>
+                                                                        </button>
+                                                                        {activeMenuCommentId === reply.id && (
+                                                                            <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.1s_ease-out]">
+                                                                                {canEditReply && (
+                                                                                    <button onClick={() => { onStartEditComment(post.id, reply); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-2">
+                                                                                        <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                    </button>
+                                                                                )}
+                                                                                {canDeleteReply && (
+                                                                                    <button onClick={(e) => { e.stopPropagation(); onDeleteComment(post.id, reply.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-[10px] font-bold text-red-600 flex items-center gap-2">
+                                                                                        <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {isReplyEditing ? (
+                                                                <div className="mt-1">
+                                                                    <textarea
+                                                                        value={editingComment.text}
+                                                                        onChange={(e) => setEditingComment({ ...editingComment, text: e.target.value })}
+                                                                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:outline-none focus:border-primary resize-none h-12"
+                                                                    />
+                                                                    <div className="flex justify-end gap-2 mt-1">
+                                                                        <button onClick={() => setEditingComment(null)} className="text-[9px] font-bold text-slate-500 hover:underline">Cancelar</button>
+                                                                        <button onClick={() => onSaveEditComment(post.id, reply.id, editingComment.text)} className="text-[9px] font-bold text-primary hover:underline">Guardar</button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-xs text-slate-600 leading-normal">{reply.text}</p>
+                                                            )}
                                                         </div>
                                                         <div className="flex gap-3 mt-1 ml-1 text-[9px] font-bold text-slate-400">
                                                             <button

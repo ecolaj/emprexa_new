@@ -183,6 +183,36 @@ function AppContent() {
     }
   }, []);
 
+  // --- SINCRONIZACIÓN DE NAVEGACIÓN (Botones Atrás/Adelante) ---
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewParam = urlParams.get('view');
+      const idParam = urlParams.get('id');
+
+      if (viewParam === 'post' && idParam) {
+        setCurrentView(View.SINGLE_POST);
+        setNavParams({ postId: idParam });
+      } else if (viewParam === 'pricing') {
+        setCurrentView(View.PRICING);
+        setNavParams(null);
+      } else if (viewParam === 'onboarding') {
+        setCurrentView(View.ONBOARDING);
+        setNavParams(null);
+      } else {
+        if (!user) {
+          setCurrentView(View.LOGIN);
+        } else {
+          setCurrentView(View.FEED);
+        }
+        setNavParams(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user]);
+
   // Manejar rutas hash para reset-password - VERSIÓN CORREGIDA
   useEffect(() => {
     const handleHashRoute = () => {
@@ -252,12 +282,11 @@ function AppContent() {
   // --- FULL SCREEN VIEWS (No Sidebar) ---
   if (currentView === View.LOGIN) return <Login currentView={currentView} navigate={navigate} />;
   if (currentView === View.ONBOARDING) return <Onboarding currentView={currentView} navigate={navigate} />;
-  if (currentView === View.CHECKOUT) return <Checkout currentView={currentView} navigate={navigate} params={navParams} />;
-  if (currentView === View.SUCCESS) return <Success currentView={currentView} navigate={navigate} params={navParams} />;
   if (currentView === View.RESET_PASSWORD) return <ResetPassword currentView={currentView} navigate={navigate} />;
   if (currentView === View.PROCESS_RECOVERY) return <ProcessRecovery currentView={currentView} navigate={navigate} />;
   // Public Post View - SIEMPRE visible, con o sin usuario
-  if (currentView === View.SINGLE_POST) {
+  // Public Views - Renderizados fuera del layout con Sidebar para visitantes
+  if (!user && (currentView === View.SINGLE_POST)) {
     return <SinglePost currentView={currentView} navigate={navigate} params={navParams} />;
   }
 
@@ -307,6 +336,8 @@ function AppContent() {
         {currentView === View.SEARCH && <Search currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.FEED && <Feed currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.PRICING && <Pricing currentView={currentView} navigate={navigate} params={navParams} />}
+        {currentView === View.CHECKOUT && <Checkout currentView={currentView} navigate={navigate} params={navParams} />}
+        {currentView === View.SUCCESS && <Success currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.EXPLORE && <Explore currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.SDG_FEED && <SDGFeed currentView={currentView} navigate={navigate} params={navParams} />}
         {currentView === View.HASHTAG && <HashtagFeed currentView={currentView} navigate={navigate} params={navParams} />}

@@ -174,8 +174,9 @@ export const usePostInteractions = (
         setActiveReplyToId(null);
     };
 
-    const handleDeleteComment = (postId: number, commentId: string) => {
+    const handleDeleteComment = async (postId: number, commentId: string) => {
         if (window.confirm("¿Eliminar comentario?")) {
+            // Optimistic Update
             setPosts(prev => prev.map(p => {
                 if (p.id === postId) {
                     const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId);
@@ -184,10 +185,20 @@ export const usePostInteractions = (
                 return p;
             }));
             setActiveMenuCommentId(null);
+
+            // DB Update
+            try {
+                const { error } = await supabase.from('comments').delete().eq('id', commentId);
+                if (error) throw error;
+            } catch (error) {
+                console.error("Error deleting comment:", error);
+                alert("No se pudo eliminar el comentario.");
+            }
         }
     };
 
-    const onSaveEditComment = (postId: number, commentId: string, text: string) => {
+    const onSaveEditComment = async (postId: number, commentId: string, text: string) => {
+        // Optimistic Update
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const updatedComments = p.recentComments.map((c: any) => c.id === commentId ? { ...c, text } : c);
@@ -196,6 +207,15 @@ export const usePostInteractions = (
             return p;
         }));
         setEditingComment(null);
+
+        // DB Update
+        try {
+            const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
+            if (error) throw error;
+        } catch (error) {
+            console.error("Error updating comment:", error);
+            alert("No se pudo guardar el comentario.");
+        }
     };
 
     return {

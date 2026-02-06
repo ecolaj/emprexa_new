@@ -58,7 +58,7 @@ export const Pricing: React.FC<NavProps> = ({ navigate }) => {
           <div className="space-y-4 mb-8">
             <p className="text-xs font-bold uppercase text-slate-400">Incluye:</p>
             <ul className="space-y-3">
-              {['Ver Publicaciones y Proyectos', 'Interactuar (Like, Comentar)', 'Visualizar Perfiles', 'Chat Básico'].map(feat => (
+              {['Ver Publicaciones y Proyectos', 'Interactuar (Like, Comentar, Save)', 'Visualizar Perfiles', 'Chat Básico'].map(feat => (
                 <li key={feat} className="flex items-start gap-3 text-sm text-slate-700">
                   <span className="material-symbols-outlined text-green-500 text-lg">check</span> {feat}
                 </li>
