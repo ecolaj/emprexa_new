@@ -6,6 +6,7 @@ import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useAuth } from '../context/AuthContext';
 import { ImageLightbox } from '../components/ImageLightbox';
+import { supabase } from '../utils/supabase';
 
 type FilterType = 'all' | 'projects' | 'people' | 'orgs';
 
@@ -104,7 +105,6 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
       setLoading(true);
 
       try {
-        const { supabase } = await import('../utils/supabase');
         let profilesFound: any[] = [];
         let matchingUserIds: string[] = [];
 

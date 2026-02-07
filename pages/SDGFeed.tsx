@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, NavProps, ID } from '../types';
+import React, { useState, useEffect } from 'react';
+import { View, NavProps, ID, Post } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { SDGS, POSTS, USERS, PROJECTS } from '../constants';
+import { SDGS, USERS, PROJECTS } from '../constants';
+import { supabase } from '../utils/supabase';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { renderBadge, renderContent } from '../utils/renderers';
 import { PostCard } from '../components/PostCard';
@@ -63,23 +64,21 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
     copiedUrl
   } = usePostInteractions(relevantPosts, setRelevantPosts, currentUser, sendMentionNotifications);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
         const targetSdgId = Number(sdgId);
 
         // Fetch Posts for this SDG
-        const { data: postsData, error: postsError } = await import('../utils/supabase')
-          .then(mod => mod.supabase
-            .from('posts')
-            .select('*')
-            .overlaps('sdg_ids', [targetSdgId])
-            .order('created_at', { ascending: false })
-          );
+        const { data: postsData, error: postsError } = await supabase // Used static supabase import
+          .from('posts')
+          .select('*')
+          .overlaps('sdg_ids', [targetSdgId])
+          .order('created_at', { ascending: false });
 
         // Fetch Global Counts and Metrics for this SDG
-        const supabase = (await import('../utils/supabase')).supabase;
+        // const supabase = (await import('../utils/supabase')).supabase; // Removed dynamic import
 
         const [postsCountRes, projectsCountRes, interactionsRes] = await Promise.all([
           // Total global posts for this SDG
@@ -106,8 +105,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
             // Resolve User
             let userData = null;
             if (p.user_id) {
-              const { data: user } = await import('../utils/supabase')
-                .then(mod => mod.supabase.from('profiles').select('*').eq('id', p.user_id).single());
+              const { data: user } = await supabase.from('profiles').select('*').eq('id', p.user_id).single();
               userData = user;
             }
             if (!userData) userData = USERS.find(u => u.id === p.user_id) || USERS[0] || { id: 'unknown', name: 'Usuario', avatar: '' };
@@ -127,12 +125,15 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
         }
 
         // Fetch Projects for this SDG
-        const { data: projectsData } = await import('../utils/supabase')
-          .then(mod => mod.supabase
-            .from('projects')
-            .select('*')
-            .eq('sdg_id', targetSdgId)
-          );
+        const { data: projectsData, error: projError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('sdg_id', targetSdgId);
+
+        if (projError) {
+          console.error('Error fetching projects in SDGFeed.tsx:', projError);
+          throw projError;
+        }
 
         if (projectsData) {
           setRelevantProjects(projectsData.map(p => ({

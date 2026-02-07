@@ -110,7 +110,10 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
       const { data, error, count } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching posts in Feed.tsx:', error);
+        throw error;
+      }
 
       if (data) {
         // Check if there are more posts

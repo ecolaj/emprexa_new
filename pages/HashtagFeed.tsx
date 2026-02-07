@@ -6,7 +6,8 @@ import { PostCard } from '../components/PostCard';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useAuth } from '../context/AuthContext';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
-import { renderContent } from '../utils/renderers'; // Keep renderContent if needed for other things, but PostCard handles post content.
+import { renderContent } from '../utils/renderers';
+import { supabase } from '../utils/supabase'; // Keep renderContent if needed for other things, but PostCard handles post content.
 
 export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, sendMentionNotifications } = useAuth();
@@ -27,14 +28,12 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
     const checkFollowStatus = async () => {
       if (!currentUser?.id) return;
       try {
-        const { data, error } = await import('../utils/supabase')
-          .then(mod => mod.supabase
-            .from('hashtag_follows')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .eq('hashtag', cleanTag)
-            .maybeSingle()
-          );
+        const { data, error } = await supabase
+          .from('hashtag_follows')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .eq('hashtag', cleanTag)
+          .maybeSingle();
 
         if (!error && data) {
           setIsFollowing(true);
@@ -60,7 +59,6 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
     setIsFollowing(!oldState);
 
     try {
-      const supabase = (await import('../utils/supabase')).supabase;
 
       if (oldState) {
         // Unfollow
@@ -135,21 +133,18 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
     const fetchPosts = async () => {
       setIsLoading(true);
       try {
-        const { data: postsData, error } = await import('../utils/supabase')
-          .then(mod => mod.supabase
-            .from('posts')
-            .select('*')
-            .or(`content.ilike.%#${cleanTag}%,title.ilike.%#${cleanTag}%`)
-            .order('created_at', { ascending: false })
-          );
+        const { data: postsData, error } = await supabase
+          .from('posts')
+          .select('*')
+          .or(`content.ilike.%#${cleanTag}%,title.ilike.%#${cleanTag}%`)
+          .order('created_at', { ascending: false });
 
         if (postsData && !error) {
           const formattedPosts = await Promise.all(postsData.map(async (p) => {
             // Resolve User
             let userData = null;
             if (p.user_id) {
-              const { data: user } = await import('../utils/supabase')
-                .then(mod => mod.supabase.from('profiles').select('*').eq('id', p.user_id).single());
+              const { data: user } = await supabase.from('profiles').select('*').eq('id', p.user_id).single();
               userData = user;
             }
             if (!userData) userData = USERS.find(u => u.id === p.user_id) || USERS[0] || { id: 'unknown', name: 'Usuario', avatar: '' };
