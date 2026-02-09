@@ -102,6 +102,7 @@ export interface Post {
   title: string;
   content: string;
   images: string[];
+  youtube_url?: string;
   likes: number;
   isLiked?: boolean; // Virtual field (not in DB table, calculated on fetch)
   comments: number;

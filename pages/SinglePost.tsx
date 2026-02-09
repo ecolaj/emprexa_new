@@ -51,6 +51,18 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         .eq('id', postData.user_id)
                         .single();
 
+                    // Fetch user like status
+                    let userHasLiked = false;
+                    if (user) {
+                        const { data: likeData } = await supabase
+                            .from('post_likes')
+                            .select('id')
+                            .eq('post_id', postId)
+                            .eq('user_id', user.id)
+                            .maybeSingle();
+                        userHasLiked = !!likeData;
+                    }
+
                     const formattedPost = {
                         ...postData,
                         user: userData || USERS[0] || {
@@ -63,13 +75,13 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         time: postData.created_at ? new Date(postData.created_at).toLocaleDateString() : 'Hoy',
                         sdgIds: postData.sdg_ids || [],
                         likes: postData.likes_count || 0,
-                        isLiked: false,
+                        isLiked: userHasLiked,
                         comments: postData.comments_count || 0,
                         recentComments: []
                     };
 
                     setPost(formattedPost);
-                    setIsLiked(formattedPost.isLiked);
+                    setIsLiked(userHasLiked);
                     setLikesCount(formattedPost.likes);
 
                     // Fetch Comments for this post
@@ -185,14 +197,39 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
 
     const isSaved = user ? savedPostIds.includes(post.id) : false;
 
-    const handleLike = () => {
+    const handleLike = async () => {
         if (!user) {
             setActionRequiringLogin('like');
             setShowLoginModal(true);
             return;
         }
-        setIsLiked(!isLiked);
-        setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
+
+        const newIsLiked = !isLiked;
+        const newLikesCount = newIsLiked ? likesCount + 1 : Math.max(0, likesCount - 1);
+
+        // Optimistic update
+        setIsLiked(newIsLiked);
+        setLikesCount(newLikesCount);
+
+        try {
+            if (newIsLiked) {
+                const { error } = await supabase
+                    .from('post_likes')
+                    .insert({ user_id: user.id, post_id: post.id });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('post_likes')
+                    .delete()
+                    .match({ user_id: user.id, post_id: post.id });
+                if (error) throw error;
+            }
+        } catch (error) {
+            console.error("Error toggling like:", error);
+            // Revert on error
+            setIsLiked(!newIsLiked);
+            setLikesCount(likesCount);
+        }
     };
 
     const handleBookmark = () => {
@@ -341,7 +378,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
         }));
     };
 
-    const handleAddReply = (commentId: string) => {
+    const handleAddReply = async (commentId: string) => {
         if (!user) {
             setActionRequiringLogin('comment');
             setShowLoginModal(true);
@@ -350,25 +387,43 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
         const text = newReplyText[commentId]?.trim();
         if (!text) return;
 
-        const newReply = {
-            id: `sp-reply-${Date.now()}`,
-            userId: user.id,
-            user: user, // Ensure user object is present
-            text: text,
-            time: formatRelativeTime(new Date()),
-            likes: 0,
-            isLiked: false
-        };
+        try {
+            const { data, error } = await supabase
+                .from('comments')
+                .insert([{
+                    post_id: post.id,
+                    user_id: user.id,
+                    text: text,
+                    parent_id: commentId
+                }])
+                .select()
+                .single();
 
-        setLocalComments(prev => prev.map((c: any) => {
-            if (c.id === commentId) {
-                return { ...c, replies: [...(c.replies || []), newReply] };
+            if (error) throw error;
+
+            if (data) {
+                const newReply = {
+                    ...data,
+                    user: user,
+                    time: 'Ahora',
+                    likes: 0,
+                    isLiked: false
+                };
+
+                setLocalComments(prev => prev.map((c: any) => {
+                    if (c.id === commentId) {
+                        return { ...c, replies: [...(c.replies || []), newReply] };
+                    }
+                    return c;
+                }));
+
+                setNewReplyText({ ...newReplyText, [commentId]: '' });
+                setActiveReplyToId(null);
             }
-            return c;
-        }));
-
-        setNewReplyText({ ...newReplyText, [commentId]: '' });
-        setActiveReplyToId(null);
+        } catch (error) {
+            console.error("Error adding reply:", error);
+            alert("No se pudo enviar la respuesta.");
+        }
     };
 
     const handleProfileClick = () => {
@@ -466,6 +521,24 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                             {/* Content */}
                             <h1 className="text-2xl font-bold text-slate-900 mb-4">{post.title}</h1>
                             <p className="text-slate-700 text-base leading-relaxed mb-6 whitespace-pre-wrap">{renderContent(post.content, navigate)}</p>
+
+                            {/* YouTube Video */}
+                            {post.youtube_url && (
+                                <div className="mb-6 rounded-2xl overflow-hidden aspect-video bg-slate-900 border border-slate-200">
+                                    <iframe
+                                        className="w-full h-full"
+                                        src={`https://www.youtube.com/embed/${((url) => {
+                                            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                                            const match = url.match(regExp);
+                                            return (match && match[2].length === 11) ? match[2] : null;
+                                        })(post.youtube_url)}`}
+                                        title="YouTube video player"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
+                            )}
 
                             {/* Images */}
                             {post.images.length > 0 && (

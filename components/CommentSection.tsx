@@ -250,8 +250,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         }
 
         if (data) {
-            // Update Post comments count
-            await supabase.from('posts').update({ comments_count: (post.comments || 0) + 1 }).eq('id', post.id);
+            // Se comenta ya que ahora el conteo se maneja por Triggers en la DB 
+            // await supabase.from('posts').update({ comments_count: (post.comments || 0) + 1 }).eq('id', post.id);
 
             let userData = authUser;
             if (data.user_id) {
@@ -306,8 +306,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
         if (data) {
             console.log("Reply published successfully:", data);
-            // Update Post comments count
-            await supabase.from('posts').update({ comments_count: (post.comments || 0) + 1 }).eq('id', post.id);
+            // Se comenta ya que ahora el conteo se maneja por Triggers en la DB 
+            // await supabase.from('posts').update({ comments_count: (post.comments || 0) + 1 }).eq('id', post.id);
 
             setComments(comments.map(c => c.id === rootCommentId ? {
                 ...c,

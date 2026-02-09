@@ -124,6 +124,23 @@ export const PostCard: React.FC<PostCardProps> = ({
                     {renderContent(post.content, onNavigate)}
                 </p>
 
+                {post.youtube_url && (
+                    <div className="mb-3 rounded-xl overflow-hidden aspect-video bg-slate-900 border border-slate-100 shadow-inner">
+                        <iframe
+                            className="w-full h-full"
+                            src={`https://www.youtube.com/embed/${((url) => {
+                                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                                const match = url.match(regExp);
+                                return (match && match[2].length === 11) ? match[2] : null;
+                            })(post.youtube_url)}`}
+                            title="YouTube video player"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                )}
+
                 {post.images.length > 0 && (
                     <div className={`grid gap-1 rounded-xl overflow-hidden ${post.images.length > 1 ? 'grid-cols-2 h-80' : 'h-[420px]'}`}>
                         {post.images.slice(0, 2).map((img, idx) => {
@@ -165,7 +182,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                         onClick={() => onToggleCommentSection(post.id)}
                         className={`flex items-center gap-2 text-sm transition-colors ${isCommentsOpen ? 'text-primary' : 'hover:text-primary'}`}
                     >
-                        <span className={`material-symbols-outlined text-[20px] ${isCommentsOpen ? 'filled' : ''}`}>chat_bubble</span> {post.comments || (post.recentComments?.length || 0)}
+                        <span className={`material-symbols-outlined text-[20px] ${isCommentsOpen ? 'filled' : ''}`}>chat_bubble</span> {post.comments ?? (post.recentComments?.length ?? 0)}
                     </button>
                     <button
                         onClick={() => onShare(post.id)}

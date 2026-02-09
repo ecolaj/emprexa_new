@@ -199,10 +199,15 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   // --- ACTIONS ---
-  const handleToggleLike = (postId: number) => {
+  const handleToggleLike = async (postId: number) => {
+    const post = localUserPosts.find(p => p.id === postId);
+    if (!post || !authUser) return;
+
+    const isNowLiked = !post.isLiked;
+
+    // Optimistic Update
     setLocalUserPosts(prev => prev.map(p => {
       if (p.id === postId) {
-        const isNowLiked = !p.isLiked;
         return {
           ...p,
           isLiked: isNowLiked,
@@ -211,6 +216,34 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       }
       return p;
     }));
+
+    try {
+      if (isNowLiked) {
+        const { error } = await supabase
+          .from('post_likes')
+          .insert({ user_id: authUser.id, post_id: postId });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('post_likes')
+          .delete()
+          .match({ user_id: authUser.id, post_id: postId });
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      // Revert on error
+      setLocalUserPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            isLiked: !isNowLiked,
+            likes: !isNowLiked ? p.likes + 1 : Math.max(0, p.likes - 1)
+          };
+        }
+        return p;
+      }));
+    }
   };
 
   const handleDeletePost = (postId: number) => {
@@ -222,7 +255,12 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     setLocalUserPosts(prev => prev.filter(p => p.id !== postToDelete));
     setActiveMenuPostId(null);
     const { error } = await supabase.from('posts').delete().eq('id', postToDelete);
-    if (error) console.error("Error deleting post:", error);
+    if (!error) {
+      // Actualizar estadísticas del perfil reactivamente
+      setStats(prev => ({ ...prev, posts: Math.max(0, prev.posts - 1) }));
+    } else {
+      console.error("Error deleting post:", error);
+    }
     setPostToDelete(null);
   };
 
@@ -239,15 +277,46 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     });
   };
 
-  const handleAddComment = (postId: number, text: string) => {
-    const newComment = { id: `new-${Date.now()}`, userId: currentUser.id, text, time: formatRelativeTime(new Date()), likes: 0, isLiked: false, replies: [] };
-    setLocalUserPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return { ...p, recentComments: [...(p.recentComments || []), newComment], comments: (p.comments || 0) + 1 };
+  const handleAddComment = async (postId: number, text: string) => {
+    if (!authUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert([{
+          post_id: postId,
+          user_id: authUser.id,
+          text: text
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const newComment = {
+          ...data,
+          userId: authUser.id,
+          user: authUser,
+          time: 'Ahora',
+          likes: 0,
+          isLiked: false,
+          replies: []
+        };
+
+        setLocalUserPosts(prev => prev.map(p => {
+          if (p.id === postId) {
+            return { ...p, recentComments: [...(p.recentComments || []), newComment] };
+          }
+          return p;
+        }));
+
+        sendMentionNotifications(text);
       }
-      return p;
-    }));
-    sendMentionNotifications(text);
+    } catch (error) {
+      console.error("Error adding comment in profile:", error);
+      alert("No se pudo publicar el comentario.");
+    }
   };
 
   const handleToggleCommentLike = (postId: number, commentId: string) => {
@@ -266,20 +335,50 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     }));
   };
 
-  const handleAddCommentReply = (postId: number, commentId: string, text: string) => {
-    const newReply = { id: `reply-${Date.now()}`, userId: currentUser.id, text, time: formatRelativeTime(new Date()), likes: 0, isLiked: false };
-    setLocalUserPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const updatedComments = p.recentComments.map((c: any) => {
-          if (c.id === commentId) {
-            return { ...c, replies: [...(c.replies || []), newReply] };
+  const handleAddCommentReply = async (postId: number, commentId: string, text: string) => {
+    if (!authUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert([{
+          post_id: postId,
+          user_id: authUser.id,
+          text: text,
+          parent_id: commentId
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const newReply = {
+          ...data,
+          userId: authUser.id,
+          user: authUser,
+          time: 'Ahora',
+          likes: 0,
+          isLiked: false
+        };
+
+        setLocalUserPosts(prev => prev.map(p => {
+          if (p.id === postId) {
+            const updatedComments = p.recentComments.map((c: any) => {
+              if (c.id === commentId) {
+                return { ...c, replies: [...(c.replies || []), newReply] };
+              }
+              return c;
+            });
+            return { ...p, recentComments: updatedComments };
           }
-          return c;
-        });
-        return { ...p, recentComments: updatedComments };
+          return p;
+        }));
       }
-      return p;
-    }));
+    } catch (error) {
+      console.error("Error adding reply in profile:", error);
+      alert("No se pudo publicar la respuesta.");
+    }
     setActiveReplyToId(null);
   };
 

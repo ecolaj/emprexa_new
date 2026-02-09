@@ -16,6 +16,8 @@ interface PostFormModalProps {
     setFormSdgs: (val: number[]) => void;
     formImages: string[];
     setFormImages: (val: string[]) => void;
+    formYoutubeUrl: string;
+    setFormYoutubeUrl: (val: string) => void;
     onClose: () => void;
     onSubmit: () => void;
     onRemoveImage: (index: number) => void;
@@ -32,6 +34,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     setFormSdgs,
     formImages,
     setFormImages,
+    formYoutubeUrl,
+    setFormYoutubeUrl,
     onClose,
     onSubmit,
     onRemoveImage
@@ -226,6 +230,20 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                         onChange={(e) => handleContentChange(e.target.value)}
                         onKeyDown={handleKeyDown}
                     ></textarea>
+
+                    <div className="relative group">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-[20px]">play_circle</span>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Enlace de YouTube (Opcional)"
+                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            value={formYoutubeUrl}
+                            onChange={(e) => setFormYoutubeUrl(e.target.value)}
+                        />
+                    </div>
+
 
                     {isUploading && (
                         <div className="flex items-center gap-2 text-xs font-bold text-primary animate-pulse">

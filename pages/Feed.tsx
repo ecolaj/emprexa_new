@@ -282,6 +282,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const [formContent, setFormContent] = useState('');
   const [formSdgs, setFormSdgs] = useState<number[]>([]);
   const [formImages, setFormImages] = useState<string[]>([]);
+  const [formYoutubeUrl, setFormYoutubeUrl] = useState('');
 
   const [activeMenuPostId, setActiveMenuPostId] = useState<number | null>(null);
   const [activeCommentSectionId, setActiveCommentSectionId] = useState<number | null>(null);
@@ -318,7 +319,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
           title: formTitle,
           content: formContent,
           sdg_ids: formSdgs,
-          images: formImages
+          images: formImages,
+          youtube_url: formYoutubeUrl
         })
         .eq('id', formPostId);
 
@@ -338,7 +340,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
           sdg_ids: formSdgs,
           title: formTitle,
           content: formContent,
-          images: formImages
+          images: formImages,
+          youtube_url: formYoutubeUrl
         }])
         .select(`*, profiles!posts_user_id_fkey(*)`)
         .single();
@@ -370,10 +373,14 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
           sdgIds: data.sdg_ids || [],
           likes: 0,
           comments: 0,
+          youtube_url: data.youtube_url,
           recentComments: []
         };
         setLocalPosts(prev => [newPost, ...prev]);
         sendMentionNotifications(formTitle + " " + formContent);
+
+        // Actualizar estadísticas del usuario reactivamente
+        setUserStats(prev => ({ ...prev, posts: prev.posts + 1 }));
       }
     }
     resetPostForm();
@@ -384,6 +391,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     setFormContent('');
     setFormSdgs([]);
     setFormImages([]);
+    setFormYoutubeUrl('');
     setFormPostId(null);
     setIsEditing(false);
     setShowPostModal(false);
@@ -395,6 +403,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     setFormContent(post.content);
     setFormSdgs([...post.sdgIds]);
     setFormImages([...post.images]);
+    setFormYoutubeUrl(post.youtube_url || '');
     setIsEditing(true);
     setShowPostModal(true);
     setActiveMenuPostId(null);
@@ -426,8 +435,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         .insert({ user_id: currentUser.id, post_id: postId });
 
       if (!likeError) {
-        // Increment count
-        await supabase.from('posts').update({ likes_count: newLikesCount }).eq('id', postId);
+        // Incremento manejado por Trigger en DB
+        // await supabase.from('posts').update({ likes_count: newLikesCount }).eq('id', postId);
       } else {
         console.error("Error liking post:", likeError);
         // Revert optimistic? For now simplified.
@@ -440,8 +449,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         .match({ user_id: currentUser.id, post_id: postId });
 
       if (!unlikeError) {
-        // Decrement count
-        await supabase.from('posts').update({ likes_count: newLikesCount }).eq('id', postId);
+        // Decremento manejado por Trigger en DB
+        // await supabase.from('posts').update({ likes_count: newLikesCount }).eq('id', postId);
       } else {
         console.error("Error unliking post:", unlikeError);
       }
@@ -461,12 +470,14 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
     // DB Remove
     const { error } = await supabase.from('posts').delete().eq('id', postToDelete);
-    if (error) {
+    if (!error) {
+      // Actualizar estadísticas del usuario reactivamente
+      setUserStats(prev => ({ ...prev, posts: Math.max(0, prev.posts - 1) }));
+    } else {
       console.error("Error deleting post:", error);
       alert("No se pudo eliminar la publicación. Intenta de nuevo.");
-      // We might want to re-fetch or re-add the post here for robustness, 
-      // but keeping it simple as per original logic.
     }
+    setPostToDelete(null);
   };
 
   const handleShare = (postId: ID) => {
@@ -905,6 +916,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         setFormSdgs={setFormSdgs}
         formImages={formImages}
         setFormImages={setFormImages}
+        formYoutubeUrl={formYoutubeUrl}
+        setFormYoutubeUrl={setFormYoutubeUrl}
         onClose={resetPostForm}
         onSubmit={handleSubmitPost}
         onRemoveImage={removeFormImage}
