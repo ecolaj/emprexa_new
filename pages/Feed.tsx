@@ -88,8 +88,11 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   // Ref for infinite scroll
   const feedEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch posts from Supabase with pagination and smart filtering
+  // Fetch posts from Supabase with intelligent priority and pagination
   const fetchPosts = async (pageNum: number, append: boolean = false) => {
+    // Escudo: Solo bloquea si ya hay una carga de "añadir más" en curso.
+    if (append && isLoadingMore) return;
+
     if (append) {
       setIsLoadingMore(true);
     } else {
@@ -97,92 +100,99 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     }
 
     try {
-      console.log(`Fetching posts - Page ${pageNum}, Per Page: ${POSTS_PER_PAGE}`);
+      console.log(`Fetching prioritized posts - Page ${pageNum}, Per Page: ${POSTS_PER_PAGE}`);
 
-      // Build query: Global Chronological Feed (Discovery Mode)
-      // We prioritize showing ALL content ordered by time to encourage discovery and avoid "Filter Bubbles".
-      // Users will see their interests naturally within the stream, but won't miss out on other causes.
-      let query = supabase
-        .from('posts')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(pageNum * POSTS_PER_PAGE, (pageNum + 1) * POSTS_PER_PAGE - 1);
-
-      const { data, error, count } = await query;
+      // Call our new Intelligent Priority RPC function
+      const { data, error } = await supabase.rpc('get_intelligent_feed', {
+        p_user_id: currentUser.id,
+        p_offset: pageNum * POSTS_PER_PAGE,
+        p_limit: POSTS_PER_PAGE
+      });
 
       if (error) {
-        console.error('Error fetching posts in Feed.tsx:', error);
-        throw error;
-      }
+        // Fallback to basic query if RPC is not yet created in the DB
+        console.warn('RPC feed handling fallback:', error.message);
+        const { data: fallbackData, error: fallbackError, count } = await supabase
+          .from('posts')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(pageNum * POSTS_PER_PAGE, (pageNum + 1) * POSTS_PER_PAGE - 1);
 
-      if (data) {
-        // Check if there are more posts
-        const totalFetched = (pageNum + 1) * POSTS_PER_PAGE;
-        setHasMore(count ? totalFetched < count : false);
-
-        // Fetch user likes for posts
-        let likedPostIds = new Set<number>();
-        if (currentUser && currentUser.id) {
-          const { data: likesData } = await supabase
-            .from('post_likes')
-            .select('post_id')
-            .eq('user_id', currentUser.id);
-
-          if (likesData) {
-            likesData.forEach((l: any) => likedPostIds.add(l.post_id));
+        if (fallbackError) {
+          // If we get a range error (416), it means we reached the end
+          if (fallbackError.code === 'PGRST103' || fallbackError.message.includes('Position')) {
+            setHasMore(false);
+            return;
           }
+          throw fallbackError;
         }
 
-        const formattedPosts: Post[] = await Promise.all(
-          data.map(async (p) => {
+        if (fallbackData) {
+          const totalFetched = (pageNum * POSTS_PER_PAGE) + fallbackData.length;
+          setHasMore(count ? totalFetched < count : fallbackData.length === POSTS_PER_PAGE);
+
+          const formatted = await Promise.all(fallbackData.map(async (p) => {
             let userData = null;
-
             if (p.user_id) {
-              const { data: user, error: userError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', p.user_id)
-                .single();
-
-              if (!userError && user) userData = user;
+              const { data: prof } = await supabase.from('profiles').select('*').eq('id', p.user_id).single();
+              userData = prof;
             }
-
-            if (!userData) {
-              userData = USERS.find(u => u.id === p.user_id) || USERS[0] || {
-                id: 'unknown', name: 'Usuario', role: 'Miembro', avatar: '', plan: 'free'
-              };
-            }
-
             return {
               ...p,
-              user: userData,
+              user: userData || USERS[0],
               time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Hoy',
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,
-              isLiked: likedPostIds.has(p.id),
               comments: p.comments_count || 0,
               recentComments: []
             };
-          })
-        );
+          }));
 
-        if (append) {
-          setLocalPosts(prev => [...prev, ...formattedPosts]);
-        } else {
-          setLocalPosts(formattedPosts);
+          if (append) setLocalPosts(prev => [...prev, ...formatted]);
+          else setLocalPosts(formatted);
         }
+        return;
+      }
+
+      if (data) {
+        setHasMore(data.length === POSTS_PER_PAGE);
+
+        let likedPostIds = new Set<number>();
+        if (currentUser?.id) {
+          const { data: likesData } = await supabase.from('post_likes').select('post_id').eq('user_id', currentUser.id);
+          likesData?.forEach((l: any) => likedPostIds.add(l.post_id));
+        }
+
+        const formattedPosts: Post[] = data.map((p: any) => ({
+          ...p,
+          user: {
+            id: p.user_id,
+            name: p.author_name,
+            avatar: p.author_avatar,
+            role: p.author_role,
+            plan: p.author_plan,
+            location: p.author_location
+          },
+          time: p.created_at ? formatRelativeTime(p.created_at) : 'Hoy',
+          location: p.location || p.author_location || 'Global',
+          sdgIds: p.sdg_ids || [],
+          likes: p.likes_count || 0,
+          isLiked: likedPostIds.has(p.id),
+          comments: p.comments_count || 0,
+          recentComments: []
+        }));
+
+        if (append) setLocalPosts(prev => [...prev, ...formattedPosts]);
+        else setLocalPosts(formattedPosts);
+      } else {
+        setHasMore(false);
       }
     } catch (error) {
-      console.error('Error fetching posts:', error);
-      if (!append) {
-        setLocalPosts(POSTS); // Fallback to mock data only on initial load
-      }
+      console.error('Error in fetchPosts:', error);
+      setHasMore(false); // Stop infinite loading on error
     } finally {
-      if (append) {
-        setIsLoadingMore(false);
-      } else {
-        setIsInitialLoading(false);
-      }
+      setIsLoadingMore(false);
+      setIsInitialLoading(false);
     }
   };
 
@@ -199,11 +209,16 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
   // Infinite scroll observer
   useEffect(() => {
-    if (!feedEndRef.current || isLoadingMore || !hasMore) return;
+    // Escudo: No activar el sensor si:
+    // 1. No hay referencia al elemento
+    // 2. Se está cargando la página inicial
+    // 3. Ya se está cargando más contenido
+    // 4. Se ha llegado al final de los datos
+    if (!feedEndRef.current || isInitialLoading || isLoadingMore || !hasMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isInitialLoading) {
           const nextPage = page + 1;
           setPage(nextPage);
           fetchPosts(nextPage, true);
@@ -215,7 +230,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     observer.observe(feedEndRef.current);
 
     return () => observer.disconnect();
-  }, [page, hasMore, isLoadingMore]);
+  }, [page, hasMore, isLoadingMore, isInitialLoading]);
 
   // Discovery Feed Logic:
   // We explicitly do NOT sort by preferences client-side anymore.
@@ -804,8 +819,20 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
             />
           ))}
 
-          <div className="py-8 text-center">
-            <p className="text-slate-400 text-sm font-medium">Has llegado al final</p>
+          {/* Infinite Scroll Anchor & Message */}
+          <div ref={feedEndRef} className="py-12 text-center">
+            {isLoadingMore ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-slate-500 text-xs font-medium">Buscando más impacto...</p>
+              </div>
+            ) : !hasMore && postsToDisplay.length > 0 ? (
+              <div className="flex flex-col items-center gap-2 opacity-60">
+                <span className="material-symbols-outlined text-slate-400">task_alt</span>
+                <p className="text-slate-400 text-sm font-medium">Has llegado al final del camino</p>
+                <p className="text-slate-300 text-[10px] uppercase tracking-widest">¡Excelente trabajo explorando!</p>
+              </div>
+            ) : null}
           </div>
         </div>
 
