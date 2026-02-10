@@ -118,9 +118,20 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
             return;
         }
 
+        // Validación de Auth: No permitir publicar con IDs de mock (números)
+        if (typeof currentUser.id === 'number') {
+            alert("Sesión de invitado detectada. Por favor inicia sesión con una cuenta real para publicar proyectos.");
+            return;
+        }
+
         setLoading(true);
         try {
-            let imageUrl = imagePreview || currentUser.cover || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80';
+            // Default image
+            const fallbackImage = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80';
+
+            // Si hay un preview pero no es la de la organización y no hemos subido nada aún, usamos el fallback
+            // o lo que ya tenga si estamos editando.
+            let imageUrl = isEditing ? imagePreview : (currentUser.cover || fallbackImage);
 
             // 1. Upload Image if exists
             if (imageFile) {
@@ -128,8 +139,9 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                 const fileName = `${Math.random()}.${fileExt}`;
                 const filePath = `${currentUser.id}/projects/${fileName}`;
 
+                console.log('📤 Subiendo imagen a storage:', filePath);
                 const { error: uploadError } = await supabase.storage
-                    .from('avatars') // Using avatars bucket for now as it exists, but ideally a 'projects' bucket
+                    .from('avatars')
                     .upload(filePath, imageFile);
 
                 if (!uploadError) {
@@ -137,7 +149,18 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                         .from('avatars')
                         .getPublicUrl(filePath);
                     imageUrl = publicUrl;
+                    console.log('✅ Imagen subida con éxito:', imageUrl);
+                } else {
+                    console.error('❌ Error subiendo imagen:', uploadError);
+                    // IMPORTANTE: No usamos imagePreview aquí porque suele ser un Base64 gigante 
+                    // que rompe la petición REST si el campo image de la DB tiene límites o por el tamaño del payload.
+                    // Si estamos editando mantenemos la anterior, si es uno nuevo usamos el fallback.
+                    if (!isEditing) imageUrl = fallbackImage;
                 }
+            } else if (imagePreview && imagePreview.startsWith('data:')) {
+                // Si llegamos aquí y sigue siendo base64 (y no se subió), usamos fallback para evitar el reset de conexión
+                console.warn('⚠️ Se detectó imagen en Base64 no subida. Usando imagen por defecto para evitar error de red.');
+                imageUrl = fallbackImage;
             }
 
             // 2. Insert or Update Project
@@ -150,11 +173,12 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                 looking_for: formData.lookingFor,
                 start_date: formData.startDate,
                 end_date: formData.endDate || null,
-                progress: isEditing ? undefined : 0, // Don't reset progress on edit
+                progress: isEditing ? undefined : 0,
                 status: isEditing ? undefined : 'Activo',
                 donations_enabled: true
             };
 
+            console.log('💾 Guardando proyecto en DB...', isEditing ? 'Update' : 'Insert');
             let finalProjectId = isEditing ? editingProjectId : null;
 
             if (isEditing) {
@@ -167,19 +191,30 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
             } else {
                 const { data, error } = await supabase
                     .from('projects')
-                    .insert({ ...projectPayload, owner_id: currentUser.id })
+                    .insert({
+                        ...projectPayload,
+                        owner_id: currentUser.id
+                    })
                     .select()
                     .single();
-                if (error) throw error;
+
+                if (error) {
+                    console.error('❌ Error en el insert de projects:', error);
+                    throw error;
+                }
                 finalProjectId = data.id;
             }
 
+            console.log('✨ Proyecto procesado con éxito. ID:', finalProjectId);
             setCreatedProjectId(finalProjectId);
-
             setShowSuccess(true);
         } catch (err: any) {
             console.error("Error publishing project:", err);
-            alert("Error al publicar el proyecto: " + err.message);
+            // Si el error es Failed to fetch, sugerir que puede ser el tamaño de la imagen o conexión literal
+            const helpfulMessage = err.message === 'Failed to fetch'
+                ? "Error de conexión (posiblemente imagen demasiado grande o sesión expirada). Intenta de nuevo."
+                : err.message;
+            alert("Error al publicar el proyecto: " + helpfulMessage);
         } finally {
             setLoading(false);
         }

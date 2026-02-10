@@ -1,6 +1,9 @@
 -- ALGORITMO DE PRIORIDAD V2 (ROBUSTO)
 -- Copia y ejecuta esto en el SQL Editor de Supabase
 
+-- IMPORTANTE: Eliminamos la función antes de recrearla para evitar errores de cambio de tipo de retorno
+DROP FUNCTION IF EXISTS get_intelligent_feed(UUID, INT, INT);
+
 CREATE OR REPLACE FUNCTION get_intelligent_feed(
     p_user_id UUID,
     p_offset INT,
@@ -34,13 +37,13 @@ BEGIN
     RETURN QUERY
     WITH author_stats AS (
         -- Consolidar popularidad de autores
-        SELECT following_id as author_id, COUNT(*) as followers_count
+        SELECT following_id as auth_id, COUNT(*)::INTEGER as followers_count
         FROM public.follows
         GROUP BY following_id
     ),
     user_following AS (
         -- Obtener lista de seguidos
-        SELECT following_id FROM public.follows WHERE follower_id = p_user_id
+        SELECT following_id as followed_id FROM public.follows WHERE follower_id = p_user_id
     )
     SELECT 
         p.id, 
@@ -62,15 +65,14 @@ BEGIN
             (COALESCE(p.likes_count, 0) * 2.0 + COALESCE(p.comments_count, 0) * 5.0) +
             
             -- PESO 2: Relevancia Social (Si sigues al autor)
-            (CASE WHEN p.user_id IN (SELECT following_id FROM user_following) THEN 100.0 ELSE 0.0 END) +
+            (CASE WHEN p.user_id IN (SELECT followed_id FROM user_following) THEN 100.0 ELSE 0.0 END) +
             
             -- PESO 3: Intereses (Si el post coincide con tus ODS)
-            -- Usamos el operador && que es mucho más seguro para comparar arrays
             (CASE WHEN p.sdg_ids && v_user_interests THEN 50.0 ELSE 0.0 END) +
             
             -- PESO 4: Autoridad (Popularidad del autor)
-            (COALESCE((SELECT fs.followers_count FROM author_stats fs WHERE fs.author_id = p.user_id), 0) * 0.1)
-        ) as calculated_score
+            (COALESCE((SELECT fs.followers_count FROM author_stats fs WHERE fs.auth_id = p.user_id), 0) * 0.1)
+        )::FLOAT as calculated_score
     FROM 
         public.posts p
     JOIN 
@@ -82,3 +84,4 @@ BEGIN
     LIMIT p_limit OFFSET p_offset;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
