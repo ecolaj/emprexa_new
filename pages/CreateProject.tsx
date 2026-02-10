@@ -4,6 +4,7 @@ import { View, NavProps, ID } from '../types';
 import { SDGS, USERS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
+import { compressImage } from '../utils/imageUtils';
 import { ProjectSuccessModal } from '../components/ProjectSuccessModal';
 
 export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, params }) => {
@@ -56,13 +57,19 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
         location: '',
         lookingFor: [] as string[],
         startDate: new Date().toISOString().split('T')[0],
-        endDate: ''
+        endDate: '',
+        customTag: '',
+        imagePositionX: 50,
+        imagePositionY: 50
     });
 
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [showSuccess, setShowSuccess] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState<ID | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0, pos: { x: 50, y: 50 } });
+    const [originalImage, setOriginalImage] = useState<string | null>(null);
 
     // Load project data if editing
     useEffect(() => {
@@ -76,14 +83,19 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     .single();
 
                 if (!error && data) {
+                    const [posX, posY] = (data.image || '').split('#pos=')[1]?.split(',') || ['50', '50'];
                     setFormData({
                         title: data.title || '',
                         sdgId: data.sdg_id || 0,
                         description: data.description || '',
                         location: data.location || '',
-                        lookingFor: data.looking_for || []
-                    });
+                        lookingFor: data.looking_for || [],
+                        imagePositionX: parseInt(posX),
+                        imagePositionY: parseInt(posY),
+                        customTag: ''
+                    } as any);
                     setImagePreview(data.image);
+                    setOriginalImage(data.image);
                 }
                 setLoading(false);
             };
@@ -139,10 +151,14 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                 const fileName = `${Math.random()}.${fileExt}`;
                 const filePath = `${currentUser.id}/projects/${fileName}`;
 
+                // Compress image before upload
+                const compressedBlob = await compressImage(imageFile);
+                const compressedFile = new File([compressedBlob], imageFile.name, { type: imageFile.type });
+
                 console.log('📤 Subiendo imagen a storage:', filePath);
                 const { error: uploadError } = await supabase.storage
                     .from('avatars')
-                    .upload(filePath, imageFile);
+                    .upload(filePath, compressedFile);
 
                 if (!uploadError) {
                     const { data: { publicUrl } } = supabase.storage
@@ -152,10 +168,9 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     console.log('✅ Imagen subida con éxito:', imageUrl);
                 } else {
                     console.error('❌ Error subiendo imagen:', uploadError);
-                    // IMPORTANTE: No usamos imagePreview aquí porque suele ser un Base64 gigante 
-                    // que rompe la petición REST si el campo image de la DB tiene límites o por el tamaño del payload.
-                    // Si estamos editando mantenemos la anterior, si es uno nuevo usamos el fallback.
-                    if (!isEditing) imageUrl = fallbackImage;
+                    alert("Error al subir la imagen. Se usará la imagen anterior o una por defecto.");
+                    // Reset to original or fallback to avoid base64 payload crash
+                    imageUrl = isEditing ? (originalImage || fallbackImage) : (currentUser.cover || fallbackImage);
                 }
             } else if (imagePreview && imagePreview.startsWith('data:')) {
                 // Si llegamos aquí y sigue siendo base64 (y no se subió), usamos fallback para evitar el reset de conexión
@@ -164,11 +179,15 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
             }
 
             // 2. Insert or Update Project
+            // Append position to URL if not already there or update it
+            const cleanImageUrl = imageUrl.split('#pos=')[0];
+            const finalImageUrl = `${cleanImageUrl}#pos=${formData.imagePositionX || 50},${formData.imagePositionY || 50}`;
+
             const projectPayload = {
                 title: formData.title,
                 description: formData.description,
                 sdg_id: formData.sdgId,
-                image: imageUrl,
+                image: finalImageUrl,
                 location: formData.location,
                 looking_for: formData.lookingFor,
                 start_date: formData.startDate,
@@ -233,9 +252,51 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
         setFormData({ ...formData, sdgId: id });
     };
 
+    const handleAddCustomTag = () => {
+        if (!formData.customTag?.trim()) return;
+        const tag = formData.customTag.trim();
+        if (!formData.lookingFor.includes(tag)) {
+            setFormData({
+                ...formData,
+                lookingFor: [...formData.lookingFor, tag],
+                customTag: ''
+            });
+        } else {
+            setFormData({ ...formData, customTag: '' });
+        }
+    };
+
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!imagePreview) return;
+        setIsDragging(true);
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        setDragStart({
+            x: clientX,
+            y: clientY,
+            pos: { x: formData.imagePositionX, y: formData.imagePositionY }
+        });
+    };
+
+    const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isDragging) return;
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+        const deltaX = (dragStart.x - clientX) * 0.2; // Sensibilidad ajustable
+        const deltaY = (dragStart.y - clientY) * 0.2;
+
+        const nextX = Math.max(0, Math.min(100, dragStart.pos.x + deltaX));
+        const nextY = Math.max(0, Math.min(100, dragStart.pos.y + deltaY));
+
+        setFormData(prev => ({ ...prev, imagePositionX: Math.round(nextX), imagePositionY: Math.round(nextY) }));
+    };
+
+    const handleDragEnd = () => setIsDragging(false);
+
     return (
-        <div className="flex-1 overflow-y-auto bg-slate-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col min-h-[600px]">
+        <div className="flex-1 overflow-y-auto bg-slate-50 flex items-center justify-center p-2 md:p-4">
+            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header with Progress */}
                 <div className="px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
@@ -309,11 +370,10 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                     <label className="block text-sm font-bold text-slate-700 mb-2">Descripción Corta</label>
                                     <textarea
                                         placeholder="Describe el objetivo, el problema que resuelves y cómo lo harás..."
-                                        className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors resize-none leading-relaxed"
+                                        className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors leading-relaxed"
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     ></textarea>
-                                    <div className="text-right mt-1 text-xs text-slate-400 font-bold">0 / 300</div>
                                 </div>
 
                                 <div>
@@ -341,15 +401,28 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                     />
                                     <label
                                         htmlFor="project-image"
-                                        className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden relative group ${imagePreview ? 'border-primary border-solid' : 'border-slate-300 text-slate-400 hover:bg-slate-50 hover:border-primary hover:text-primary'
+                                        className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden relative group min-h-[240px] ${imagePreview ? 'border-primary border-solid' : 'border-slate-300 text-slate-400 hover:bg-slate-50 hover:border-primary hover:text-primary'
                                             }`}
+                                        onMouseDown={handleDragStart}
+                                        onMouseMove={handleDragMove}
+                                        onMouseUp={handleDragEnd}
+                                        onMouseLeave={handleDragEnd}
+                                        onTouchStart={handleDragStart}
+                                        onTouchMove={handleDragMove}
+                                        onTouchEnd={handleDragEnd}
                                     >
                                         {imagePreview ? (
                                             <>
-                                                <img src={imagePreview} className="absolute inset-0 w-full h-full object-cover opacity-50" alt="Preview" />
-                                                <div className="relative z-10 flex flex-col items-center">
-                                                    <span className="material-symbols-outlined text-4xl mb-2 text-primary">published_with_changes</span>
-                                                    <span className="font-bold text-sm text-primary-dark">Cambiar Imagen</span>
+                                                <img
+                                                    src={imagePreview.split('#pos=')[0]}
+                                                    className={`absolute inset-0 w-full h-full object-cover opacity-60 select-none pointer-events-none transition-opacity ${isDragging ? 'opacity-40' : 'opacity-60'}`}
+                                                    style={{ objectPosition: `${formData.imagePositionX}% ${formData.imagePositionY}%` }}
+                                                    alt="Preview"
+                                                />
+                                                <div className={`relative z-10 flex flex-col items-center bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white/30 shadow-xl transition-all ${isDragging ? 'scale-90 opacity-0' : 'scale-100 opacity-100'}`}>
+                                                    <span className="material-symbols-outlined text-4xl mb-1 text-slate-900">drag_pan</span>
+                                                    <span className="font-bold text-sm text-slate-900">Arrastra para mover</span>
+                                                    <div className="mt-2 text-[10px] uppercase tracking-widest font-black text-slate-700 bg-white/50 px-2 py-0.5 rounded">O haz clic para cambiar</div>
                                                 </div>
                                             </>
                                         ) : (
@@ -359,6 +432,14 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                             </>
                                         )}
                                     </label>
+
+                                    {imagePreview && (
+                                        <div className="mt-3 text-center">
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                Interacción táctil y ratón habilitada para el encuadre
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -370,7 +451,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                             <h2 className="text-3xl font-black text-slate-900 mb-2">¿Qué necesitas?</h2>
                             <p className="text-slate-500 mb-8 text-lg">Selecciona las etiquetas para atraer a los colaboradores correctos.</p>
 
-                            <div className="mb-8">
+                            <div className="space-y-4">
                                 <div className="flex flex-wrap gap-3">
                                     {['Voluntarios', 'Financiación', 'Socios', 'Mentoría', 'Materiales', 'Difusión', 'Desarrolladores', 'Diseñadores'].map(tag => (
                                         <button
@@ -384,6 +465,37 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                             {formData.lookingFor.includes(tag) ? '✓ ' : '+ '} {tag}
                                         </button>
                                     ))}
+
+                                    {/* Render custom tags that are not in the default list */}
+                                    {formData.lookingFor.filter(t => !['Voluntarios', 'Financiación', 'Socios', 'Mentoría', 'Materiales', 'Difusión', 'Desarrolladores', 'Diseñadores'].includes(t)).map(tag => (
+                                        <button
+                                            key={tag}
+                                            onClick={() => toggleTag(tag)}
+                                            className="px-4 py-2 rounded-full border bg-primary border-primary text-white shadow-md font-bold text-sm transition-all"
+                                        >
+                                            ✓ {tag}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="mt-6">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">¿Necesitas algo más? (Otros)</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Ej. Espacio de oficina, Equipamiento..."
+                                            className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors"
+                                            value={formData.customTag}
+                                            onChange={(e) => setFormData({ ...formData, customTag: (e.target as HTMLInputElement).value })}
+                                            onKeyPress={(e) => e.key === 'Enter' && handleAddCustomTag()}
+                                        />
+                                        <button
+                                            onClick={handleAddCustomTag}
+                                            className="px-6 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                                        >
+                                            Agregar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

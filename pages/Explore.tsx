@@ -8,9 +8,10 @@ import { UpgradeModal } from '../components/UpgradeModal';
 export const Explore: React.FC<NavProps> = ({ navigate }) => {
   const { user, followedUserIds, toggleFollowUser } = useAuth();
 
-  type TabType = 'trends' | 'ods' | 'users';
+  type TabType = 'trends' | 'projects' | 'ods' | 'users';
   const [activeTab, setActiveTab] = useState<TabType>('trends');
   const [trendingProjects, setTrendingProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [sortedSdgs, setSortedSdgs] = useState<any[]>(SDGS);
   const [trendingTopics, setTrendingTopics] = useState<any[]>([]);
@@ -61,6 +62,31 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             donationsEnabled: p.donations_enabled || false
           }));
           setTrendingProjects(formattedProjects);
+        }
+
+        // Fetch ALL Projects for the new tab
+        const { data: allProjData, error: allProjError } = await supabase
+          .from('projects')
+          .select('*, team:project_members(profiles(*))')
+          .order('created_at', { ascending: false });
+
+        if (allProjData) {
+          const formattedAllProjects = allProjData.map(p => ({
+            ...p,
+            id: p.id,
+            sdgId: p.sdg_id || p.sdgId,
+            ownerId: p.owner_id || p.ownerId,
+            orgId: p.org_id || p.orgId,
+            title: p.title || 'Proyecto sin título',
+            description: p.description || '',
+            image: p.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+            progress: p.progress || 0,
+            status: p.status || 'Activo',
+            lookingFor: p.looking_for || [],
+            team: (p.team || []).map((m: any) => m.profiles || {}).filter((t: any) => t && t.id),
+            donationsEnabled: p.donations_enabled || false
+          }));
+          setAllProjects(formattedAllProjects);
         }
 
         // Fetch All Users for recommendations
@@ -341,6 +367,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
           <div className="flex gap-8">
             {[
               { id: 'trends', label: 'Tendencias' },
+              { id: 'projects', label: 'Proyectos' },
               { id: 'ods', label: 'ODS' },
               { id: 'users', label: 'Usuarios' }
             ].map(tab => (
@@ -414,7 +441,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                 </h2>
                 <button
                   className="text-sm font-bold text-slate-500 hover:text-primary"
-                  onClick={() => navigate(View.EXPLORE)}
+                  onClick={() => setActiveTab('projects')}
                 >
                   Ver todos
                 </button>
@@ -430,22 +457,30 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                       className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer flex flex-col h-full group"
                       onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })}
                     >
-                      <div
-                        className="h-48 bg-slate-200 bg-cover bg-center relative"
-                        style={{ backgroundImage: `url("${project.image}")` }}
-                      >
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
-                        {sdg && (
-                          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
-                            <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                      {(() => {
+                        const [posX, posY] = (project.image || '').split('#pos=')[1]?.split(',') || ['50', '50'];
+                        return (
+                          <div
+                            className="h-48 bg-slate-200 bg-cover relative"
+                            style={{
+                              backgroundImage: `url("${project.image.split('#pos=')[0]}")`,
+                              backgroundPosition: `${posX}% ${posY}%`
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+                            {sdg && (
+                              <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
+                                <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                              </div>
+                            )}
+                            <div className="absolute bottom-3 right-3">
+                              <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
+                                {project.status}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                        <div className="absolute bottom-3 right-3">
-                          <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide">
-                            {project.status}
-                          </span>
-                        </div>
-                      </div>
+                        );
+                      })()}
                       <div className="p-5 flex-1 flex flex-col">
                         <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{project.title}</h3>
                         <p className="text-sm text-slate-500 line-clamp-3 mb-4 flex-1">{project.description}</p>
@@ -532,7 +567,96 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
           </div>
         )}
 
-        {/* --- ODS TAB --- */}
+        {/* --- PROYECTOS TAB (ALL NEW) --- */}
+        {activeTab === 'projects' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">rocket_launch</span> Todos los Proyectos
+                </h2>
+                <p className="text-sm text-slate-500">Explora todas las iniciativas de la comunidad.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allProjects.map(project => {
+                const sdg = getSdgInfo(project.sdgId);
+                const owner = getUser(project.ownerId);
+                return (
+                  <div
+                    key={project.id}
+                    className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer flex flex-col h-full group"
+                    onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })}
+                  >
+                    {(() => {
+                      const [posX, posY] = (project.image || '').split('#pos=')[1]?.split(',') || ['50', '50'];
+                      return (
+                        <div
+                          className="h-48 bg-slate-200 bg-cover relative"
+                          style={{
+                            backgroundImage: `url("${project.image.split('#pos=')[0]}")`,
+                            backgroundPosition: `${posX}% ${posY}%`
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+                          {sdg && (
+                            <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
+                              <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                            </div>
+                          )}
+                          <div className="absolute bottom-3 right-3">
+                            <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
+                              {project.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{project.title}</h3>
+                      <p className="text-sm text-slate-500 line-clamp-3 mb-4 flex-1">{project.description}</p>
+
+                      <div className="mt-auto">
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1">
+                          <span>Meta alcanzada</span>
+                          <span className="text-primary">{project.progress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
+                          <div className="bg-primary h-full rounded-full" style={{ width: `${project.progress}%` }}></div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="size-6 rounded-full bg-cover bg-center"
+                              style={{ backgroundImage: `url("${owner.avatar}")` }}
+                            ></div>
+                            <span className="text-xs font-bold text-slate-700 truncate max-w-[100px]">{owner.name}</span>
+                          </div>
+                          <div className="flex -space-x-1.5">
+                            {project.team && project.team.slice(0, 3).map((m: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="size-6 rounded-full border-2 border-white bg-cover bg-center bg-slate-200"
+                                style={{ backgroundImage: `url("${m.avatar}")` }}
+                              ></div>
+                            ))}
+                            {project.team && project.team.length > 3 && (
+                              <div className="size-6 rounded-full border-2 border-white bg-slate-100 text-[9px] flex items-center justify-center font-bold text-slate-500">
+                                +{project.team.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {activeTab === 'ods' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
             {sortedSdgs.map((sdg) => {

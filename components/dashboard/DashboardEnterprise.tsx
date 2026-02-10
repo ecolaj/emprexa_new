@@ -25,12 +25,19 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
         reach: 0,
         views: 0
     });
+    const [projectMetrics, setProjectMetrics] = useState({
+        count: 0,
+        sdgs: 0,
+        raised: 0,
+        volunteers: 0
+    });
     const [globalImpactScore, setGlobalImpactScore] = useState(0); // For Enterprise Comparison
     const [isLoading, setIsLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().substring(0, 7));
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [flippedCardIndex, setFlippedCardIndex] = useState<number | null>(null);
+    const [flippedProjectCardIndex, setFlippedProjectCardIndex] = useState<number | null>(null);
     const [isChartFlipped, setIsChartFlipped] = useState(false);
     const [isOdsFlipped, setIsOdsFlipped] = useState(false);
     const [isActivityFlipped, setIsActivityFlipped] = useState(false);
@@ -114,6 +121,24 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                     impact: Math.min(100, (totalImpactPoints / 500) * 100),
                     reach,
                     views: reach * 0.45
+                });
+
+                // Calculate Project Metrics
+                const uniqueSdgs = new Set<number>();
+                let totalRaised = 0;
+                let totalVolunteers = 0;
+
+                projects.forEach((p: any) => {
+                    if (p.sdg_id) uniqueSdgs.add(p.sdg_id);
+                    totalRaised += p.raised_amount || 0;
+                    totalVolunteers += p.volunteers_count || 0;
+                });
+
+                setProjectMetrics({
+                    count: projects.length,
+                    sdgs: uniqueSdgs.size,
+                    raised: totalRaised,
+                    volunteers: totalVolunteers
                 });
 
                 const sorted = [...posts].sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count));
@@ -379,7 +404,114 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                     })}
                 </div>
 
-                {/* Reusing existing visual logic for the rest... (Charts, etc.) */}
+                {/* PROJECT METRICS GRID */}
+                <h3 className="text-2xl font-black text-slate-900 tracking-tighter mb-6 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-slate-400">engineering</span>
+                    KPIs de Proyectos
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+                    {[
+                        {
+                            label: 'Proyectos del Mes',
+                            value: projectMetrics.count,
+                            change: 'Active',
+                            icon: 'folder_managed',
+                            color: 'text-pink-500',
+                            bg: 'bg-pink-50',
+                            backBg: 'bg-pink-600',
+                            explanation: (
+                                <p className="text-[10px] font-medium leading-relaxed opacity-90">
+                                    Total de iniciativas activas o creadas en el periodo seleccionado.
+                                </p>
+                            )
+                        },
+                        {
+                            label: 'Diversidad ODS',
+                            value: projectMetrics.sdgs,
+                            change: 'Scope',
+                            icon: 'category',
+                            color: 'text-cyan-500',
+                            bg: 'bg-cyan-50',
+                            backBg: 'bg-cyan-600',
+                            explanation: (
+                                <p className="text-[10px] font-medium leading-relaxed opacity-90">
+                                    Cantidad de Objetivos de Desarrollo Sostenible distintos que abarcan tus proyectos actuales.
+                                </p>
+                            )
+                        },
+                        {
+                            label: 'Recaudo Total',
+                            value: '$' + (projectMetrics.raised / 1000).toFixed(1) + 'k',
+                            change: 'Funding',
+                            icon: 'attach_money',
+                            color: 'text-emerald-500',
+                            bg: 'bg-emerald-50',
+                            backBg: 'bg-emerald-600',
+                            explanation: (
+                                <p className="text-[10px] font-medium leading-relaxed opacity-90">
+                                    Fondos totales recaudados o asignados a los proyectos activos en este periodo.
+                                </p>
+                            )
+                        },
+                        {
+                            label: 'Voluntarios',
+                            value: projectMetrics.volunteers,
+                            change: 'Team',
+                            icon: 'diversity_3',
+                            color: 'text-orange-500',
+                            bg: 'bg-orange-50',
+                            backBg: 'bg-orange-600',
+                            explanation: (
+                                <p className="text-[10px] font-medium leading-relaxed opacity-90">
+                                    Número total de voluntarios y colaboradores sumados en todos tus proyectos.
+                                </p>
+                            )
+                        }
+                    ].map((card, i) => {
+                        const isFlipped = flippedProjectCardIndex === i;
+                        return (
+                            <div key={i} className="h-[220px]" style={{ perspective: '1000px' }}>
+                                <div
+                                    className={`relative w-full h-full transition-all duration-700`}
+                                    style={{
+                                        transformStyle: 'preserve-3d',
+                                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => setFlippedProjectCardIndex(isFlipped ? null : i)}
+                                >
+                                    <div className="absolute inset-0 bg-white p-8 rounded-[48px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-2xl transition-all duration-700" style={{ backfaceVisibility: 'hidden' }}>
+                                        <div className="flex justify-between items-start mb-8">
+                                            <div>
+                                                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">{card.label}</p>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-4xl font-black text-slate-900 tracking-tighter tabular-nums">{card.value}</span>
+                                                    <div className={`flex items-center px-2 py-1 rounded-lg text-[9px] font-black bg-slate-50 text-slate-500`}>
+                                                        {card.change}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className={`size-16 rounded-3xl ${card.bg} ${card.color} flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
+                                                <span className="material-symbols-outlined text-3xl filled">{card.icon}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className={`absolute inset-0 ${card.backBg} p-8 rounded-[48px] shadow-2xl flex flex-col justify-center items-center text-center text-white`}
+                                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                                    >
+                                        <span className="material-symbols-outlined text-3xl mb-4 filled">info</span>
+                                        <h4 className="text-sm font-black uppercase tracking-widest mb-3">{card.label}</h4>
+                                        {card.explanation}
+                                        <div className="mt-4 px-4 py-2 bg-white/20 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                            Click para volver
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-12">
                     <div className="lg:col-span-2 h-[600px]" style={{ perspective: '2000px' }}>
                         <div
@@ -494,7 +626,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                         <span className="material-symbols-outlined text-3xl filled">eco</span>
                                     </div>
                                 </div>
-                                <div className="size-72 relative mb-10 mx-auto cursor-pointer" onClick={() => setIsOdsFlipped(true)}>
+                                <div className="flex-1 w-full relative mb-4 mx-auto cursor-pointer min-h-[250px]" onClick={() => setIsOdsFlipped(true)}>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <RechartsTooltip
@@ -527,7 +659,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                         <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest mt-2">Acciones</span>
                                     </div>
                                 </div>
-                                <div className="w-full space-y-4 max-h-48 overflow-y-auto no-scrollbar pr-2">
+                                <div className="w-full space-y-3 h-32 overflow-y-auto no-scrollbar pr-2">
                                     {pieData.map((e, i) => (
                                         <div key={i} className="flex items-center justify-between group/ods">
                                             <div className="flex items-center gap-4">
@@ -556,7 +688,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                 <h4 className="text-3xl font-black uppercase tracking-widest mb-8">Huella Corporativa</h4>
                                 <div className="space-y-8 max-w-sm">
                                     <p className="text-xl font-medium leading-relaxed opacity-90">
-                                        Tu impacto está alineado con los Objetivos de Desarrollo Sostenible de la ONU.
+                                        Tu impacto está alineado con los Objetivos de Desarrollo Sostenible.
                                     </p>
                                     <p className="text-sm font-medium leading-relaxed opacity-60">
                                         Analizamos cada reporte corporativo y publicación social para categorizar tus esfuerzos en pilares de <span className="text-blue-400 font-bold">Sostenibilidad Global</span>.

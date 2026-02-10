@@ -128,6 +128,8 @@ export interface Project {
   gallery?: string[];
   raisedAmount?: number;
   volunteersCount?: number;
+  imagePositionX?: number;
+  imagePositionY?: number;
 }
 
 export interface ProjectUpdate {
