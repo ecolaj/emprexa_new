@@ -53,6 +53,17 @@ function AppContent() {
       return;
     }
 
+    // SI hay un PERFIL en la URL, MOSTRARLO SIEMPRE (público o logueado)
+    const userIdParam = urlParams.get('userId');
+    const usernameParam = urlParams.get('username');
+    if (viewParam === 'PROFILE' && (userIdParam || usernameParam)) {
+      console.log('👤 App.tsx: Acceso directo a perfil público detectado');
+      setCurrentView(View.PROFILE);
+      setNavParams({ userId: userIdParam, username: usernameParam });
+      setInitialCheckDone(true);
+      return;
+    }
+
     // REGLA 0: PRIORIDAD ABSOLUTA - Bloqueo de recuperación de contraseña
     const isRecoveryFlag = sessionStorage.getItem('is_recovery_active') === 'true';
     if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD || isRecoveryFlag) {
@@ -120,7 +131,7 @@ function AppContent() {
     // REGLA NUEVA (FIX LOGOUT): Si ya cargó la app y el usuario se vuelve null (Logout), redirigir al Login
     // Excluyendo vistas que son públicamente accesibles para evitar rebotes en SinglePost, etc.
     if (initialCheckDone && !isLoading && !user) {
-      const publicViews = [View.LOGIN, View.SINGLE_POST, View.RESET_PASSWORD, View.PRICING];
+      const publicViews = [View.LOGIN, View.SINGLE_POST, View.RESET_PASSWORD, View.PRICING, View.PROFILE];
       if (!publicViews.includes(currentView)) {
         setCurrentView(View.LOGIN);
         setNavParams(null);
@@ -137,11 +148,11 @@ function AppContent() {
 
     // Definir vistas públicas (accesibles sin login)
     const publicViews = [
-      View.LOGIN,
       View.ONBOARDING,
       View.SINGLE_POST,
       View.PRICING,  // Pricing puede ser público
-      View.RESET_PASSWORD
+      View.RESET_PASSWORD,
+      View.PROFILE   // Permitir acceso público a perfiles
     ];
 
     // Si no hay usuario y trata de acceder a vista protegida → LOGIN
@@ -159,6 +170,9 @@ function AppContent() {
 
     if (view === View.SINGLE_POST && params?.postId) {
       window.history.pushState({}, '', `?view=post&id=${params.postId}`);
+    } else if (view === View.PROFILE && (params?.userId || params?.username)) {
+      const query = params.userId ? `userId=${params.userId}` : `username=${params.username}`;
+      window.history.pushState({}, '', `?view=PROFILE&${query}`);
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -199,6 +213,9 @@ function AppContent() {
       } else if (viewParam === 'onboarding') {
         setCurrentView(View.ONBOARDING);
         setNavParams(null);
+      } else if (viewParam === 'PROFILE' && (urlParams.get('userId') || urlParams.get('username'))) {
+        setCurrentView(View.PROFILE);
+        setNavParams({ userId: urlParams.get('userId'), username: urlParams.get('username') });
       } else {
         if (!user) {
           setCurrentView(View.LOGIN);
@@ -286,8 +303,13 @@ function AppContent() {
   if (currentView === View.PROCESS_RECOVERY) return <ProcessRecovery currentView={currentView} navigate={navigate} />;
   // Public Post View - SIEMPRE visible, con o sin usuario
   // Public Views - Renderizados fuera del layout con Sidebar para visitantes
-  if (!user && (currentView === View.SINGLE_POST)) {
-    return <SinglePost currentView={currentView} navigate={navigate} params={navParams} />;
+  if (!user && (currentView === View.SINGLE_POST || currentView === View.PROFILE)) {
+    return (
+      <>
+        {currentView === View.SINGLE_POST && <SinglePost currentView={currentView} navigate={navigate} params={navParams} />}
+        {currentView === View.PROFILE && <Profile currentView={currentView} navigate={navigate} params={navParams} />}
+      </>
+    );
   }
 
   // --- PROTECTED APP LAYOUT (With Sidebar) ---

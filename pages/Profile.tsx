@@ -10,6 +10,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { Logo } from '../components/Logo';
 
 export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, followedUserIds, toggleFollowUser, sendMentionNotifications } = useAuth();
@@ -277,6 +278,21 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     });
   };
 
+  // NEW: Handle Share Profile
+  const handleShareProfile = () => {
+    if (!user) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=PROFILE&userId=${user.id}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopiedUrl(shareUrl);
+      setShowShareModal(true);
+      setTimeout(() => setShowShareModal(false), 3000);
+    }).catch(err => {
+      console.error('Error copying link:', err);
+      setCopiedUrl(shareUrl);
+      setShowShareModal(true);
+    });
+  };
+
   const handleAddComment = async (postId: number, text: string) => {
     if (!authUser) return;
 
@@ -435,6 +451,19 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   return (
     <>
       <div className="flex-1 overflow-y-auto bg-slate-50" onClick={() => { setActiveMenuPostId(null); setActiveMenuCommentId(null); }}>
+        {/* Public Header (only visible if no sidebar/user) */}
+        {!authUser && (
+          <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(View.LOGIN)}>
+              <Logo className="h-8" />
+            </div>
+            <div className="flex gap-4 text-sm">
+              <button onClick={() => navigate(View.LOGIN)} className="font-bold text-slate-600 hover:text-slate-900">Entrar</button>
+              <button onClick={() => navigate(View.ONBOARDING)} className="font-bold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">Registrarse</button>
+            </div>
+          </div>
+        )}
+
         {/* Banner & Header */}
         <div className="bg-white pb-0 border-b border-slate-200">
           <div className="h-64 bg-slate-900 relative group overflow-hidden">
@@ -486,7 +515,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                   </button>
                 )}
                 <button
-                  onClick={() => isCurrentUser ? {} : toggleFollowUser(user.id)}
+                  onClick={() => isCurrentUser ? handleShareProfile() : toggleFollowUser(user.id)}
                   className={`flex-1 md:flex-none px-4 py-2 ${isCurrentUser ? 'bg-primary' : isFollowing ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-slate-900 text-white'} rounded-lg font-bold hover:opacity-90 shadow-sm transition-colors flex items-center justify-center gap-2`}
                 >
                   {isCurrentUser ? (
