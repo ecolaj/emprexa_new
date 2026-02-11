@@ -50,8 +50,80 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
     // Gallery Management
     const [showGalleryModal, setShowGalleryModal] = useState(false);
     const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-    const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+
+    // Gallery State
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+
+    // Team Management State
+    const [showAddMemberMode, setShowAddMemberMode] = useState(false);
+    const [searchMemberQuery, setSearchMemberQuery] = useState('');
+    const [memberSuggestions, setMemberSuggestions] = useState<User[]>([]);
+
+    // --- TEAM LOGIC ---
+    useEffect(() => {
+        const searchUsers = async () => {
+            if (searchMemberQuery.length < 2) {
+                setMemberSuggestions([]);
+                return;
+            }
+
+            const { data } = await supabase
+                .from('profiles')
+                .select('*')
+                .ilike('name', `%${searchMemberQuery}%`)
+                .limit(5);
+
+            if (data) {
+                // Filter out already added members and owner
+                const currentTeamIds = team.map(m => m.id);
+                setMemberSuggestions(data.filter((u: User) =>
+                    u.id !== project?.owner_id &&
+                    !currentTeamIds.includes(u.id)
+                ));
+            }
+        };
+
+        const debounce = setTimeout(searchUsers, 300);
+        return () => clearTimeout(debounce);
+    }, [searchMemberQuery, team, project]);
+
+    const handleAddMember = async (user: User) => {
+        if (!project) return;
+
+        const { error } = await supabase
+            .from('project_members')
+            .insert({ project_id: project.id, user_id: user.id, role: 'Miembro' });
+
+        if (!error) {
+            setTeam([...team, user]);
+            setSearchMemberQuery('');
+            setMemberSuggestions([]);
+            setShowAddMemberMode(false);
+        } else {
+            console.error(error);
+            alert("Error al agregar miembro");
+        }
+    };
+
+    const handleRemoveMember = async (userId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent navigating to profile
+        if (!project || !confirm("¿Seguro que quieres quitar a este miembro del equipo?")) return;
+
+        const { error } = await supabase
+            .from('project_members')
+            .delete()
+            .eq('project_id', project.id)
+            .eq('user_id', userId);
+
+        if (!error) {
+            setTeam(team.filter(m => m.id !== userId));
+        } else {
+            console.error(error);
+            alert("Error al eliminar miembro");
+        }
+    };
 
     const openGalleryLightbox = (index: number) => {
         const allImages = [project?.image, ...(project?.gallery || [])].filter(Boolean) as string[];
@@ -322,9 +394,6 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
     const sdg = project ? SDGS.find(s => s.id === project.sdgId) : null;
     const isOwner = authUser?.id === project?.owner_id;
     const isFollowing = followedProjectIds.includes(Number(projectId));
-
-    // Lightbox
-    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
     // Contact Modal
     const [showContactModal, setShowContactModal] = useState(false);
@@ -736,17 +805,86 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
                             )}
 
                             {activeTab === 'team' && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {team.map(member => (
-                                        <div key={member.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate(View.PROFILE, { userId: member.id })}>
-                                            <img src={member.avatar} alt={member.name} className="size-14 rounded-full object-cover border border-slate-100" />
-                                            <div>
-                                                <h4 className="font-bold text-slate-900">{member.name}</h4>
-                                                <p className="text-xs text-slate-500">{member.role}</p>
-                                            </div>
+                                <div>
+                                    {isOwner && (
+                                        <div className="mb-6 bg-white p-4 rounded-xl border border-slate-200">
+                                            {!showAddMemberMode ? (
+                                                <button
+                                                    onClick={() => setShowAddMemberMode(true)}
+                                                    className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-symbols-outlined">person_add</span> Agregar Miembro
+                                                </button>
+                                            ) : (
+                                                <div className="animate-[fade-in_0.2s_ease-out]">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <label className="text-sm font-bold text-slate-700">Buscar Usuario</label>
+                                                        <button onClick={() => setShowAddMemberMode(false)} className="text-xs font-bold text-red-500 hover:underline">Cancelar</button>
+                                                    </div>
+                                                    <div className="relative">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Escribe el nombre del usuario..."
+                                                            className="w-full p-3 pl-10 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none"
+                                                            value={searchMemberQuery}
+                                                            onChange={(e) => setSearchMemberQuery(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                        <span className="material-symbols-outlined absolute left-3 top-3.5 text-slate-400">search</span>
+
+                                                        {memberSuggestions.length > 0 && (
+                                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-100 z-20 max-h-60 overflow-y-auto">
+                                                                {memberSuggestions.map(user => (
+                                                                    <button
+                                                                        key={user.id}
+                                                                        onClick={() => handleAddMember(user)}
+                                                                        className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 transition-colors border-b border-slate-50 last:border-0"
+                                                                    >
+                                                                        <img src={user.avatar} className="size-8 rounded-full border border-slate-100 bg-slate-200" alt={user.name} />
+                                                                        <div>
+                                                                            <p className="font-bold text-sm text-slate-800">{user.name}</p>
+                                                                            <p className="text-xs text-slate-500 truncate">{user.role || 'Usuario'}</p>
+                                                                        </div>
+                                                                        <span className="material-symbols-outlined text-primary ml-auto">add_circle</span>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                    {team.length === 0 && <div className="col-span-full text-center py-12 text-slate-500">Solo el líder está en este equipo actualmente.</div>}
+                                    )}
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {team.map(member => (
+                                            <div key={member.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 hover:shadow-md transition-all cursor-pointer group" onClick={() => navigate(View.PROFILE, { userId: member.id })}>
+                                                <img src={member.avatar} alt={member.name} className="size-14 rounded-full object-cover border border-slate-100" />
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-slate-900 truncate">{member.name}</h4>
+                                                    <p className="text-xs text-slate-500 truncate">{member.role}</p>
+                                                </div>
+                                                {isOwner && (
+                                                    <button
+                                                        onClick={(e) => handleRemoveMember(member.id, e)}
+                                                        className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all"
+                                                        title="Eliminar miembro"
+                                                    >
+                                                        <span className="material-symbols-outlined">delete</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {team.length === 0 && (
+                                            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 rounded-2xl">
+                                                <div className="size-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                                    <span className="material-symbols-outlined text-slate-300 text-3xl">groups_2</span>
+                                                </div>
+                                                <p className="text-slate-500 font-medium">Aún no hay miembros en el equipo.</p>
+                                                {isOwner && <p className="text-xs text-slate-400 mt-1">¡Invita a colaboradores para comenzar!</p>}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>

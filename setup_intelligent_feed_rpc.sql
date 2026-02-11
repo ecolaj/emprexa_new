@@ -24,6 +24,8 @@ RETURNS TABLE (
     author_avatar TEXT,
     author_role TEXT,
     author_plan TEXT,
+    location TEXT,
+    author_location TEXT,
     score FLOAT
 ) AS $$
 DECLARE
@@ -60,6 +62,8 @@ BEGIN
         prof.avatar as author_avatar,
         prof.role as author_role,
         prof.plan as author_plan,
+        p.location as location,
+        prof.location as author_location,
         (
             -- PESO 1: Engagement (Popularidad actual del post)
             (COALESCE(p.likes_count, 0) * 2.0 + COALESCE(p.comments_count, 0) * 5.0) +

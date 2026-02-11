@@ -94,7 +94,6 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                         imagePositionY: parseInt(posY),
                         customTag: ''
                     } as any);
-                    setImagePreview(data.image);
                     setOriginalImage(data.image);
                 }
                 setLoading(false);
