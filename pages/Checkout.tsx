@@ -3,11 +3,19 @@ import React, { useState } from 'react';
 import { View, NavProps } from '../types';
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../utils/supabase';
 
 const PLAN_IDS: Record<string, string> = {
   'Básico': import.meta.env.VITE_PAYPAL_PLAN_BASIC,
   'Pro': import.meta.env.VITE_PAYPAL_PLAN_PRO,
   'Enterprise': import.meta.env.VITE_PAYPAL_PLAN_ENTERPRISE
+};
+
+// Mapeo de nombre de pantalla a valor en DB
+const DB_PLAN_MAP: Record<string, string> = {
+  'Básico': 'basic',
+  'Pro': 'pro',
+  'Enterprise': 'enterprise'
 };
 
 export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
@@ -19,33 +27,87 @@ export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
   const { plan = 'Pro', price = '9.99' } = params || {};
   const planId = PLAN_IDS[plan];
 
+  const updatePlanDirectly = async (subscriptionId: string, planDbValue: string) => {
+    // Actualización directa a Supabase como fallback de seguridad
+    // Esto asegura que incluso si updateUser falla, el plan se actualice
+    if (!user?.id) return false;
+
+    try {
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({
+          plan: planDbValue,
+          paypal_subscription_id: subscriptionId,
+          plan_updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (dbError) {
+        console.error("Error en actualización directa a DB:", dbError);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("Exception en actualización directa:", err);
+      return false;
+    }
+  };
+
   const handleSubscriptionSuccess = async (data: any) => {
     try {
       setIsProcessing(true);
-      // Mapear nombre de pantalla a valor de base de datos
-      const dbPlanMap: Record<string, string> = {
-        'Básico': 'basic',
-        'Pro': 'pro',
-        'Enterprise': 'enterprise'
-      };
+      setError(null);
 
-      // Actualizar plan en BD (Supabase) sin refrescar
-      await updateUser({
-        plan: (dbPlanMap[plan] || plan.toLowerCase()) as any,
-        status: 'active',
-        paypalSubscriptionId: data.subscriptionID,
-        planUpdatedAt: new Date().toISOString()
-      });
+      const dbPlanValue = DB_PLAN_MAP[plan] || plan.toLowerCase();
+      const subscriptionId = data.subscriptionID;
 
-      // Navegar a éxito con parámetros para mostrar confeti y info dinámica
-      navigate(View.SUCCESS, {
-        plan,
-        subscriptionId: data.subscriptionID,
-        orderId: data.orderID
-      });
+      console.log(`✅ PayPal onApprove - Plan: ${dbPlanValue}, Sub ID: ${subscriptionId}, User: ${user?.id}`);
+
+      // ESTRATEGIA DOBLE: Intentar ambas vías para máxima seguridad
+      let updateSuccess = false;
+
+      // Vía 1: updateUser del contexto (actualiza DB + estado local)
+      try {
+        await updateUser({
+          plan: dbPlanValue as any,
+          status: 'active',
+          paypalSubscriptionId: subscriptionId,
+          planUpdatedAt: new Date().toISOString()
+        });
+        updateSuccess = true;
+        console.log("✅ Plan actualizado vía updateUser");
+      } catch (updateErr: any) {
+        console.error("⚠️ updateUser falló, intentando vía directa:", updateErr.message);
+
+        // Vía 2: Actualización directa a Supabase (fallback)
+        updateSuccess = await updatePlanDirectly(subscriptionId, dbPlanValue);
+        if (updateSuccess) {
+          console.log("✅ Plan actualizado vía directa a DB");
+        }
+      }
+
+      if (updateSuccess) {
+        // Navegar a éxito
+        navigate(View.SUCCESS, {
+          plan,
+          subscriptionId: subscriptionId,
+          orderId: data.orderID
+        });
+      } else {
+        // Si AMBAS vías fallan, mostrar mensaje con el subscription ID
+        // para que soporte pueda resolver manualmente
+        setError(
+          `El pago fue procesado exitosamente (ID: ${subscriptionId}), ` +
+          `pero hubo un problema actualizando tu plan. ` +
+          `Tu suscripción está activa en PayPal. Por favor contacta a soporte con este ID: ${subscriptionId}`
+        );
+      }
     } catch (err: any) {
-      console.error("Error updating user plan:", err);
-      setError("La transacción fue exitosa pero hubo un problema actualizando tu perfil. Por favor contacta a soporte.");
+      console.error("Error en handleSubscriptionSuccess:", err);
+      setError(
+        "La transacción fue exitosa pero hubo un problema actualizando tu perfil. " +
+        "Tu pago está seguro. Por favor contacta a soporte."
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -98,20 +160,30 @@ export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
                 }}
                 disabled={isProcessing}
                 createSubscription={(data, actions) => {
+                  console.log(`🔄 Creando suscripción PayPal - Plan ID: ${planId}, User ID: ${user?.id}`);
                   return actions.subscription.create({
                     plan_id: planId,
                     custom_id: user?.id as string // Link transaction to this specific user ID
                   });
                 }}
                 onApprove={async (data, actions) => {
+                  console.log("✅ PayPal onApprove disparado:", JSON.stringify(data));
                   await handleSubscriptionSuccess(data);
                 }}
                 onCancel={() => {
+                  console.log("⚠️ PayPal: Transacción cancelada por el usuario");
                   setError("Transacción cancelada.");
                 }}
                 onError={(err) => {
-                  console.error("PayPal Error:", err);
-                  setError("Hubo un error con PayPal. Inténtalo de nuevo.");
+                  console.error("❌ PayPal onError:", err);
+                  // IMPORTANTE: onError puede dispararse INCLUSO cuando el pago fue exitoso
+                  // pero hubo un error de red al cerrar el popup de PayPal.
+                  // Por eso NO degradamos el plan aquí, solo mostramos un mensaje genérico.
+                  setError(
+                    "Hubo un error de comunicación con PayPal. " +
+                    "Si completaste el pago, tu plan se actualizará automáticamente en unos momentos. " +
+                    "Si no, inténtalo de nuevo."
+                  );
                 }}
               />
             ) : (
