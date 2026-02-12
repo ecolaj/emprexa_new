@@ -429,7 +429,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Cargar datos iniciales
-    // Cargar datos iniciales
     loadUserData(user.id);
 
     // Verificar estado del trial
@@ -442,6 +441,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       stopPolling();
+    };
+  }, [user?.id]);
+
+  // 3. Suscripción Realtime al perfil del usuario (detecta cambios de plan, etc.)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log('📡 Iniciando suscripción Realtime para perfil:', user.id);
+
+    const channel = supabase
+      .channel(`profile-changes-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          if (!mountedRef.current) return;
+
+          const updatedProfile = payload.new as any;
+          console.log('📡 Cambio detectado en perfil via Realtime:', {
+            plan: updatedProfile.plan,
+            paypal_subscription_id: updatedProfile.paypal_subscription_id,
+            status: updatedProfile.status
+          });
+
+          // Actualizar estado local con los datos nuevos de la BD
+          setUser(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              name: updatedProfile.name ?? prev.name,
+              role: updatedProfile.role ?? prev.role,
+              avatar: updatedProfile.avatar ?? prev.avatar,
+              cover: updatedProfile.cover ?? prev.cover,
+              bio: updatedProfile.bio ?? prev.bio,
+              location: updatedProfile.location ?? prev.location,
+              organizationId: updatedProfile.organization_id ?? prev.organizationId,
+              organizationName: updatedProfile.organization_name ?? prev.organizationName,
+              sdgInterests: updatedProfile.sdg_interests ?? prev.sdgInterests,
+              plan: updatedProfile.plan ?? prev.plan,
+              paypalSubscriptionId: updatedProfile.paypal_subscription_id ?? prev.paypalSubscriptionId,
+              planUpdatedAt: updatedProfile.plan_updated_at ?? prev.planUpdatedAt,
+              status: updatedProfile.status ?? prev.status,
+              username: updatedProfile.username ?? prev.username,
+              website: updatedProfile.website ?? prev.website,
+              linkedin: updatedProfile.linkedin ?? prev.linkedin,
+              phone: updatedProfile.phone ?? prev.phone,
+              isTrialActive: updatedProfile.is_trial_active ?? prev.isTrialActive,
+              trialPostsRemaining: updatedProfile.trial_posts_remaining ?? prev.trialPostsRemaining,
+              trialEndsAt: updatedProfile.trial_ends_at ?? prev.trialEndsAt,
+              hasUsedTrial: updatedProfile.has_used_trial ?? prev.hasUsedTrial,
+              isAdmin: updatedProfile.is_admin ?? prev.isAdmin,
+            };
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status);
+      });
+
+    return () => {
+      console.log('📡 Limpiando suscripción Realtime para perfil');
+      supabase.removeChannel(channel);
     };
   }, [user?.id]);
 
