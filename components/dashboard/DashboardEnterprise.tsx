@@ -187,16 +187,47 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
         if (!element) return;
         setIsExporting(true);
         try {
-            const originalScrollY = window.scrollY;
-            window.scrollTo(0, 0);
-            const canvas = await html2canvas(element, { scale: 4, useCORS: true, backgroundColor: '#ffffff', width: element.scrollWidth, height: element.scrollHeight });
+            // High fidelity delay for rendering all complex SVG gradients
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const canvas = await html2canvas(element, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                height: element.scrollHeight,
+                windowHeight: element.scrollHeight,
+                onclone: (clonedDoc) => {
+                    const el = clonedDoc.getElementById('pdf-report-container');
+                    if (el) {
+                        el.style.display = 'flex';
+                        el.style.width = '900px';
+                        el.style.height = 'auto'; // Force expansion in clone
+                        el.style.minHeight = '1850px';
+                        el.style.fontFamily = "'Inter', system-ui, sans-serif";
+
+                        // Ensure dark regions keep their visibility
+                        const darkSections = el.querySelectorAll('.bg-slate-900');
+                        darkSections.forEach((s: any) => s.style.backgroundColor = '#0f172a');
+
+                        // Force visibility of all icons and high-contrast text
+                        const texts = el.querySelectorAll('p, span, h1, h3');
+                        texts.forEach((t: any) => {
+                            if (t.classList.contains('text-white')) t.style.color = '#ffffff';
+                        });
+                    }
+                }
+            });
+
             const link = document.createElement('a');
-            link.download = `Reporte_Enterprise_${authUser?.name}_${selectedMonth}.png`;
+            const fileName = `Reporte_Impacto_Corporativo_${authUser?.name || 'Empresa'}_${monthName.replace(' ', '_')}.png`;
+            link.download = fileName;
             link.href = canvas.toDataURL('image/png', 1.0);
             link.click();
             setIsPreviewOpen(false);
-            window.scrollTo(0, originalScrollY);
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error('Export Error:', err);
+        }
         setIsExporting(false);
     };
 
@@ -851,29 +882,151 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                 <span className="material-symbols-outlined font-black">close</span>
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-20 flex justify-center no-scrollbar">
-                            <div id="pdf-report-container" className="bg-white w-[210mm] p-20 shadow-2xl relative border border-slate-200 flex flex-col font-sans">
-                                <div className="flex justify-between items-start mb-20">
-                                    <div className="space-y-6">
-                                        <div className="inline-flex items-center gap-3 px-5 py-2 bg-blue-50 rounded-full border border-blue-100"><span id="pdf-corp-analysis" className="text-[11px] font-black uppercase tracking-[0.3em] text-blue-900">Enterprise High-Fidelity Analysis</span></div>
-                                        <h1 className="text-7xl font-black text-slate-900 tracking-tighter leading-[1.1]">Global Summary<span className="text-blue-600">.</span></h1>
-                                        <div className="flex items-center gap-6 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                                            <img src={authUser?.avatar} className="size-14 rounded-2xl border-2 border-white shadow-xl object-cover" alt="" />
-                                            <div><p className="text-lg font-black text-slate-900 leading-tight">{authUser?.name}</p><p className="text-[11px] font-black text-slate-500 uppercase tracking-widest leading-normal">Impact Executive Officer</p></div>
+                        <div className="flex-1 overflow-y-auto p-12 flex justify-center no-scrollbar bg-slate-900/10">
+                            <div id="pdf-report-container" className="bg-[#ffffff] w-[900px] p-20 shadow-2xl relative border border-slate-300 flex flex-col font-sans mb-12" style={{ display: 'flex', minHeight: '2000px', backgroundColor: '#ffffff', color: '#0f172a' }}>
+                                {/* Header: Executive Branding */}
+                                <div className="flex justify-between items-start mb-16 border-b-[6px] border-slate-900 pb-12">
+                                    <div className="flex items-center gap-6">
+                                        <div className="size-20 bg-slate-900 rounded-[24px] flex items-center justify-center text-white shadow-2xl transform -rotate-3">
+                                            <span className="material-symbols-outlined text-5xl">domain</span>
+                                        </div>
+                                        <div>
+                                            <h1 className="text-4xl font-[1000] text-slate-900 tracking-tighter uppercase leading-none">Emprexa Reportes</h1>
+                                            <p className="text-blue-600 font-black text-[11px] uppercase tracking-[0.6em] mt-3">Métricas de Impacto y Análisis Estratégico</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-5xl font-black text-slate-900 tracking-tighter mb-2">{monthName.split(' ')[0]}</p>
-                                        <p className="text-2xl font-black text-blue-600 uppercase tracking-widest">{monthName.split(' ')[1]}</p>
+                                        <div className="inline-block px-5 py-2 bg-slate-900 rounded-full mb-3 shadow-lg" style={{ backgroundColor: '#0f172a' }}>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white" style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}>Documento Corporativo Oficial</p>
+                                        </div>
+                                        <p className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{monthName}</p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-8 mb-12">
-                                    <div className="bg-slate-50 p-8 rounded-[40px]"><p className="text-[10px] font-black text-slate-400 uppercase mb-2">Share of Voice</p><p className="text-5xl font-black text-slate-900 mb-2">{shareOfImpact}%</p><p className="text-xs font-bold text-blue-600">Cuota Global</p></div>
-                                    <div className="bg-slate-50 p-8 rounded-[40px]"><p className="text-[10px] font-black text-slate-400 uppercase mb-2">Projects</p><p className="text-5xl font-black text-slate-900 mb-2">{counts.projects}</p><p className="text-xs font-bold text-indigo-600">Activos</p></div>
-                                    <div className="bg-slate-50 p-8 rounded-[40px]"><p className="text-[10px] font-black text-slate-400 uppercase mb-2">Impact Points</p><p className="text-5xl font-black text-slate-900 mb-2">{counts.impact.toFixed(0)}</p><p className="text-xs font-bold text-emerald-600">KPI Social</p></div>
+
+                                {/* Summary Grid: Clean & High Contrast */}
+                                <div className="grid grid-cols-4 gap-6 mb-16">
+                                    {[
+                                        { label: 'Cuota de Impacto Global', value: shareOfImpact + '%', sub: 'Cuota de Mercado Social', icon: 'public' },
+                                        { label: 'Alcance Agregado', value: (counts.reach / 1000).toFixed(1) + 'k', sub: 'Alcance Bruto de Impacto', icon: 'rocket_launch' },
+                                        { label: 'Puntaje de Impacto', value: counts.impact.toFixed(0), sub: 'Índice de Relevancia', icon: 'stars' },
+                                        { label: 'Red Estratégica', value: counts.followers, sub: 'Crecimiento de Red Activa', icon: 'groups' }
+                                    ].map((m, i) => (
+                                        <div key={i} className="bg-[#f8fafc] p-8 rounded-[40px] border-2 border-slate-100 flex flex-col items-center text-center shadow-sm">
+                                            <div className="size-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm border border-slate-100 mb-4">
+                                                <span className="material-symbols-outlined text-xl filled">{m.icon}</span>
+                                            </div>
+                                            <p className="text-[32px] font-[1000] text-slate-900 mb-1 tabular-nums tracking-tighter">{m.value}</p>
+                                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-tight">{m.label}</p>
+                                            <p className="text-[8px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{m.sub}</p>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="mt-auto pt-10 border-t-4 border-slate-900">
-                                    <p className="text-[11px] font-black text-slate-800 uppercase tracking-[0.4em]">Emprexa Intelligence © 2026</p>
+
+                                {/* ESG & SDG Section */}
+                                <div className="grid grid-cols-5 gap-10 mb-16">
+                                    <div className="col-span-2 bg-slate-900 rounded-[56px] p-10 text-white shadow-2xl relative overflow-hidden flex flex-col justify-center">
+                                        <div className="absolute top-0 right-0 size-80 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+                                        <h3 className="text-blue-400 font-black text-[12px] uppercase tracking-[0.4em] mb-10 flex items-center gap-3">
+                                            <div className="w-8 h-1 bg-blue-400"></div> Sostenibilidad
+                                        </h3>
+                                        <div className="space-y-12 relative z-10">
+                                            <div>
+                                                <p className="text-5xl font-black tabular-nums tracking-tighter text-white" style={{ color: '#ffffff' }}>{projectMetrics.count}</p>
+                                                <p className="text-[11px] font-black uppercase text-slate-300 tracking-widest leading-none mt-3">Proyectos Totales</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-5xl font-black tabular-nums tracking-tighter text-white" style={{ color: '#ffffff' }}>${(projectMetrics.raised / 1000).toFixed(1)}k</p>
+                                                <p className="text-[11px] font-black uppercase text-slate-300 tracking-widest leading-none mt-3">Capital Movilizado</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-5xl font-black tabular-nums tracking-tighter text-white" style={{ color: '#ffffff' }}>{projectMetrics.volunteers}</p>
+                                                <p className="text-[11px] font-black uppercase text-slate-300 tracking-widest leading-none mt-3">Red de Voluntarios</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-3 bg-[#ffffff] rounded-[56px] border-[3px] border-slate-50 p-12 flex flex-col shadow-sm">
+                                        <h3 className="text-slate-400 font-black text-[11px] uppercase tracking-[0.4em] mb-10">Análisis Completo de Impacto ODS (100%)</h3>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                                            {pieData.filter(e => e.percentage > 0 || e.value > 0).map((e, i) => (
+                                                <div key={i} className="flex items-center gap-4 p-4 bg-[#f8fafc] rounded-[24px] border border-slate-100 min-h-[72px]">
+                                                    <div className="size-12 rounded-[14px] flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: e.color }}>
+                                                        <span className="material-symbols-outlined text-xl filled">{e.icon}</span>
+                                                    </div>
+                                                    <div className="min-w-0 flex flex-col justify-center">
+                                                        <p className="text-[10px] font-black text-slate-900 truncate uppercase tracking-tighter leading-normal mb-1" style={{ paddingBottom: '2px', paddingTop: '2px' }}>{e.name}</p>
+                                                        <p className="text-2xl font-[1000] text-blue-600 tabular-nums leading-none">{e.percentage}%</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {pieData.length === 0 && (
+                                                <p className="col-span-2 text-center text-slate-400 font-bold py-10 uppercase tracking-widest text-[10px]">Sin datos registrados este periodo</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Activity Analysis */}
+                                <div className="mb-16 bg-[#fcfdfe] p-16 rounded-[64px] border border-slate-200 shadow-sm relative border-b-[12px] border-b-slate-900/5">
+                                    <h3 className="text-slate-900 font-[1000] text-2xl tracking-tighter mb-10 flex justify-between items-center">
+                                        Frecuencia de Actividad por Día
+                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Contenido Publicado — {monthName}</span>
+                                    </h3>
+                                    <div className="grid grid-cols-7 gap-3">
+                                        {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) => (
+                                            <span key={i} className="text-center text-[10px] font-black text-slate-400 mb-2">{d}</span>
+                                        ))}
+                                        {heatmapGrid.padding.map((_, i) => <div key={`p-${i}`} className="aspect-square"></div>)}
+                                        {heatmapGrid.days.map((day) => {
+                                            const count = activityData[day] || 0;
+                                            const intensity = count === 0 ? 'bg-white' : count === 1 ? 'bg-blue-100' : count < 5 ? 'bg-blue-400' : 'bg-blue-700';
+                                            const textColor = count > 1 ? 'text-white' : 'text-slate-300';
+                                            return (
+                                                <div key={day} className={`aspect-square rounded-[18px] ${intensity} border-2 border-slate-100 flex flex-col items-center justify-center shadow-sm relative group`}>
+                                                    <span className={`text-[10px] font-black mb-0.5 ${textColor}`}>{day}</span>
+                                                    {count > 0 && <span className={`text-[14px] font-[1000] ${textColor} tabular-nums`}>{count}</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Top Posts Selection */}
+                                <div className="mb-20 bg-white rounded-[56px] border-[3px] border-slate-100 p-12 shadow-sm">
+                                    <h3 className="text-slate-400 font-black text-[11px] uppercase tracking-[0.4em] mb-10">Publicaciones de Mayor Tracción Social</h3>
+                                    <div className="grid grid-cols-2 gap-8">
+                                        {topPosts.slice(0, 4).map((p, i) => (
+                                            <div key={i} className="flex items-center gap-6 p-6 bg-[#f8fafc] rounded-[36px] border border-slate-100 shadow-sm h-32 overflow-hidden flex-nowrap">
+                                                <div className="size-20 rounded-[24px] bg-slate-200 overflow-hidden border-4 border-white shrink-0 shadow-md">
+                                                    <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=200'} className="w-full h-full object-cover" alt="" />
+                                                </div>
+                                                <div className="flex-1 min-w-0 pr-4">
+                                                    <h4 className="text-[14px] font-[1000] text-slate-900 uppercase tracking-tighter mb-2 line-clamp-2" style={{ lineHeight: '1.5', paddingBottom: '2px', paddingTop: '2px' }}>
+                                                        {p.title || 'Iniciativa de Impacto'}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="material-symbols-outlined text-blue-600 text-[14px] filled">analytics</span>
+                                                        <span className="text-[11px] font-black text-slate-500 uppercase">{p.likes_count} Reacciones</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Simplified Footer with Protection Padding */}
+                                <div className="mt-auto pt-16 pb-12 border-t-[8px] border-slate-900 flex justify-between items-end">
+                                    <div className="flex items-center gap-6">
+                                        <img src={authUser?.avatar} className="size-16 rounded-[22px] border-[4px] border-white shadow-lg object-cover" alt="" />
+                                        <div>
+                                            <p className="text-lg font-black text-slate-900 uppercase tracking-tighter leading-none mb-1">{authUser?.name}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Responsable de Reporte Corporativo</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">Generado: {new Date().toLocaleDateString('es-ES')} — {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]">FOLIO DE SEGURIDAD: {Math.random().toString(36).substring(2, 10).toUpperCase()}-{Date.now().toString().slice(-4)}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
