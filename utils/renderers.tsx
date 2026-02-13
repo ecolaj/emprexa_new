@@ -24,9 +24,30 @@ export const renderBadge = (plan: string) => {
 };
 
 export const renderContent = (text: string, navigate: (view: View, params?: any) => void) => {
-  // Regex modified to capture both #hashtags and @mentions
-  const parts = text.split(/((?:#|@)[\wñÑáéíóúÁÉÍÓÚ]+)/g);
+  if (!text) return null;
+
+  // Regex to capture URLs, #hashtags, and @mentions
+  const parts = text.split(/((?:https?:\/\/[^\s]+|www\.[^\s]+)|(?:#|@)[\wñÑáéíóúÁÉÍÓÚ]+)/g);
+
   return parts.map((part, i) => {
+    // URL Check
+    if (part.startsWith('http://') || part.startsWith('https://') || part.startsWith('www.')) {
+      const url = part.startsWith('www.') ? `https://${part}` : part;
+      return (
+        <a
+          key={i}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+
+    // Hashtag Check
     if (part.startsWith('#')) {
       return (
         <span
@@ -41,6 +62,8 @@ export const renderContent = (text: string, navigate: (view: View, params?: any)
         </span>
       );
     }
+
+    // Mention Check
     if (part.startsWith('@')) {
       const username = part.slice(1);
       return (
@@ -57,6 +80,7 @@ export const renderContent = (text: string, navigate: (view: View, params?: any)
         </span>
       );
     }
+
     return part;
   });
 };

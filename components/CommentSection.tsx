@@ -4,6 +4,7 @@ import { USERS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { MentionDropdown } from './MentionDropdown';
 import { supabase } from '../utils/supabase';
+import { renderContent } from '../utils/renderers';
 
 interface CommentSectionProps {
     post: Post;
@@ -455,7 +456,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-slate-600 mt-0.5">{comment.text}</p>
+                                                <p className="text-sm text-slate-600 mt-0.5">{renderContent(comment.text, onNavigate)}</p>
                                             )}
                                         </div>
 
@@ -544,7 +545,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                     </div>
                                                                 </div>
                                                             ) : (
-                                                                <p className="text-xs text-slate-600 leading-normal">{reply.text}</p>
+                                                                <p className="text-xs text-slate-600 leading-normal">{renderContent(reply.text, onNavigate)}</p>
                                                             )}
                                                         </div>
                                                         <div className="flex gap-3 mt-1 ml-1 text-[9px] font-bold text-slate-400">
