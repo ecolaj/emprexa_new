@@ -8,7 +8,7 @@ import { renderBadge, renderContent } from '../utils/renderers';
 import { Logo } from '../components/Logo';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { ConfirmModal } from '../components/ConfirmModal';
-import { getBaseUrl, getShareUrl } from '../utils/environment';
+import { getBaseUrl } from '../utils/environment';
 import { formatRelativeTime } from '../utils/timeUtils';
 
 export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
@@ -242,7 +242,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
     };
 
     const handleShare = (postId: ID) => {
-        const shareUrl = getShareUrl(postId);
+        const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
 
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopiedUrl(shareUrl);

@@ -9,7 +9,7 @@ import { PostCard } from '../components/PostCard';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
-import { getShareUrl, getProfileShareUrl } from '../utils/environment';
+import { formatRelativeTime } from '../utils/timeUtils';
 import { Logo } from '../components/Logo';
 
 export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
@@ -266,7 +266,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   const handleShare = (postId: ID) => {
-    const shareUrl = getShareUrl(postId);
+    const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=post&id=${postId}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopiedUrl(shareUrl);
       setShowShareModal(true);
@@ -281,7 +281,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   // NEW: Handle Share Profile
   const handleShareProfile = () => {
     if (!user) return;
-    const shareUrl = getProfileShareUrl(user.id);
+    const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=PROFILE&userId=${user.id}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopiedUrl(shareUrl);
       setShowShareModal(true);

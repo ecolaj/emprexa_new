@@ -11,7 +11,7 @@ import { UpgradeModal } from '../components/UpgradeModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
-import { getBaseUrl, getShareUrl } from '../utils/environment';
+import { getBaseUrl } from '../utils/environment';
 import { formatRelativeTime } from '../utils/timeUtils';
 
 export const Feed: React.FC<NavProps> = ({ navigate }) => {
@@ -496,7 +496,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   };
 
   const handleShare = (postId: ID) => {
-    const shareUrl = getShareUrl(postId);
+    // Usar URL dinámica para localhost y producción
+    const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
 
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopiedUrl(shareUrl);

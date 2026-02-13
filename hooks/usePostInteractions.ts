@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Post, User, View, ID } from '../types';
 import { supabase } from '../utils/supabase';
-import { getShareUrl } from '../utils/environment';
 
 export const usePostInteractions = (
     posts: Post[],
@@ -74,7 +73,8 @@ export const usePostInteractions = (
     const [copiedUrl, setCopiedUrl] = useState('');
 
     const handleShare = (postId: ID) => {
-        const shareUrl = getShareUrl(postId);
+        // Dynamic URL check
+        const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=post&id=${postId}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopiedUrl(shareUrl);
