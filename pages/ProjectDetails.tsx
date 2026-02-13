@@ -571,9 +571,6 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
                                 </>
                             ) : (
                                 <>
-                                    <button className="size-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white hover:text-slate-900 transition-colors">
-                                        <span className="material-symbols-outlined">share</span>
-                                    </button>
                                     <button
                                         onClick={() => toggleFollowProject(project.id)}
                                         className={`px-6 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center gap-2 ${isFollowing

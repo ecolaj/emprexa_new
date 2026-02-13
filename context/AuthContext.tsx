@@ -373,6 +373,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               hasUsedTrial: profile.has_used_trial
             };
             setUser(formattedUser);
+            setFollowedSdgIds(profile.sdg_interests || []);
           } else if (mountedRef.current) {
             // Perfil mínimo
             setUser({
@@ -572,6 +573,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isAdmin: profile.is_admin
           };
           setUser(formattedUser);
+          setFollowedSdgIds(profile.sdg_interests || []);
         }
       }
     } catch (error) {
@@ -675,6 +677,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isAdmin: data.is_admin
         };
         setUser(formattedUpdatedUser);
+        setFollowedSdgIds(data.sdg_interests || []);
 
         // Sync with mock array if exists
         const userIndex = USERS.findIndex(u => u.id === user.id);
@@ -743,8 +746,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const toggleFollowSdg = (sdgId: number) => {
-    setFollowedSdgIds(prev => prev.includes(sdgId) ? prev.filter(id => id !== sdgId) : [...prev, sdgId]);
+  const toggleFollowSdg = async (sdgId: number) => {
+    if (!user) return;
+
+    const isCurrentlyFollowing = followedSdgIds.includes(sdgId);
+    const newFollowedSdgIds = isCurrentlyFollowing
+      ? followedSdgIds.filter(id => id !== sdgId)
+      : [...followedSdgIds, sdgId];
+
+    // Update local state immediately for snappy UI
+    setFollowedSdgIds(newFollowedSdgIds);
+    setUser(prev => prev ? ({ ...prev, sdgInterests: newFollowedSdgIds }) : null);
+
+    try {
+      // Persist to Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({ sdg_interests: newFollowedSdgIds })
+        .eq('id', user.id);
+
+      if (error) {
+        // Rollback states if update fails
+        console.error('Error persisting SDG interests:', error);
+        setFollowedSdgIds(followedSdgIds);
+        setUser(prev => prev ? ({ ...prev, sdgInterests: followedSdgIds }) : null);
+      }
+    } catch (err) {
+      console.error('Exception persisting SDG interests:', err);
+      // Rollback
+      setFollowedSdgIds(followedSdgIds);
+      setUser(prev => prev ? ({ ...prev, sdgInterests: followedSdgIds }) : null);
+    }
   };
 
   const toggleFollowProject = (projectId: number) => {

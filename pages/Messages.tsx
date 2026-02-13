@@ -437,10 +437,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 text-slate-400">
-                <span className="material-symbols-outlined cursor-pointer hover:text-slate-600">videocam</span>
-                <span className="material-symbols-outlined cursor-pointer hover:text-slate-600">info</span>
-              </div>
+
             </div>
 
             <div className="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
@@ -480,9 +477,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
 
             <div className="p-4 bg-white border-t border-slate-200 shrink-0">
               <div className="max-w-4xl mx-auto flex gap-3 items-end">
-                <button type="button" className="text-slate-400 hover:text-slate-600 mb-2.5">
-                  <span className="material-symbols-outlined">add_circle</span>
-                </button>
+
                 <div className="flex-1 bg-slate-50 rounded-2xl border border-slate-200 px-4 py-2 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all relative">
                   <textarea
                     ref={textareaRef}

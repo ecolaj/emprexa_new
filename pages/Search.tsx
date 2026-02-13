@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, NavProps } from '../types';
+import { View, NavProps, Project } from '../types';
 import { SDGS, POSTS, USERS } from '../constants';
 import { PostCard } from '../components/PostCard';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { supabase } from '../utils/supabase';
 
-type FilterType = 'all' | 'projects' | 'people' | 'orgs';
+type FilterType = 'all' | 'projects' | 'people' | 'orgs' | 'real_projects';
 
 export const Search: React.FC<NavProps> = ({ navigate }) => {
   const { user, sendMentionNotifications, isLoading: authLoading, params } = useAuth();
@@ -18,6 +18,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
 
   const filters: { id: FilterType; label: string }[] = [
     { id: 'all', label: 'Todo' },
+    { id: 'real_projects', label: 'Proyectos' },
     { id: 'projects', label: 'Publicaciones' },
     { id: 'people', label: 'Personas' },
   ];
@@ -28,6 +29,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
   const [dbPeople, setDbPeople] = useState<any[]>([]);
   const [dbProjects, setDbProjects] = useState<any[]>([]);
   const [dbOrgs, setDbOrgs] = useState<any[]>([]);
+  const [dbRealProjects, setDbRealProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const currentUser = user;
 
@@ -99,6 +101,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
       if (!query) {
         setDbPeople([]);
         setDbProjects([]);
+        setDbRealProjects([]);
         return;
       }
 
@@ -211,6 +214,54 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
           setDbProjects([]);
         }
 
+        // --- 3. SEARCH REAL PROJECTS (from 'projects' table) ---
+        if (activeFilter === 'all' || activeFilter === 'real_projects') {
+          // Strategy A: Content matches query (title or description)
+          const projContentRes = await supabase
+            .from('projects')
+            .select('*, owner:profiles!owner_id(*)')
+            .or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+
+          // Strategy B: Owner name/username matches query
+          let projOwnerRes = { data: [], error: null } as any;
+          if (matchingUserIds.length > 0) {
+            projOwnerRes = await supabase
+              .from('projects')
+              .select('*, owner:profiles!owner_id(*)')
+              .in('owner_id', matchingUserIds);
+          }
+
+          const contentProjects = projContentRes.data || [];
+          const ownerProjects = projOwnerRes.data || [];
+
+          // Merge and Deduplicate
+          const allRealProjects = [...contentProjects, ...ownerProjects];
+          const uniqueProjectsMap = new Map();
+          allRealProjects.forEach(proj => {
+            uniqueProjectsMap.set(proj.id, proj);
+          });
+          const finalRealProjects = Array.from(uniqueProjectsMap.values());
+
+          if (finalRealProjects.length > 0) {
+            const mapped = finalRealProjects.map(p => ({
+              ...p,
+              sdgId: p.sdg_id || p.sdgId,
+              ownerId: p.owner_id || p.ownerId,
+              title: p.title || 'Proyecto sin título',
+              description: p.description || '',
+              image: p.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+              progress: p.progress || 0,
+              status: p.status || 'Activo',
+              lookingFor: p.looking_for || [],
+            }));
+            setDbRealProjects(mapped);
+          } else {
+            setDbRealProjects([]);
+          }
+        } else {
+          setDbRealProjects([]);
+        }
+
       } catch (error) {
         console.error("Error searching Supabase:", error);
       } finally {
@@ -223,11 +274,11 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
   }, [query, activeFilter]);
 
   const results = useMemo(() => {
-    if (!query) return { people: [], projects: [], orgs: [] };
-    return { people: dbPeople, projects: dbProjects, orgs: dbOrgs };
-  }, [query, dbPeople, dbProjects, dbOrgs]);
+    if (!query) return { people: [], projects: [], orgs: [], realProjects: [] };
+    return { people: dbPeople, projects: dbProjects, orgs: dbOrgs, realProjects: dbRealProjects };
+  }, [query, dbPeople, dbProjects, dbOrgs, dbRealProjects]);
 
-  const hasResults = results.people.length > 0 || results.projects.length > 0 || results.orgs.length > 0;
+  const hasResults = results.people.length > 0 || results.projects.length > 0 || results.orgs.length > 0 || results.realProjects.length > 0;
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
@@ -351,6 +402,71 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                       <button className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-xs font-bold hover:bg-slate-200">Seguir</button>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Real Projects Results */}
+            {(activeFilter === 'all' || activeFilter === 'real_projects') && results.realProjects.length > 0 && (
+              <div>
+                <h3 className="font-bold text-slate-900 mb-4 text-lg">Proyectos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {results.realProjects.map((project: any) => {
+                    const sdg = SDGS.find(s => s.id === project.sdgId);
+                    const owner = project.owner || { name: 'Usuario', avatar: '' };
+                    return (
+                      <div
+                        key={project.id}
+                        className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer flex flex-col h-full group"
+                        onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })}
+                      >
+                        {(() => {
+                          const [posX, posY] = (project.image || '').split('#pos=')[1]?.split(',') || ['50', '50'];
+                          return (
+                            <div
+                              className="h-40 bg-slate-200 bg-cover relative"
+                              style={{
+                                backgroundImage: `url("${(project.image || '').split('#pos=')[0]}")`,
+                                backgroundPosition: `${posX}% ${posY}%`
+                              }}
+                            >
+                              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
+                              {sdg && (
+                                <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
+                                  <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                                </div>
+                              )}
+                              <div className="absolute bottom-3 right-3">
+                                <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
+                                  {project.status}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <div className="p-4 flex-1 flex flex-col">
+                          <h3 className="font-bold text-slate-900 text-base mb-1 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{project.title}</h3>
+                          <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">{project.description}</p>
+                          <div className="mt-auto">
+                            <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1">
+                              <span>Progreso</span>
+                              <span className="text-primary">{project.progress}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-3">
+                              <div className="bg-primary h-full rounded-full" style={{ width: `${project.progress}%` }}></div>
+                            </div>
+                            <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                              <div
+                                className="size-6 rounded-full bg-cover bg-center bg-slate-200"
+                                style={{ backgroundImage: `url("${owner.avatar}")` }}
+                              ></div>
+                              <span className="text-xs font-bold text-slate-700 truncate">{owner.name}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
