@@ -23,11 +23,19 @@ export const renderBadge = (plan: string) => {
   }
 };
 
-export const renderContent = (text: string, navigate: (view: View, params?: any) => void) => {
+export const renderContent = (text: string, navigate: (view: View, params?: any) => void, isDarkBackground?: boolean) => {
   if (!text) return null;
 
   // Regex to capture URLs, #hashtags, and @mentions
   const parts = text.split(/((?:https?:\/\/[^\s]+|www\.[^\s]+)|(?:#|@)[\wñÑáéíóúÁÉÍÓÚ]+)/g);
+
+  const linkClass = isDarkBackground
+    ? "text-white font-black underline hover:opacity-80 transition-opacity cursor-pointer"
+    : "text-primary hover:underline cursor-pointer";
+
+  const boldClass = isDarkBackground
+    ? "text-white font-black underline hover:opacity-80 transition-opacity cursor-pointer"
+    : "text-primary font-bold hover:underline cursor-pointer";
 
   return parts.map((part, i) => {
     // URL Check
@@ -39,7 +47,7 @@ export const renderContent = (text: string, navigate: (view: View, params?: any)
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary hover:underline"
+          className={linkClass}
           onClick={(e) => e.stopPropagation()}
         >
           {part}
@@ -52,7 +60,7 @@ export const renderContent = (text: string, navigate: (view: View, params?: any)
       return (
         <span
           key={i}
-          className="text-primary font-bold cursor-pointer hover:underline"
+          className={boldClass}
           onClick={(e) => {
             e.stopPropagation();
             navigate(View.HASHTAG, { tag: part });
@@ -69,7 +77,7 @@ export const renderContent = (text: string, navigate: (view: View, params?: any)
       return (
         <span
           key={i}
-          className="text-primary font-bold cursor-pointer hover:underline"
+          className={boldClass}
           onClick={(e) => {
             e.stopPropagation();
             // NAVEGACIÓN DIRECTA AL PERFIL: Usar el username (handle)

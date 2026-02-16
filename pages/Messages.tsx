@@ -463,7 +463,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
 
                       <div className="flex flex-col max-w-[75%] gap-1">
                         <div className={`p-4 rounded-2xl shadow-sm text-sm border whitespace-pre-wrap ${isMe ? 'bg-primary text-white rounded-br-none border-primary' : 'bg-white text-slate-800 rounded-bl-none border-slate-200'}`}>
-                          <p>{renderContent(msg.text, navigate)}</p>
+                          <p>{renderContent(msg.text, navigate, isMe)}</p>
                         </div>
                         <span className={`text-[10px] text-slate-400 font-bold px-1 ${isMe ? 'text-right' : 'text-left'}`}>
                           {msg.time}
