@@ -42,6 +42,9 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
   // Controlled Inputs
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
 
   // Register Form State
   const [registerData, setRegisterData] = useState({
@@ -345,12 +348,21 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               </div>
               <div className="relative">
                 <input
-                  type="password"
-                  className="w-full h-12 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full h-12 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all pr-12"
                   placeholder=""
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -439,25 +451,47 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                       <label className="text-sm font-bold text-slate-700">Contraseña</label>
                       <span className="text-[10px] text-slate-400 font-medium">Mínimo 6 caracteres</span>
                     </div>
-                    <input
-                      type="password"
-                      required
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary"
-                      placeholder="••••••••"
-                      value={registerData.password}
-                      onChange={e => setRegisterData({ ...registerData, password: e.target.value })}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showRegisterPassword ? "text" : "password"}
+                        required
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary pr-12"
+                        placeholder="••••••••"
+                        value={registerData.password}
+                        onChange={e => setRegisterData({ ...registerData, password: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-xl">
+                          {showRegisterPassword ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-bold text-slate-700 block mb-1">Confirmar</label>
-                    <input
-                      type="password"
-                      required
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary"
-                      placeholder="••••••••"
-                      value={registerData.confirmPassword}
-                      onChange={e => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showRegisterConfirmPassword ? "text" : "password"}
+                        required
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary pr-12"
+                        placeholder="••••••••"
+                        value={registerData.confirmPassword}
+                        onChange={e => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisterConfirmPassword(!showRegisterConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-xl">
+                          {showRegisterConfirmPassword ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
