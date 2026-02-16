@@ -43,8 +43,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
 
         if (projError) {
           console.error('Error fetching projects:', projError);
-          // Fallback to mock data if Supabase fails
-          setTrendingProjects(PROJECTS.slice(0, 3));
+          setTrendingProjects([]);
         } else if (projData) {
           const formattedProjects = projData.map(p => ({
             ...p,
@@ -98,8 +97,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
 
         if (userError) {
           console.error('Error fetching users:', userError);
-          // Fallback to mock users
-          setUsers(USERS.filter(u => u.id !== user?.id).slice(0, 8));
+          setUsers([]);
         } else if (userData) {
           const formattedUsers = userData.map(u => ({
             id: u.id,
@@ -258,10 +256,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
               }
             });
           } else {
-            // Fallback to constants if DB fetch fails
-            PROJECTS.forEach(p => {
-              if (stats[p.sdgId]) stats[p.sdgId].projects++;
-            })
+            // Do nothing, leave at 0
           }
 
           // Count Posts
@@ -275,12 +270,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
               });
             });
           } else {
-            // Fallback to constants if DB fetch fails
-            POSTS.forEach(p => {
-              p.sdgIds.forEach(id => {
-                if (stats[id]) stats[id].posts++;
-              })
-            })
+            // Do nothing, leave at 0
           }
 
           setSdgStats(stats);

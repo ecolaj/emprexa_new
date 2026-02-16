@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, NavProps, Post, Project, User, ID } from '../types';
 import { SDGS, USERS, POSTS, PROJECTS } from '../constants';
+import { DEFAULT_USER } from '../utils/defaults';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { useAuth } from '../context/AuthContext';
 import { renderBadge, renderContent } from '../utils/renderers';
@@ -168,7 +169,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
 
   // Cuando es el usuario actual, usa authUser directamente para evitar el parpadeo
   const user = (isCurrentUser && authUser) ? authUser : profileUser;
-  const currentUser = authUser || (USERS[0] as any);
+  const currentUser = authUser || DEFAULT_USER;
 
   if (!user && !isLoadingProfile) {
     return (

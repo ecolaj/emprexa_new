@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, NavProps, ID, Post } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { SDGS, USERS, PROJECTS } from '../constants';
+import { DEFAULT_USER } from '../utils/defaults';
 import { supabase } from '../utils/supabase';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { renderBadge, renderContent } from '../utils/renderers';
@@ -16,7 +17,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
   // Use param id or default to 13 (Climate) if none provided
   const sdgId = params?.id || 13;
   const sdg = SDGS.find(s => s.id === sdgId);
-  const currentUser = useAuth().user || USERS[0];
+  const currentUser = useAuth().user || DEFAULT_USER;
 
   const isFollowing = followedSdgIds.includes(Number(sdgId));
 
@@ -108,7 +109,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
               const { data: user } = await supabase.from('profiles').select('*').eq('id', p.user_id).single();
               userData = user;
             }
-            if (!userData) userData = USERS.find(u => u.id === p.user_id) || USERS[0] || { id: 'unknown', name: 'Usuario', avatar: '' };
+            if (!userData) userData = USERS.find(u => u.id === p.user_id) || DEFAULT_USER;
 
             return {
               ...p,

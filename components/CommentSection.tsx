@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, ID, View, Post } from '../types';
 import { USERS } from '../constants';
+import { DEFAULT_USER } from '../utils/defaults';
 import { useAuth } from '../context/AuthContext';
 import { MentionDropdown } from './MentionDropdown';
 import { supabase } from '../utils/supabase';
@@ -98,7 +99,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 const replies = data.filter(c => c.parent_id);
 
                 const combined = mainComments.map(c => {
-                    let userData = usersMap[c.user_id] || USERS.find(u => u.id === c.user_id) || (currentUser && currentUser.id === c.user_id ? currentUser : USERS[0]);
+                    let userData = usersMap[c.user_id] || USERS.find(u => u.id === c.user_id) || (currentUser && currentUser.id === c.user_id ? currentUser : DEFAULT_USER);
 
                     // Force usage of authUser if IDs match
                     if (authUser && c.user_id === authUser.id) {
@@ -114,7 +115,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                         likes: c.likes_count || c.likes || 0,
                         isLiked: userLikesSet.has(c.id),
                         replies: replies.filter(r => r.parent_id === c.id).map(r => {
-                            let replyUser = usersMap[r.user_id] || USERS.find(u => u.id === r.user_id) || (currentUser && currentUser.id === r.user_id ? currentUser : USERS[0]);
+                            let replyUser = usersMap[r.user_id] || USERS.find(u => u.id === r.user_id) || (currentUser && currentUser.id === r.user_id ? currentUser : DEFAULT_USER);
 
                             // Force usage of authUser if IDs match
                             if (authUser && r.user_id === authUser.id) {
@@ -483,7 +484,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                         {comment.replies.map((reply: any) => {
                                             // FIX: Use the enriched user object directly from the reply
                                             // This ensures we use the loaded profile from Supabase instead of falling back to hardcoded USERS[0]
-                                            const replyAuthor = reply.user || USERS[0];
+                                            const replyAuthor = reply.user || DEFAULT_USER;
 
                                             const isReplyOwner = (authUser?.id === reply.user_id) || (authUser?.id === reply.userId);
                                             const isReplyEditing = editingComment?.commentId === reply.id;

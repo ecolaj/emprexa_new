@@ -4,6 +4,7 @@ import { View, NavProps, ID } from '../types';
 import { POSTS, USERS, SDGS } from '../constants';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_USER } from '../utils/defaults';
 import { renderBadge, renderContent } from '../utils/renderers';
 import { Logo } from '../components/Logo';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
@@ -65,13 +66,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
 
                     const formattedPost = {
                         ...postData,
-                        user: userData || USERS[0] || {
-                            id: 'unknown',
-                            name: 'Usuario',
-                            role: 'Miembro',
-                            avatar: '',
-                            plan: 'free'
-                        },
+                        user: userData || DEFAULT_USER,
                         time: postData.created_at ? new Date(postData.created_at).toLocaleDateString() : 'Hoy',
                         sdgIds: postData.sdg_ids || [],
                         likes: postData.likes_count || 0,
@@ -124,7 +119,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         const replies = commentsData.filter(c => c.parent_id);
 
                         const formattedComments = mainComments.map(c => {
-                            const userData = usersMap[c.user_id] || USERS.find(u => u.id === c.user_id) || (user && user.id === c.user_id ? user : USERS[0]);
+                            const userData = usersMap[c.user_id] || USERS.find(u => u.id === c.user_id) || (user && user.id === c.user_id ? user : DEFAULT_USER);
                             return {
                                 ...c,
                                 user: userData,
@@ -133,7 +128,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                 likes: c.likes_count || 0,
                                 isLiked: userLikesSet.has(c.id),
                                 replies: replies.filter(r => r.parent_id === c.id).map(r => {
-                                    const replyUser = usersMap[r.user_id] || USERS.find(u => u.id === r.user_id) || (user && user.id === r.user_id ? user : USERS[0]);
+                                    const replyUser = usersMap[r.user_id] || USERS.find(u => u.id === r.user_id) || (user && user.id === r.user_id ? user : DEFAULT_USER);
                                     return {
                                         ...r,
                                         user: replyUser,
@@ -637,7 +632,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         {/* Comments List */}
                         <div className="space-y-6">
                             {localComments.map((comment: any) => {
-                                const author = comment.user || (user && comment.userId === user.id ? user : USERS[0]);
+                                const author = comment.user || (user && comment.userId === user.id ? user : DEFAULT_USER);
                                 return (
                                     <div key={comment.id} className="space-y-4 group/comment">
                                         <div className="flex gap-3 items-start">
@@ -726,7 +721,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                             <div className="ml-12 space-y-4 border-l-2 border-slate-100 pl-4">
                                                 {comment.replies.map((reply: any) => {
                                                     // FIX: Use enriched user object from DB fetch
-                                                    const replyAuthor = reply.user || (user && reply.userId === user.id ? user : USERS[0]);
+                                                    const replyAuthor = reply.user || (user && reply.userId === user.id ? user : DEFAULT_USER);
                                                     return (
                                                         <div key={reply.id} className="flex gap-3 items-start">
                                                             <div

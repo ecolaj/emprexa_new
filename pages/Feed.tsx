@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, NavProps, Post, ID } from '../types';
 import { SDGS, POSTS, USERS } from '../constants';
+import { DEFAULT_USER } from '../utils/defaults';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { useAuth } from '../context/AuthContext';
 import { renderBadge, renderContent } from '../utils/renderers';
@@ -139,7 +140,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
             }
             return {
               ...p,
-              user: userData || USERS[0],
+              user: userData || DEFAULT_USER,
               time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Hoy',
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,

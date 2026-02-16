@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, NavProps, ID } from '../types';
 import { SDGS, USERS } from '../constants';
+import { DEFAULT_USER } from '../utils/defaults';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { PostCard } from '../components/PostCard';
 import { usePostInteractions } from '../hooks/usePostInteractions';
@@ -11,7 +12,7 @@ import { supabase } from '../utils/supabase'; // Keep renderContent if needed fo
 
 export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, sendMentionNotifications } = useAuth();
-  const currentUser = authUser || USERS[0];
+  const currentUser = authUser || DEFAULT_USER;
 
   const tag = params?.tag || '#Impact';
   const cleanTag = tag.replace('#', '').toLowerCase();
@@ -147,7 +148,7 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
               const { data: user } = await supabase.from('profiles').select('*').eq('id', p.user_id).single();
               userData = user;
             }
-            if (!userData) userData = USERS.find(u => u.id === p.user_id) || USERS[0] || { id: 'unknown', name: 'Usuario', avatar: '' };
+            if (!userData) userData = USERS.find(u => u.id === p.user_id) || DEFAULT_USER;
 
             return {
               ...p,

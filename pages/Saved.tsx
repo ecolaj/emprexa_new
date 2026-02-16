@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, NavProps, Post, ID } from '../types';
 import { USERS } from '../constants';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_USER } from '../utils/defaults';
 import { supabase } from '../utils/supabase';
 import { PostCard } from '../components/PostCard';
 import { ImageLightbox } from '../components/ImageLightbox';
@@ -10,7 +11,7 @@ import { usePostInteractions } from '../hooks/usePostInteractions';
 
 export const Saved: React.FC<NavProps> = ({ navigate }) => {
     const { savedPostIds, toggleSavedPost, user } = useAuth();
-    const currentUser = user || USERS[0];
+    const currentUser = user || DEFAULT_USER;
 
     const [savedPosts, setSavedPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -100,9 +101,7 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
                             }
 
                             if (!userData) {
-                                userData = USERS.find(u => u.id === p.user_id) || USERS[0] || {
-                                    id: 'unknown', name: 'Usuario', role: 'Miembro', avatar: '', plan: 'free'
-                                };
+                                userData = USERS.find(u => u.id === p.user_id) || DEFAULT_USER;
                             }
 
                             return {

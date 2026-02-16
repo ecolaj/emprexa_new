@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, NavProps, ID } from '../types';
 import { SDGS, USERS } from '../constants';
+import { DEFAULT_USER } from '../utils/defaults';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
 import { compressImage } from '../utils/imageUtils';
@@ -9,7 +10,7 @@ import { ProjectSuccessModal } from '../components/ProjectSuccessModal';
 
 export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, params }) => {
     const { user } = useAuth();
-    const currentUser = user || USERS[0]; // Fallback to Juan for dev if no auth
+    const currentUser = user || DEFAULT_USER; // Fallback to neutral data if no auth
 
     const isEditing = currentView === View.EDIT_PROJECT;
     const editingProjectId = params?.projectId;
