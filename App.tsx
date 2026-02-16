@@ -49,9 +49,9 @@ function AppContent() {
 
   // Helper para navegar usando el enum View (Retrocompatibilidad)
   const appNavigate = (view: View, params?: any) => {
-    let path = '/';
+    let path = '/feed';
     switch (view) {
-      case View.FEED: path = '/'; break;
+      case View.FEED: path = '/feed'; break;
       case View.DASHBOARD: path = '/dashboard'; break;
       case View.EXPLORE: path = '/explore'; break;
       case View.NOTIFICATIONS: path = '/notifications'; break;
@@ -94,22 +94,24 @@ function AppContent() {
   };
 
   // Lógica de Redirección y Onboarding
+  const publicPaths = ['/login', '/reset-password', '/auth/callback', '/process-recovery'];
+  const isPublicPath = publicPaths.includes(location.pathname) ||
+    location.pathname.startsWith('/post/') ||
+    location.pathname.startsWith('/u/') ||
+    location.pathname.startsWith('/profile/');
+
   useEffect(() => {
     if (isLoading) return;
 
-    const publicPaths = ['/login', '/reset-password', '/auth/callback', '/process-recovery'];
-    const isPublicPath = publicPaths.includes(location.pathname) ||
-      location.pathname.startsWith('/post/') ||
-      location.pathname.startsWith('/u/') ||
-      location.pathname.startsWith('/profile/');
-
     if (!user && !isPublicPath) {
-      navigate('/login');
+      if (location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
     } else if (user && location.pathname === '/login') {
       if (user.status === 'onboarding' || !user.sdgInterests || user.sdgInterests.length === 0) {
         navigate('/onboarding');
       } else {
-        navigate('/');
+        navigate('/feed');
       }
     } else if (user && user.status === 'onboarding' && location.pathname !== '/onboarding') {
       if (!location.pathname.startsWith('/post/') && !location.pathname.startsWith('/u/')) {
@@ -118,7 +120,12 @@ function AppContent() {
     }
 
     setInitialCheckDone(true);
-  }, [user, isLoading, location.pathname]);
+  }, [user, isLoading, location.pathname, isPublicPath]);
+
+  // Si no hay usuario y la ruta es privada, redirigir inmediatamente (evita flash de contenido en blanco)
+  if (!isLoading && initialCheckDone && !user && !isPublicPath) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (isLoading && !initialCheckDone) return <Loading />;
 
@@ -177,7 +184,8 @@ function AppContent() {
       <Route path="/process-recovery" element={<ProcessRecovery currentView={View.PROCESS_RECOVERY} navigate={appNavigate} />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      <Route path="/" element={withSidebar(<Feed currentView={View.FEED} navigate={appNavigate} />, View.FEED)} />
+      <Route path="/" element={<Navigate to="/feed" replace />} />
+      <Route path="/feed" element={withSidebar(<Feed currentView={View.FEED} navigate={appNavigate} />, View.FEED)} />
       <Route path="/dashboard" element={withSidebar(<Dashboard currentView={View.DASHBOARD} navigate={appNavigate} />, View.DASHBOARD)} />
       <Route path="/explore" element={withSidebar(<Explore currentView={View.EXPLORE} navigate={appNavigate} />, View.EXPLORE)} />
       <Route path="/search" element={withSidebar(<Search currentView={View.SEARCH} navigate={appNavigate} />, View.SEARCH)} />
@@ -190,6 +198,7 @@ function AppContent() {
       <Route path="/success" element={withSidebar(<Success currentView={View.SUCCESS} navigate={appNavigate} />, View.SUCCESS)} />
 
       <Route path="/post/:postId" element={<RouteHelper component={SinglePost} view={View.SINGLE_POST} navigate={appNavigate} paramKey="postId" withSidebarWrap={withSidebar} user={user} />} />
+      <Route path="/profile" element={withSidebar(<Profile currentView={View.PROFILE} navigate={appNavigate} />, View.PROFILE)} />
       <Route path="/profile/:userId" element={<RouteHelper component={Profile} view={View.PROFILE} navigate={appNavigate} paramKey="userId" withSidebarWrap={withSidebar} user={user} />} />
       <Route path="/u/:username" element={<RouteHelper component={Profile} view={View.PROFILE} navigate={appNavigate} paramKey="username" withSidebarWrap={withSidebar} user={user} />} />
 

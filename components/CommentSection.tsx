@@ -566,9 +566,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                 )}
 
                                 {/* Reply Input */}
-                                {activeReplyToId === comment.id && (
+                                {activeReplyToId === comment.id && authUser && (
                                     <div className="ml-10 mt-2 flex gap-2 items-start animate-[fade-in_0.2s_ease-out]">
-                                        <div className="size-6 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${currentUser.avatar}")` }}></div>
+                                        <div className="size-6 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${authUser.avatar}")` }}></div>
                                         <div className="flex-1 relative">
                                             <textarea
                                                 ref={(el) => (replyInputRefs.current[comment.id] = el)}
@@ -591,29 +591,40 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             )}
 
             {/* New Comment Input */}
-            <div className="flex gap-3 items-start">
-                <div className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${currentUser.avatar}")` }}></div>
-                <div className="flex-1 relative">
-                    <textarea
-                        ref={mainInputRef}
-                        placeholder="Escribe un comentario..."
-                        className="w-full bg-white border border-slate-200 rounded-2xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:border-primary resize-none h-10"
-                        value={newCommentText}
-                        onChange={(e) => handleTextChange(e.target.value, mainInputRef, setNewCommentText)}
-                        onKeyDown={handleKeyDown}
-                    />
-                    <button onClick={handleAddComment} className="absolute right-2 top-2 text-primary">
-                        <span className="material-symbols-outlined filled">send</span>
-                    </button>
+            {authUser ? (
+                <div className="flex gap-3 items-start">
+                    <div className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${authUser.avatar}")` }}></div>
+                    <div className="flex-1 relative">
+                        <textarea
+                            ref={mainInputRef}
+                            placeholder="Escribe un comentario..."
+                            className="w-full bg-white border border-slate-200 rounded-2xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:border-primary resize-none h-10"
+                            value={newCommentText}
+                            onChange={(e) => handleTextChange(e.target.value, mainInputRef, setNewCommentText)}
+                            onKeyDown={handleKeyDown}
+                        />
+                        <button onClick={handleAddComment} className="absolute right-2 top-2 text-primary">
+                            <span className="material-symbols-outlined filled">send</span>
+                        </button>
 
-                    <MentionDropdown
-                        suggestions={mentionSuggestions}
-                        onSelect={handleSelectMention}
-                        position={mentionPosition}
-                        activeIndex={activeMentionIndex}
-                    />
+                        <MentionDropdown
+                            suggestions={mentionSuggestions}
+                            onSelect={handleSelectMention}
+                            position={mentionPosition}
+                            activeIndex={activeMentionIndex}
+                        />
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="bg-white/50 rounded-xl p-3 border border-slate-100 text-center">
+                    <button
+                        onClick={() => onNavigate(View.LOGIN)}
+                        className="text-xs font-bold text-slate-500 hover:text-primary transition-colors"
+                    >
+                        Inicia sesión para participar en la conversación
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

@@ -38,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
     setShowLogoutModal(false);
     if (onClose) onClose();
     await logout();
+    navigate(View.LOGIN);
   };
 
   const handleNavigation = (view: View) => {
