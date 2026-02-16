@@ -237,7 +237,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
     };
 
     const handleShare = (postId: ID) => {
-        const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
+        const shareUrl = `${getBaseUrl()}/post/${postId}`;
 
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopiedUrl(shareUrl);

@@ -29,255 +29,100 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { AuthCallback } from './components/AuthCallback';
 import { ResetPassword } from './pages/ResetPassword';
 import { ProcessRecovery } from './pages/ProcessRecovery';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  useParams,
+  Navigate
+} from 'react-router-dom';
 
 
 function AppContent() {
   const { user, isLoading, totalUnreadMessages, totalUnreadNotifications } = useAuth();
-  const [currentView, setCurrentView] = useState<View>(View.LOGIN);
-  const [navParams, setNavParams] = useState<any>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
-  // Deep Linking & Auth Redirect Logic - VERSIÓN FINAL
+  // Helper para navegar usando el enum View (Retrocompatibilidad)
+  const appNavigate = (view: View, params?: any) => {
+    let path = '/';
+    switch (view) {
+      case View.FEED: path = '/'; break;
+      case View.DASHBOARD: path = '/dashboard'; break;
+      case View.EXPLORE: path = '/explore'; break;
+      case View.NOTIFICATIONS: path = '/notifications'; break;
+      case View.MESSAGES: path = '/messages'; break;
+      case View.SETTINGS: path = '/settings'; break;
+      case View.SAVED: path = '/saved'; break;
+      case View.SEARCH: path = '/search'; break;
+      case View.PRICING: path = '/pricing'; break;
+      case View.LOGIN: path = '/login'; break;
+      case View.ONBOARDING: path = '/onboarding'; break;
+      case View.RESET_PASSWORD: path = '/reset-password'; break;
+      case View.PROCESS_RECOVERY: path = '/process-recovery'; break;
+      case View.SINGLE_POST:
+        path = params?.postId ? `/post/${params.postId}` : '/';
+        break;
+      case View.PROFILE:
+        if (params?.username) path = `/u/${params.username}`;
+        else if (params?.userId) path = `/profile/${params.userId}`;
+        else path = '/profile';
+        break;
+      case View.PROJECT_DETAILS:
+        path = params?.projectId ? `/project/${params.projectId}` : '/';
+        break;
+      case View.SDG_FEED:
+        path = params?.id ? `/sdg/${params.id}` : '/explore';
+        break;
+      case View.HASHTAG:
+        path = params?.tag ? `/hashtag/${params.tag.replace('#', '')}` : '/explore';
+        break;
+      case View.CREATE_PROJECT: path = '/projects/new'; break;
+      case View.EDIT_PROJECT: path = `/projects/edit/${params?.projectId}`; break;
+      case View.ORG_SETTINGS: path = params?.editMode ? '/org/settings' : '/org/profile'; break;
+      case View.CHECKOUT: path = '/checkout'; break;
+      case View.SUCCESS: path = '/success'; break;
+      default: path = '/';
+    }
+    navigate(path, { state: params });
+    window.scrollTo(0, 0);
+    setIsMobileMenuOpen(false);
+  };
+
+  // Lógica de Redirección y Onboarding
   useEffect(() => {
-    // 1. Siempre verificar parámetros de URL PRIMERO (lo más importante)
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewParam = urlParams.get('view');
-    const idParam = urlParams.get('id');
+    if (isLoading) return;
 
-    // Si hay un post en la URL, MOSTRARLO SIEMPRE (público o logueado)
-    if (viewParam === 'post' && idParam) {
-      setCurrentView(View.SINGLE_POST);
-      setNavParams({ postId: idParam });
-      setInitialCheckDone(true);
-      return;
-    }
+    const publicPaths = ['/login', '/reset-password', '/auth/callback', '/process-recovery'];
+    const isPublicPath = publicPaths.includes(location.pathname) ||
+      location.pathname.startsWith('/post/') ||
+      location.pathname.startsWith('/u/') ||
+      location.pathname.startsWith('/profile/');
 
-    // SI hay un PERFIL en la URL, MOSTRARLO SIEMPRE (público o logueado)
-    const userIdParam = urlParams.get('userId');
-    const usernameParam = urlParams.get('username');
-    if (viewParam === 'PROFILE' && (userIdParam || usernameParam)) {
-      console.log('👤 App.tsx: Acceso directo a perfil público detectado');
-      setCurrentView(View.PROFILE);
-      setNavParams({ userId: userIdParam, username: usernameParam });
-      setInitialCheckDone(true);
-      return;
-    }
-
-    // REGLA 0: PRIORIDAD ABSOLUTA - Bloqueo de recuperación de contraseña
-    const isRecoveryFlag = sessionStorage.getItem('is_recovery_active') === 'true';
-    if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD || isRecoveryFlag) {
-      if (currentView !== View.RESET_PASSWORD) {
-        console.log('🎯 App.tsx: Forzando vista de Reset Password');
-        setCurrentView(View.RESET_PASSWORD);
-        if (isRecoveryFlag) {
-          sessionStorage.removeItem('is_recovery_active');
-          window.location.hash = 'reset-password';
-        }
-      }
-      setInitialCheckDone(true);
-      return;
-    }
-
-    // REGLA 1: No hacer nada durante loading inicial
-    if (isLoading && !initialCheckDone) {
-      return;
-    }
-
-    // REGLA DE ORO: Si estamos en el callback de autenticación, NO REDIRIGIR A NINGÚN LADO
-    // Esto permite que AuthCallback.tsx haga su trabajo sin interferencia.
-    if (window.location.pathname === '/auth/callback') {
-      console.log('🛑 App.tsx: Detectada ruta de callback, deteniendo redirecciones automáticas.');
-      setInitialCheckDone(true);
-      return;
-    }
-
-    // REGLA 2: Si acaba de terminar el loading y no hay usuario, quedarse en LOGIN
-    if (!isLoading && !initialCheckDone && !user) {
-      setCurrentView(View.LOGIN);
-      setInitialCheckDone(true);
-      return;
-    }
-
-    // REGLA 3: Si ya terminó el loading inicial y hay usuario, decidir entre FEED o ONBOARDING
-    if (!isLoading && !initialCheckDone && user) {
-      const isRecovery = window.location.hash === '#reset-password' ||
-        sessionStorage.getItem('is_recovery_active') === 'true';
-
-      if (isRecovery || currentView === View.RESET_PASSWORD) {
-        setCurrentView(View.RESET_PASSWORD);
-      } else if (user.status === 'onboarding' || !user.sdgInterests || user.sdgInterests.length === 0) {
-        setCurrentView(View.ONBOARDING);
+    if (!user && !isPublicPath) {
+      navigate('/login');
+    } else if (user && location.pathname === '/login') {
+      if (user.status === 'onboarding' || !user.sdgInterests || user.sdgInterests.length === 0) {
+        navigate('/onboarding');
       } else {
-        setCurrentView(View.FEED);
+        navigate('/');
       }
-      setInitialCheckDone(true);
-      return;
-    }
-
-    // REGLA NUEVA: Si el usuario cambia de null a objeto (login/signup), redirigir
-    // EXCEPCIÓN: Si la vista actual es RESET_PASSWORD, no mover al usuario
-    if (user && currentView === View.LOGIN) {
-      if (window.location.hash === '#reset-password' || currentView === View.RESET_PASSWORD) {
-        setCurrentView(View.RESET_PASSWORD);
-      } else if (user.status === 'onboarding' || !user.sdgInterests || user.sdgInterests.length === 0) {
-        setCurrentView(View.ONBOARDING);
-      } else {
-        setCurrentView(View.FEED);
-      }
-      return;
-    }
-
-    // REGLA NUEVA (FIX LOGOUT): Si ya cargó la app y el usuario se vuelve null (Logout), redirigir al Login
-    // Excluyendo vistas que son públicamente accesibles para evitar rebotes en SinglePost, etc.
-    if (initialCheckDone && !isLoading && !user) {
-      const publicViews = [View.LOGIN, View.SINGLE_POST, View.RESET_PASSWORD, View.PRICING, View.PROFILE];
-      if (!publicViews.includes(currentView)) {
-        setCurrentView(View.LOGIN);
-        setNavParams(null);
-        return;
+    } else if (user && user.status === 'onboarding' && location.pathname !== '/onboarding') {
+      if (!location.pathname.startsWith('/post/') && !location.pathname.startsWith('/u/')) {
+        navigate('/onboarding');
       }
     }
 
     setInitialCheckDone(true);
-  }, [user, isLoading, currentView, initialCheckDone]);
+  }, [user, isLoading, location.pathname]);
 
-  const navigate = (view: View, params?: any) => {
-    // Permitir navegación incluso durante loading post-inicial
-    if (isLoading && !initialCheckDone) return;
+  if (isLoading && !initialCheckDone) return <Loading />;
 
-    // Definir vistas públicas (accesibles sin login)
-    const publicViews = [
-      View.ONBOARDING,
-      View.SINGLE_POST,
-      View.PRICING,  // Pricing puede ser público
-      View.RESET_PASSWORD,
-      View.PROFILE   // Permitir acceso público a perfiles
-    ];
-
-    // Si no hay usuario y trata de acceder a vista protegida → LOGIN
-    if (!user && !publicViews.includes(view)) {
-      setCurrentView(View.LOGIN);
-      setNavParams(null);
-      window.history.pushState({}, '', '/');
-      window.scrollTo(0, 0);
-      return;
-    }
-
-    // Navegación normal
-    setCurrentView(view);
-    setNavParams(params || null);
-
-    if (view === View.SINGLE_POST && params?.postId) {
-      window.history.pushState({}, '', `?view=post&id=${params.postId}`);
-    } else if (view === View.PROFILE && (params?.userId || params?.username)) {
-      const query = params.userId ? `userId=${params.userId}` : `username=${params.username}`;
-      window.history.pushState({}, '', `?view=PROFILE&${query}`);
-    } else {
-      window.history.pushState({}, '', '/');
-    }
-
-    window.scrollTo(0, 0);
-
-    // Cerrar menú móvil al navegar
-    if (isMobileMenuOpen) {
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  // --- NUEVA REGLA: Verificar si estamos en callback de autenticación ---
-  useEffect(() => {
-    const hash = window.location.hash;
-    const search = window.location.search;
-
-    // Si hay un hash o parámetros de autenticación en la URL, es un callback
-    if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
-      console.log('🔐 URL de callback detectada');
-      // Dejamos que AuthCallback maneje esto
-    }
-  }, []);
-
-  // --- SINCRONIZACIÓN DE NAVEGACIÓN (Botones Atrás/Adelante) ---
-  useEffect(() => {
-    const handlePopState = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const viewParam = urlParams.get('view');
-      const idParam = urlParams.get('id');
-
-      if (viewParam === 'post' && idParam) {
-        setCurrentView(View.SINGLE_POST);
-        setNavParams({ postId: idParam });
-      } else if (viewParam === 'pricing') {
-        setCurrentView(View.PRICING);
-        setNavParams(null);
-      } else if (viewParam === 'onboarding') {
-        setCurrentView(View.ONBOARDING);
-        setNavParams(null);
-      } else if (viewParam === 'PROFILE' && (urlParams.get('userId') || urlParams.get('username'))) {
-        setCurrentView(View.PROFILE);
-        setNavParams({ userId: urlParams.get('userId'), username: urlParams.get('username') });
-      } else {
-        if (!user) {
-          setCurrentView(View.LOGIN);
-        } else {
-          setCurrentView(View.FEED);
-        }
-        setNavParams(null);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [user]);
-
-  // Manejar rutas hash para reset-password - VERSIÓN CORREGIDA
-  useEffect(() => {
-    const handleHashRoute = () => {
-      const hash = window.location.hash;
-
-      // IGNORAR si hay tokens de autenticación en el hash
-      // (AuthCallback se encargará de ellos)
-      if (hash && (
-        hash.includes('access_token') ||
-        hash.includes('refresh_token') ||
-        hash.includes('type=recovery')
-      )) {
-        console.log('📍 App.tsx: Hash contiene tokens - dejando que AuthCallback maneje');
-        return;
-      }
-
-      // Solo procesar #reset-password si NO hay tokens
-      if (hash === '#reset-password') {
-        console.log('📍 App.tsx: Hash #reset-password detectado, navegando');
-        setCurrentView(View.RESET_PASSWORD);
-        setInitialCheckDone(true);
-
-        // Limpiar el hash para evitar problemas
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-    };
-
-    // Ejecutar después de un pequeño delay para asegurar que AuthCallback tuvo tiempo
-    setTimeout(handleHashRoute, 100);
-
-    // También escuchar cambios en el hash
-    const handleHashChange = () => {
-      // Esperar un momento antes de procesar para dar tiempo a AuthCallback
-      setTimeout(handleHashRoute, 50);
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, [setCurrentView, setInitialCheckDone]);
-
-  if (isLoading && !initialCheckDone) {
-    return <Loading />;
-  }
-
-  // --- VERIFICAR SI ES CALLBACK DE AUTENTICACIÓN ---
+  // --- VERIFICAR SI ES CALLBACK DE AUTENTICACIÓN --- (Mantener lógica de AuthCallback)
   const hash = window.location.hash;
   const search = window.location.search;
   const pathname = window.location.pathname;
@@ -285,103 +130,110 @@ function AppContent() {
   const isAuthCallback =
     pathname.includes('/auth/callback') ||
     (hash && (
-      (hash.includes('access_token') && !hash.includes('#reset-password')) ||
-      (hash.includes('type=recovery') && !hash.includes('#reset-password')) ||
+      (hash.includes('access_token')) ||
+      (hash.includes('type=recovery')) ||
       hash.includes('error=')
     )) ||
     (search && (search.includes('code=') || search.includes('token=')));
 
-  // Si es un callback de autenticación, mostrar componente especial
-  if (isAuthCallback && currentView !== View.RESET_PASSWORD) {
+  if (isAuthCallback && location.pathname !== '/reset-password') {
     return <AuthCallback />;
   }
 
-  // --- FULL SCREEN VIEWS (No Sidebar) ---
-  if (currentView === View.LOGIN) return <Login currentView={currentView} navigate={navigate} />;
-  if (currentView === View.ONBOARDING) return <Onboarding currentView={currentView} navigate={navigate} />;
-  if (currentView === View.RESET_PASSWORD) return <ResetPassword currentView={currentView} navigate={navigate} />;
-  if (currentView === View.PROCESS_RECOVERY) return <ProcessRecovery currentView={currentView} navigate={navigate} />;
-  // Public Post View - SIEMPRE visible, con o sin usuario
-  // Public Views - Renderizados fuera del layout con Sidebar para visitantes
-  if (!user && (currentView === View.SINGLE_POST || currentView === View.PROFILE)) {
-    return (
-      <>
-        {currentView === View.SINGLE_POST && <SinglePost currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.PROFILE && <Profile currentView={currentView} navigate={navigate} params={navParams} />}
-      </>
-    );
-  }
-
-  // --- PROTECTED APP LAYOUT (With Sidebar) ---
-  return (
+  // Layout Wrapper para Sidebar
+  const withSidebar = (component: React.ReactNode, view: View) => (
     <div className="flex h-screen bg-background-light">
       <Sidebar
-        currentView={currentView}
-        navigate={navigate}
+        currentView={view}
+        navigate={appNavigate}
         isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)} />
-
+        onClose={() => setIsMobileMenuOpen(false)}
+      />
       <div className="flex-1 flex flex-col overflow-hidden relative pt-16 lg:pt-0">
-
-        {/* Mobile Header */}
         <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 fixed top-0 left-0 w-full z-[50]">
-          <div className="flex items-center gap-2">
-            <Logo className="h-8" />
-          </div>
+          <div className="flex items-center gap-2"><Logo className="h-8" /></div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate(View.MESSAGES)} className="relative text-slate-500">
+            <button onClick={() => appNavigate(View.MESSAGES)} className="relative text-slate-500">
               <span className="material-symbols-outlined">chat</span>
-              {totalUnreadMessages > 0 && (
-                <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">
-                  {totalUnreadMessages}
-                </span>
-              )}
+              {totalUnreadMessages > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">{totalUnreadMessages}</span>}
             </button>
-            <button onClick={() => navigate(View.NOTIFICATIONS)} className="relative text-slate-500">
+            <button onClick={() => appNavigate(View.NOTIFICATIONS)} className="relative text-slate-500">
               <span className="material-symbols-outlined">notifications</span>
-              {totalUnreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">
-                  {totalUnreadNotifications}
-                </span>
-              )}
+              {totalUnreadNotifications > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">{totalUnreadNotifications}</span>}
             </button>
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="text-slate-500 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors z-50 cursor-pointer"
-              aria-label="Abrir menú"
-            >
-              <span className="material-symbols-outlined text-2xl">menu</span>
-            </button>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-500 p-2 rounded-lg z-50"><span className="material-symbols-outlined text-2xl">menu</span></button>
           </div>
         </header>
-
-        {currentView === View.DASHBOARD && <Dashboard currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.SEARCH && <Search currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.FEED && <Feed currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.PRICING && <Pricing currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.CHECKOUT && <Checkout currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.SUCCESS && <Success currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.EXPLORE && <Explore currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.SDG_FEED && <SDGFeed currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.HASHTAG && <HashtagFeed currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.MESSAGES && <Messages currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.NOTIFICATIONS && <Notifications currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.PROFILE && <Profile currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.SETTINGS && <ProfileSettings currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.SINGLE_POST && <SinglePost currentView={currentView} navigate={navigate} params={navParams} />}
-        {currentView === View.SAVED && <Saved currentView={currentView} navigate={navigate} params={navParams} />}
-
-        {currentView === View.ORG_SETTINGS && (
-          navParams?.editMode ?
-            <OrgSettings currentView={currentView} navigate={navigate} params={navParams} /> :
-            <OrgProfile currentView={currentView} navigate={navigate} params={navParams} />
-        )}
-
-        {currentView === View.PROJECT_DETAILS && <ProjectDetails currentView={currentView} navigate={navigate} params={navParams} />}
-        {(currentView === View.CREATE_PROJECT || currentView === View.EDIT_PROJECT) && <CreateProject currentView={currentView} navigate={navigate} params={navParams} />}
+        {component}
       </div>
     </div>
   );
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login currentView={View.LOGIN} navigate={appNavigate} />} />
+      <Route path="/onboarding" element={<Onboarding currentView={View.ONBOARDING} navigate={appNavigate} />} />
+      <Route path="/reset-password" element={<ResetPassword currentView={View.RESET_PASSWORD} navigate={appNavigate} />} />
+      <Route path="/process-recovery" element={<ProcessRecovery currentView={View.PROCESS_RECOVERY} navigate={appNavigate} />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+
+      <Route path="/" element={withSidebar(<Feed currentView={View.FEED} navigate={appNavigate} />, View.FEED)} />
+      <Route path="/dashboard" element={withSidebar(<Dashboard currentView={View.DASHBOARD} navigate={appNavigate} />, View.DASHBOARD)} />
+      <Route path="/explore" element={withSidebar(<Explore currentView={View.EXPLORE} navigate={appNavigate} />, View.EXPLORE)} />
+      <Route path="/search" element={withSidebar(<Search currentView={View.SEARCH} navigate={appNavigate} />, View.SEARCH)} />
+      <Route path="/notifications" element={withSidebar(<Notifications currentView={View.NOTIFICATIONS} navigate={appNavigate} />, View.NOTIFICATIONS)} />
+      <Route path="/messages" element={withSidebar(<Messages currentView={View.MESSAGES} navigate={appNavigate} />, View.MESSAGES)} />
+      <Route path="/settings" element={withSidebar(<ProfileSettings currentView={View.SETTINGS} navigate={appNavigate} />, View.SETTINGS)} />
+      <Route path="/saved" element={withSidebar(<Saved currentView={View.SAVED} navigate={appNavigate} />, View.SAVED)} />
+      <Route path="/pricing" element={withSidebar(<Pricing currentView={View.PRICING} navigate={appNavigate} />, View.PRICING)} />
+      <Route path="/checkout" element={withSidebar(<Checkout currentView={View.CHECKOUT} navigate={appNavigate} />, View.CHECKOUT)} />
+      <Route path="/success" element={withSidebar(<Success currentView={View.SUCCESS} navigate={appNavigate} />, View.SUCCESS)} />
+
+      <Route path="/post/:postId" element={<RouteHelper component={SinglePost} view={View.SINGLE_POST} navigate={appNavigate} paramKey="postId" withSidebarWrap={withSidebar} user={user} />} />
+      <Route path="/profile/:userId" element={<RouteHelper component={Profile} view={View.PROFILE} navigate={appNavigate} paramKey="userId" withSidebarWrap={withSidebar} user={user} />} />
+      <Route path="/u/:username" element={<RouteHelper component={Profile} view={View.PROFILE} navigate={appNavigate} paramKey="username" withSidebarWrap={withSidebar} user={user} />} />
+
+      <Route path="/project/:projectId" element={withSidebar(<ProjectDetailsWrapper navigate={appNavigate} />, View.PROJECT_DETAILS)} />
+      <Route path="/sdg/:id" element={withSidebar(<SDGFeedWrapper navigate={appNavigate} />, View.SDG_FEED)} />
+      <Route path="/hashtag/:tag" element={withSidebar(<HashtagFeedWrapper navigate={appNavigate} />, View.HASHTAG)} />
+
+      <Route path="/projects/new" element={withSidebar(<CreateProject currentView={View.CREATE_PROJECT} navigate={appNavigate} />, View.CREATE_PROJECT)} />
+      <Route path="/projects/edit/:projectId" element={withSidebar(<EditProjectWrapper navigate={appNavigate} />, View.EDIT_PROJECT)} />
+
+      <Route path="/org/profile" element={withSidebar(<OrgProfile currentView={View.ORG_SETTINGS} navigate={appNavigate} />, View.ORG_SETTINGS)} />
+      <Route path="/org/settings" element={withSidebar(<OrgSettings currentView={View.ORG_SETTINGS} navigate={appNavigate} params={{ editMode: true }} />, View.ORG_SETTINGS)} />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+// Helpers para extraer parámetros de la ruta
+function RouteHelper({ component: Component, view, navigate, paramKey, withSidebarWrap, user }: any) {
+  const params = useParams();
+  const navParams = { [paramKey]: params[paramKey] };
+  const element = <Component currentView={view} navigate={navigate} params={navParams} />;
+  return user ? withSidebarWrap(element, view) : element;
+}
+
+function ProjectDetailsWrapper({ navigate }: any) {
+  const { projectId } = useParams();
+  return <ProjectDetails currentView={View.PROJECT_DETAILS} navigate={navigate} params={{ projectId }} />;
+}
+
+function SDGFeedWrapper({ navigate }: any) {
+  const { id } = useParams();
+  return <SDGFeed currentView={View.SDG_FEED} navigate={navigate} params={{ id: parseInt(id || '0') }} />;
+}
+
+function HashtagFeedWrapper({ navigate }: any) {
+  const { tag } = useParams();
+  return <HashtagFeed currentView={View.HASHTAG} navigate={navigate} params={{ tag }} />;
+}
+
+function EditProjectWrapper({ navigate }: any) {
+  const { projectId } = useParams();
+  return <CreateProject currentView={View.EDIT_PROJECT} navigate={navigate} params={{ projectId }} />;
 }
 
 const App: React.FC = () => {
@@ -395,15 +247,17 @@ const App: React.FC = () => {
   if (!mounted) return null;
 
   return (
-    <PayPalScriptProvider options={{
-      clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
-      vault: true,
-      intent: "subscription"
-    }}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </PayPalScriptProvider>
+    <Router>
+      <PayPalScriptProvider options={{
+        clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID,
+        vault: true,
+        intent: "subscription"
+      }}>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </PayPalScriptProvider>
+    </Router>
   );
 };
 

@@ -4,6 +4,7 @@ import { View, NavProps } from '../types';
 import { SDGS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
+import { compressImage } from '../utils/imageUtils';
 
 export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
   const { user, updateUser } = useAuth();
@@ -46,15 +47,18 @@ export const Onboarding: React.FC<NavProps> = ({ navigate }) => {
     const file = e.target.files[0];
 
     try {
+      // Compress image before upload
+      const compressedBlob = await compressImage(file);
+      const fileToUpload = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+
       // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}-${Date.now()}.jpg`;
       const filePath = `avatars/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, fileToUpload, { upsert: true });
 
       if (uploadError) throw uploadError;
 

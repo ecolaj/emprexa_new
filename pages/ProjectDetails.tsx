@@ -151,10 +151,9 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
             const uploadPromises = filesToUpload.map(async (file: File) => {
                 // Compress image before upload
                 const compressedBlob = await compressImage(file);
-                const compressedFile = new File([compressedBlob], file.name, { type: file.type });
+                const compressedFile = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
 
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
                 const filePath = `${authUser.id}/projects/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage

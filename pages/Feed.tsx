@@ -497,8 +497,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   };
 
   const handleShare = (postId: ID) => {
-    // Usar URL dinámica para localhost y producción
-    const shareUrl = `${getBaseUrl()}/?view=post&id=${postId}`;
+    // Usar la nueva ruta de react-router-dom /post/:postId
+    const shareUrl = `${getBaseUrl()}/post/${postId}`;
 
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopiedUrl(shareUrl);

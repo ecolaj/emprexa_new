@@ -153,7 +153,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
 
                 // Compress image before upload
                 const compressedBlob = await compressImage(imageFile);
-                const compressedFile = new File([compressedBlob], imageFile.name, { type: imageFile.type });
+                const compressedFile = new File([compressedBlob], imageFile.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
 
                 console.log('📤 Subiendo imagen a storage:', filePath);
                 const { error: uploadError } = await supabase.storage

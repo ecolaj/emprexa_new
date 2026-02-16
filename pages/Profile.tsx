@@ -76,6 +76,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
         setProfileUser({
           id: profile.id,
           name: profile.name,
+          username: profile.username, // <-- Añadido
           role: profile.role,
           avatar: profile.avatar,
           email: profile.email,
@@ -267,7 +268,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   };
 
   const handleShare = (postId: ID) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=post&id=${postId}`;
+    // Usar la nueva ruta de react-router-dom /post/:postId
+    const shareUrl = `${window.location.origin}/post/${postId}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopiedUrl(shareUrl);
       setShowShareModal(true);
@@ -282,7 +284,10 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   // NEW: Handle Share Profile
   const handleShareProfile = () => {
     if (!user) return;
-    const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=PROFILE&userId=${user.id}`;
+    // Usar la ruta limpia /u/:username o fallback a /profile/:id
+    const profilePath = user.username ? `/u/${user.username}` : `/profile/${user.id}`;
+    const shareUrl = `${window.location.origin}${profilePath}`;
+
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopiedUrl(shareUrl);
       setShowShareModal(true);

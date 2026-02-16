@@ -7,6 +7,7 @@ import { LogoutModal } from '../components/LogoutModal';
 import { SuccessModal } from '../components/SuccessModal';
 import { AccountActionModal } from '../components/AccountActionModal';
 import { supabase } from '../utils/supabase';
+import { compressImage } from '../utils/imageUtils';
 
 export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
   const { user, updateUser, logout, deactivateAccount, deleteAccount } = useAuth();
@@ -120,17 +121,18 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
 
   const uploadProfileImage = async (file: File, type: 'avatar' | 'cover'): Promise<string> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`; // Simplified name to avoid potential char issues
+      // Compress image before upload
+      const compressedBlob = await compressImage(file);
+      const fileToUpload = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+
+      const fileName = `${user.id}/${Date.now()}.jpg`;
       const bucketName = type === 'avatar' ? 'avatars' : 'covers';
 
-      console.log(`Uploading ${type} to ${bucketName}/${fileName}...`);
+      console.log(`Uploading ${type} to ${bucketName}/${fileName}... (Compressed)`);
 
       const { error: uploadError } = await supabase.storage
         .from(bucketName)
-        .upload(fileName, file, { cacheControl: '3600', upsert: true }); // Removed user.id prefix in path if bucket is already scoped, but usually keeping it flat or simple is better. 
-      // NOTE: The previous code had `${user.id}/${fileName}`. I'll stick to that but ensure folder existence isn't an issue.
-      // Actually, let's keep the path pattern consistent but cleaner.
+        .upload(fileName, fileToUpload, { cacheControl: '3600', upsert: true });
 
       if (uploadError) {
         console.error(`Error uploading ${type}:`, uploadError);

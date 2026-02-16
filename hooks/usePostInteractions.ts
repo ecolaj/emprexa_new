@@ -73,8 +73,8 @@ export const usePostInteractions = (
     const [copiedUrl, setCopiedUrl] = useState('');
 
     const handleShare = (postId: ID) => {
-        // Dynamic URL check
-        const shareUrl = `${window.location.origin}${window.location.pathname.startsWith('/dist/') ? '/dist/' : '/'}?view=post&id=${postId}`;
+        // Usar la nueva ruta de react-router-dom /post/:postId
+        const shareUrl = `${window.location.origin}/post/${postId}`;
         
         navigator.clipboard.writeText(shareUrl).then(() => {
             setCopiedUrl(shareUrl);

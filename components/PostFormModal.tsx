@@ -4,6 +4,7 @@ import { Post, User } from '../types';
 import { MentionDropdown } from './MentionDropdown';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
+import { compressImage } from '../utils/imageUtils';
 
 interface PostFormModalProps {
     show: boolean;
@@ -169,13 +170,16 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
         try {
             for (const file of files as File[]) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                // Compress image before upload
+                const compressedBlob = await compressImage(file);
+                const fileToUpload = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
                 const filePath = `${authUser.id}/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
                     .from('post-images')
-                    .upload(filePath, file);
+                    .upload(filePath, fileToUpload);
 
                 if (uploadError) {
                     console.error("Error al subir imagen individual:", uploadError);
