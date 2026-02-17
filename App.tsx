@@ -147,6 +147,11 @@ function AppContent() {
     return <AuthCallback />;
   }
 
+  // Bloqueo de seguridad: Si estamos cargando el reset-password, no permitir que el resto de la app cargue
+  if (location.pathname === '/reset-password' && isLoading) {
+    return <Loading />;
+  }
+
   // Layout Wrapper para Sidebar
   const withSidebar = (component: React.ReactNode, view: View) => (
     <div className="flex h-screen bg-background-light">
