@@ -31,216 +31,148 @@ const DEGRADATION_EVENTS = [
   'BILLING.SUBSCRIPTION.PAYMENT.FAILED',
 ]
 
+/**
+ * Verifica la autenticidad del webhook con la API de PayPal
+ * Esto evita ataques de suplantación de identidad.
+ */
+async function verifyPayPalSignature(req: Request, rawBody: string) {
+  const clientId = Deno.env.get('PAYPAL_CLIENT_ID')
+  const clientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET')
+  const webhookId = Deno.env.get('PAYPAL_WEBHOOK_ID')
+
+  if (!clientId || !clientSecret || !webhookId) {
+    console.error("❌ ERROR: Variables PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET o PAYPAL_WEBHOOK_ID no configuradas.")
+    return false
+  }
+
+  try {
+    // 1. Obtener Access Token de PayPal (OAuth 2.0)
+    const auth = btoa(`${clientId}:${clientSecret}`)
+    const tokenResponse = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials'
+    })
+
+    if (!tokenResponse.ok) {
+      console.error("❌ Error obteniendo access token de PayPal")
+      return false
+    }
+
+    const { access_token } = await tokenResponse.json()
+
+    // 2. Verificar la firma con PayPal
+    const verifyResponse = await fetch('https://api-m.paypal.com/v1/notifications/verify-webhook-signature', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        auth_algo: req.headers.get('paypal-auth-algo'),
+        cert_url: req.headers.get('paypal-cert-url'),
+        transmission_id: req.headers.get('paypal-transmission-id'),
+        transmission_sig: req.headers.get('paypal-transmission-sig'),
+        transmission_time: req.headers.get('paypal-transmission-time'),
+        webhook_id: webhookId,
+        webhook_event: JSON.parse(rawBody)
+      })
+    })
+
+    const verifyData = await verifyResponse.json()
+    console.log(`🛡️ PayPal Verification Status: ${verifyData.verification_status}`)
+    
+    return verifyData.verification_status === 'SUCCESS'
+  } catch (error) {
+    console.error("❌ Excepción en verificación de firma:", error.message)
+    return false
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Log completo para debug
   const timestamp = new Date().toISOString()
   console.log(`\n${'='.repeat(60)}`)
-  console.log(`📨 [${timestamp}] Webhook PayPal recibido`)
+  console.log(`📨 [${timestamp}] Webhook PayPal recibido (Iniciando Verificación)`)
   console.log(`${'='.repeat(60)}`)
 
   try {
     const rawBody = await req.text()
     
-    // Log del payload completo para diagnóstico
-    console.log(`📋 Payload completo:`, rawBody.substring(0, 2000))
+    // 🔥 PASO QUIRÚRGICO DE SEGURIDAD
+    const isLegit = await verifyPayPalSignature(req, rawBody)
     
-    let payload: any
-    try {
-      payload = JSON.parse(rawBody)
-    } catch (parseError) {
-      console.error(`❌ Error parseando JSON:`, parseError.message)
-      console.error(`📋 Raw body (primeros 500 chars):`, rawBody.substring(0, 500))
-      return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
-        status: 400,
+    if (!isLegit) {
+      console.error(`🚫 ALERTA: Intento de acceso no autorizado o firma inválida de PayPal detectada.`)
+      // Retornamos 401 pero solo logueamos internamente para no dar pistas al atacante
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
+    console.log(`✅ Firma verificada exitosamente. Procesando contenido...`)
+    
+    const payload = JSON.parse(rawBody)
     const eventType = payload.event_type
     const resource = payload.resource
 
-    if (!eventType || !resource) {
-      console.error(`❌ Payload inválido: falta event_type o resource`)
-      return new Response(JSON.stringify({ error: 'Missing event_type or resource' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    console.log(`📌 Evento: ${eventType}`)
-    console.log(`📌 Subscription ID: ${resource.id}`)
-    console.log(`📌 Plan ID: ${resource.plan_id || 'NO PRESENTE'}`)
-    console.log(`📌 Custom ID (User): ${resource.custom_id || 'NO PRESENTE'}`)
-    console.log(`📌 Status: ${resource.status || 'NO PRESENTE'}`)
-    console.log(`📌 Subscriber Email: ${resource.subscriber?.email_address || 'NO PRESENTE'}`)
-
-    // Inicializar Supabase con Service Role Key (acceso total, sin RLS)
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error(`❌ FATAL: Variables de entorno SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY no configuradas`)
-      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
     // ==================== ACTIVACIÓN / RENOVACIÓN ====================
     if (ACTIVATION_EVENTS.includes(eventType)) {
-      // Determinar el plan
       const planValue = resource.plan_id ? (PAYPAL_PLAN_MAP[resource.plan_id] || null) : null
-      const customId = resource.custom_id // ID del usuario de Emprexa
+      const customId = resource.custom_id 
       const subscriptionId = resource.id
 
-      console.log(`✅ Procesando ACTIVACIÓN`)
-      console.log(`   Plan resuelto: ${planValue || 'DESCONOCIDO (plan_id: ' + resource.plan_id + ')'}`)
-      console.log(`   User ID: ${customId || 'NO PRESENTE'}`)
-      console.log(`   Subscription ID: ${subscriptionId}`)
+      console.log(`✅ Procesando ACTIVACIÓN: Plan ${planValue}, User ${customId}`)
 
       if (!planValue) {
-        console.error(`⚠️ plan_id "${resource.plan_id}" no está mapeado en PAYPAL_PLAN_MAP. NO se actualizará el plan.`)
-        console.error(`   Plan IDs conocidos:`, Object.keys(PAYPAL_PLAN_MAP))
-        // Aún así respondemos 200 para que PayPal no reintente
-        return new Response(JSON.stringify({ received: true, warning: 'Unknown plan_id' }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        console.warn(`⚠️ plan_id "${resource.plan_id}" no mapeado.`)
+        return new Response(JSON.stringify({ received: true, warning: 'Unknown plan' }), { status: 200, headers: corsHeaders })
       }
 
-      // Intentar actualizar por custom_id (preferido)
+      const updateData = {
+        plan: planValue,
+        paypal_subscription_id: subscriptionId,
+        plan_updated_at: new Date().toISOString()
+      }
+
+      // Intentar por custom_id
       if (customId) {
-        const updateData = {
-          plan: planValue,
-          paypal_subscription_id: subscriptionId,
-          plan_updated_at: new Date().toISOString()
-        }
+        const { data, error } = await supabaseClient.from('profiles').update(updateData).eq('id', customId).select()
         
-        console.log(`🔄 Actualizando perfil por custom_id: ${customId}`)
-        console.log(`   Datos:`, JSON.stringify(updateData))
-
-        const { data, error, count } = await supabaseClient
-          .from('profiles')
-          .update(updateData)
-          .eq('id', customId)
-          .select('id, plan, paypal_subscription_id')
-
-        if (error) {
-          console.error(`❌ Error actualizando por custom_id:`, error.message, error.details, error.hint)
-        } else if (!data || data.length === 0) {
-          console.error(`⚠️ No se encontró perfil con id: ${customId}. Intentando fallback por email...`)
-          
-          // Fallback: buscar por email del suscriptor
+        if (error) console.error(`❌ Error actualizando por ID:`, error.message)
+        else if (data?.length > 0) console.log(`✅ Perfil actualizado por ID:`, data[0].email)
+        else {
+          // Fallback por email
           const email = resource.subscriber?.email_address
           if (email) {
-            console.log(`🔄 Intentando actualizar por email: ${email}`)
-            const { data: emailData, error: emailError } = await supabaseClient
-              .from('profiles')
-              .update(updateData)
-              .eq('email', email)
-              .select('id, plan, paypal_subscription_id')
-
-            if (emailError) {
-              console.error(`❌ Error actualizando por email:`, emailError.message)
-            } else if (emailData && emailData.length > 0) {
-              console.log(`✅ Perfil actualizado exitosamente por email:`, emailData[0])
-            } else {
-              console.error(`❌ CRÍTICO: No se encontró perfil ni por custom_id ni por email`)
-            }
-          } else {
-            console.error(`❌ CRÍTICO: No hay custom_id válido ni email de suscriptor para actualizar`)
+            const { data: eData } = await supabaseClient.from('profiles').update(updateData).eq('email', email).select()
+            if (eData?.length > 0) console.log(`✅ Perfil actualizado por Email:`, email)
           }
-        } else {
-          console.log(`✅ Perfil actualizado exitosamente:`, data[0])
-        }
-      } else {
-        // Sin custom_id - intentar por email
-        const email = resource.subscriber?.email_address
-        if (email) {
-          console.log(`⚠️ No hay custom_id, intentando por email: ${email}`)
-          const { data, error } = await supabaseClient
-            .from('profiles')
-            .update({
-              plan: planValue,
-              paypal_subscription_id: subscriptionId,
-              plan_updated_at: new Date().toISOString()
-            })
-            .eq('email', email)
-            .select('id, plan, paypal_subscription_id')
-
-          if (error) {
-            console.error(`❌ Error actualizando por email:`, error.message)
-          } else if (data && data.length > 0) {
-            console.log(`✅ Perfil actualizado por email:`, data[0])
-          } else {
-            console.error(`❌ No se encontró perfil con email: ${email}`)
-          }
-        } else {
-          console.error(`❌ CRÍTICO: No hay custom_id ni email. No se puede identificar al usuario.`)
-          console.error(`   Payload completo del subscriber:`, JSON.stringify(resource.subscriber))
         }
       }
     }
     // ==================== DEGRADACIÓN ====================
     else if (DEGRADATION_EVENTS.includes(eventType)) {
       const subscriptionId = resource.id
-      console.log(`🔻 Procesando DEGRADACIÓN para suscripción: ${subscriptionId}`)
+      console.log(`🔻 Procesando DEGRADACIÓN: ${subscriptionId}`)
 
-      // Primero intentar por paypal_subscription_id
-      const { data, error } = await supabaseClient
-        .from('profiles')
-        .update({
-          plan: 'free',
-          plan_updated_at: new Date().toISOString()
-        })
+      await supabaseClient.from('profiles')
+        .update({ plan: 'free', plan_updated_at: new Date().toISOString() })
         .eq('paypal_subscription_id', subscriptionId)
-        .select('id, plan, email')
-
-      if (error) {
-        console.error(`❌ Error degradando suscripción:`, error.message)
-      } else if (!data || data.length === 0) {
-        console.warn(`⚠️ No se encontró perfil con paypal_subscription_id: ${subscriptionId}`)
-        
-        // Fallback: intentar por custom_id si existe
-        const customId = resource.custom_id
-        if (customId) {
-          console.log(`🔄 Intentando degradar por custom_id: ${customId}`)
-          const { data: customData, error: customError } = await supabaseClient
-            .from('profiles')
-            .update({
-              plan: 'free',
-              plan_updated_at: new Date().toISOString()
-            })
-            .eq('id', customId)
-            .select('id, plan, email')
-
-          if (customError) {
-            console.error(`❌ Error degradando por custom_id:`, customError.message)
-          } else if (customData && customData.length > 0) {
-            console.log(`✅ Perfil degradado por custom_id:`, customData[0])
-          } else {
-            console.error(`❌ No se encontró perfil para degradar`)
-          }
-        }
-      } else {
-        console.log(`✅ Perfil degradado exitosamente:`, data[0])
-      }
+      
+      console.log(`✅ Suscripción degradada a FREE`)
     }
-    // ==================== EVENTO NO MANEJADO ====================
-    else {
-      console.log(`ℹ️ Evento no procesado: ${eventType}`)
-      console.log(`   Resource ID: ${resource.id}`)
-      console.log(`   Resource status: ${resource.status}`)
-    }
-
-    console.log(`\n✅ Webhook procesado exitosamente`)
-    console.log(`${'='.repeat(60)}\n`)
 
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
@@ -248,15 +180,10 @@ serve(async (req: Request) => {
     })
 
   } catch (error) {
-    console.error(`\n❌ ERROR FATAL en Webhook:`, error.message)
-    console.error(`   Stack:`, error.stack)
-    console.error(`${'='.repeat(60)}\n`)
-    
-    // IMPORTANTE: Retornamos 200 incluso en error para evitar que PayPal
-    // reintente infinitamente y genere spam de errores
+    console.error(`❌ ERROR CRÍTICO:`, error.message)
     return new Response(JSON.stringify({ received: true, error: error.message }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: corsHeaders
     })
   }
 })
