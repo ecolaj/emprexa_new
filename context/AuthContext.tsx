@@ -291,21 +291,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     mountedRef.current = true;
     isAppVisibleRef.current = !document.hidden;
 
-    // A. ESCUCHAR EVENTOS (Hacerlo de primero)
+    // A. ESCUCHAR EVENTOS (Solo para logs, el ruteo lo maneja App.tsx y AuthCallback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔔 Evento de Auth detectado:', event);
       if (event === 'PASSWORD_RECOVERY') {
         console.log('🔑 Modo recuperación de contraseña detectado por evento!');
-        window.location.hash = 'reset-password';
+        // Ya no forzamos el hash aquí para no romper la validación de Supabase
       }
     });
 
-    // B. DETECTAR URL MANUAL (Por si Supabase limpia el hash antes de disparar el evento)
+    // B. DETECTAR URL MANUAL (Opcional, solo para banderas internas si fuera necesario)
     const rawHash = window.location.hash;
     const rawSearch = window.location.search;
     if (rawHash.includes('type=recovery') || rawSearch.includes('type=recovery')) {
-      console.log('🕵️‍♂️ Detección manual de recuperación detectada en URL');
-      window.location.hash = 'reset-password';
+      console.log('🕵️‍♂️ Detección de recuperación detectada en URL');
+      sessionStorage.setItem('is_recovery_active', 'true');
     }
 
     const initializeAuth = async () => {

@@ -34,11 +34,9 @@ export const AuthCallback: React.FC = () => {
                         console.log('🔑 Redirigiendo a cambio de contraseña...');
                         sessionStorage.removeItem('is_recovery_active');
 
-                        // Detener cualquier redirección al feed
-                        window.history.replaceState(null, '', '/');
-                        window.location.hash = 'reset-password';
-                        setStatus('success');
-                        setMessage('Redirigiendo a cambio de contraseña...');
+                        // REDIRECCIÓN LIMPIA A LA RUTA REAL
+                        // Esto rompe el bucle de App.tsx que redirigía de '/' a '/feed'
+                        window.location.href = '/reset-password';
                         return;
                     }
 

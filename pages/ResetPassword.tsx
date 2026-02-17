@@ -55,17 +55,23 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
           return;
         }
 
-        // 3. Si NO hay sesión y hay hash #reset-password, esperar un momento
-        if (window.location.hash === '#reset-password' && !session) {
-          console.log('⏳ Esperando que la sesión se sincronice...');
-          return;
+        // 3. Re-intento rápido (Supabase a veces tarda unos ms en hidratar la sesión)
+        if (!session) {
+          console.log('⏳ Sesión no detectada, esperando re-intento...');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            console.log('✅ Usuario recuperado vía getUser()');
+            setIsValidSession(true);
+            setMessage(null);
+            return;
+          }
         }
 
         // 4. Si no hay sesión y no hay hash, mostrar error
-        console.log('⚠️ No hay sesión de recovery activa');
+        console.log('⚠️ No hay sesión de recuperación activa');
         setMessage({
           type: 'error',
-          text: 'No hay una sesión de recuperación activa. Por favor, solicita un nuevo enlace desde el login.'
+          text: 'No hay una sesión de recuperación activa o el enlace ha expirado. Por favor, solicita un nuevo enlace desde el login.'
         });
         setIsValidSession(false);
 
