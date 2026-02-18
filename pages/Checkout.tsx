@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { View, NavProps } from '../types';
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
+import { useLocation } from 'react-router-dom';
 
 const PLAN_IDS: Record<string, string> = {
   'Básico': import.meta.env.VITE_PAYPAL_PLAN_BASIC,
@@ -19,12 +19,13 @@ const DB_PLAN_MAP: Record<string, string> = {
 };
 
 export const Checkout: React.FC<NavProps> = ({ navigate, params }) => {
-  const { updateUser, user } = useAuth();
+  const location = useLocation();
+  const { user, updateUser } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Set default values in case params are missing
-  const { plan = 'Pro', price = '9.99' } = params || {};
+  // Obtener parámetros del estado de navegación o de las props
+  const { plan = 'Pro', price = '9.99' } = { ...(location.state as any), ...params };
   const planId = PLAN_IDS[plan];
 
   const updatePlanDirectly = async (subscriptionId: string, planDbValue: string) => {
