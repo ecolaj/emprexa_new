@@ -1,6 +1,3 @@
--- SCRIPT DE SEGURIDAD UNIVERSAL (Auto-detecta nombres de columnas)
--- Este script habilita RLS y crea políticas seguras sin riesgo de errores por nombres de columnas.
-
 DO $$ 
 DECLARE
     v_col_name TEXT;
