@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { MentionDropdown } from './MentionDropdown';
 import { supabase } from '../utils/supabase';
 import { renderContent } from '../utils/renderers';
+import { formatRelativeTime } from '../utils/timeUtils';
 
 interface CommentSectionProps {
     post: Post;
@@ -110,7 +111,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                         ...c,
                         user: userData,
                         userId: c.user_id,
-                        time: c.created_at ? new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora',
+                        time: c.created_at ? formatRelativeTime(c.created_at) : 'Ahora',
                         // Map likes_count from DB to likes prop
                         likes: c.likes_count || c.likes || 0,
                         isLiked: userLikesSet.has(c.id),
@@ -126,7 +127,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                 ...r,
                                 user: replyUser,
                                 userId: r.user_id,
-                                time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ahora',
+                                time: r.created_at ? formatRelativeTime(r.created_at) : 'Ahora',
                                 likes: r.likes_count || r.likes || 0,
                                 isLiked: userLikesSet.has(r.id)
                             };
@@ -327,6 +328,16 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         }
     };
 
+    const handleLocalDelete = (commentId: string) => {
+        // Optimistic remove
+        setComments(prev => prev.filter(c => c.id !== commentId).map(c => ({
+            ...c,
+            replies: (c.replies || []).filter((r: any) => r.id !== commentId)
+        })));
+
+        onDeleteComment(post.id, commentId);
+    };
+
     const handleLocalToggleLike = async (commentId: string) => {
         if (!authUser) return;
 
@@ -433,7 +444,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                         </button>
                                                                     )}
                                                                     {canDelete && (
-                                                                        <button onClick={(e) => { e.stopPropagation(); onDeleteComment(post.id, comment.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
+                                                                        <button onClick={(e) => { e.stopPropagation(); handleLocalDelete(comment.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
                                                                             <span className="material-symbols-outlined text-sm">delete</span> Eliminar
                                                                         </button>
                                                                     )}
@@ -508,30 +519,33 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                     {replyAuthor.name}
                                                                 </p>
 
-                                                                {(canDeleteReply || canEditReply) && (
-                                                                    <div className="relative">
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
-                                                                            className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-xs">more_vert</span>
-                                                                        </button>
-                                                                        {activeMenuCommentId === reply.id && (
-                                                                            <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.1s_ease-out]">
-                                                                                {canEditReply && (
-                                                                                    <button onClick={() => { onStartEditComment(post.id, reply); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-2">
-                                                                                        <span className="material-symbols-outlined text-sm">edit</span> Editar
-                                                                                    </button>
-                                                                                )}
-                                                                                {canDeleteReply && (
-                                                                                    <button onClick={(e) => { e.stopPropagation(); onDeleteComment(post.id, reply.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-[10px] font-bold text-red-600 flex items-center gap-2">
-                                                                                        <span className="material-symbols-outlined text-sm">delete</span> Eliminar
-                                                                                    </button>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[9px] text-slate-400 font-medium">{reply.time}</span>
+                                                                    {(canDeleteReply || canEditReply) && (
+                                                                        <div className="relative">
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
+                                                                                className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-xs">more_vert</span>
+                                                                            </button>
+                                                                            {activeMenuCommentId === reply.id && (
+                                                                                <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.1s_ease-out]">
+                                                                                    {canEditReply && (
+                                                                                        <button onClick={() => { onStartEditComment(post.id, reply); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-2">
+                                                                                            <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                        </button>
+                                                                                    )}
+                                                                                    {canDeleteReply && (
+                                                                                        <button onClick={(e) => { e.stopPropagation(); handleLocalDelete(reply.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-[10px] font-bold text-red-600 flex items-center gap-2">
+                                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             {isReplyEditing ? (
                                                                 <div className="mt-1">
@@ -556,7 +570,6 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                             >
                                                                 {reply.isLiked ? 'Me gusta' : 'Me gusta'} {reply.likes > 0 && <span>• {reply.likes}</span>}
                                                             </button>
-                                                            <span>{reply.time}</span>
                                                         </div>
                                                     </div>
                                                 </div>

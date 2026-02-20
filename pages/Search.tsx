@@ -7,6 +7,7 @@ import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useAuth } from '../context/AuthContext';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { supabase } from '../utils/supabase';
+import { formatRelativeTime } from '../utils/timeUtils';
 
 type FilterType = 'all' | 'projects' | 'people' | 'orgs' | 'real_projects';
 
@@ -204,7 +205,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
               comments: post.comments_count || 0,
               sdgIds: post.sdg_ids || [],
               images: post.images || [],
-              time: post.created_at ? new Date(post.created_at).toLocaleDateString() : 'Reciente'
+              time: post.created_at ? formatRelativeTime(post.created_at) : 'Reciente'
             }));
             setDbProjects(mappedPosts);
           } else {

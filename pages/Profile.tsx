@@ -133,7 +133,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
         setLocalUserPosts(posts.map(p => ({
           ...p,
           user: postAuthor,
-          time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Hoy',
+          time: p.created_at ? formatRelativeTime(p.created_at) : 'Hoy',
           sdgIds: p.sdg_ids || [],
           likes: p.likes_count || 0,
           comments: p.comments_count || 0,
@@ -328,7 +328,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
 
         setLocalUserPosts(prev => prev.map(p => {
           if (p.id === postId) {
-            return { ...p, recentComments: [...(p.recentComments || []), newComment] };
+            return { ...p, recentComments: [...(p.recentComments || []), newComment], comments: (p.comments || 0) + 1 };
           }
           return p;
         }));
@@ -392,7 +392,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
               }
               return c;
             });
-            return { ...p, recentComments: updatedComments };
+            // FIX: Increment comments count for replies too
+            return { ...p, recentComments: updatedComments, comments: (p.comments || 0) + 1 };
           }
           return p;
         }));
@@ -415,7 +416,11 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     // Optimistic remove
     setLocalUserPosts(prev => prev.map(p => {
       if (p.id === postId) {
-        const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId);
+        // FIX: Also filter out replies if the deleted commentId refers to a reply
+        const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId).map((c: any) => ({
+          ...c,
+          replies: (c.replies || []).filter((r: any) => r.id !== commentId)
+        }));
         return { ...p, recentComments: updatedComments, comments: Math.max(0, (p.comments || 0) - 1) };
       }
       return p;

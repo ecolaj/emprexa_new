@@ -11,6 +11,7 @@ import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { ComingSoonModal } from '../components/ComingSoonModal';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { ProjectCard } from '../components/ProjectCard';
+import { formatRelativeTime } from '../utils/timeUtils';
 
 export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const { followedSdgIds, toggleFollowSdg, sendMentionNotifications } = useAuth();
@@ -114,7 +115,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
             return {
               ...p,
               user: userData,
-              time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Reciente',
+              time: p.created_at ? formatRelativeTime(p.created_at) : 'Reciente',
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,
               comments: p.comments_count || 0,

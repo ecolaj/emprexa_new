@@ -149,9 +149,10 @@ export const usePostInteractions = (
         }));
     };
 
-    const handleAddCommentReply = (postId: number, commentId: string, text: string) => {
+    const handleAddCommentReply = async (postId: number, commentId: string, text: string) => {
+        const tempId = `reply-${Date.now()}`;
         const newReply = {
-            id: `reply-${Date.now()}`,
+            id: tempId,
             userId: currentUser.id,
             text: text,
             time: 'Ahora',
@@ -159,9 +160,10 @@ export const usePostInteractions = (
             isLiked: false
         };
 
+        // Optimistic Update
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
-                const updatedComments = p.recentComments.map((c: any) => {
+                const updatedComments = (p.recentComments || []).map((c: any) => {
                     if (c.id === commentId) {
                         return { ...c, replies: [...(c.replies || []), newReply] };
                     }
@@ -172,6 +174,44 @@ export const usePostInteractions = (
             return p;
         }));
         setActiveReplyToId(null);
+
+        // DB Persistence
+        try {
+            const { data, error } = await supabase
+                .from('comments')
+                .insert([{
+                    post_id: postId,
+                    user_id: currentUser.id,
+                    text: text,
+                    parent_id: commentId
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Optional: Replace temp ID with real DB ID if needed
+            if (data && data.id) {
+                setPosts(prev => prev.map(p => {
+                    if (p.id === postId) {
+                        const updatedComments = (p.recentComments || []).map((c: any) => {
+                            if (c.id === commentId) {
+                                return {
+                                    ...c,
+                                    replies: (c.replies || []).map((r: any) => r.id === tempId ? { ...r, id: data.id } : r)
+                                };
+                            }
+                            return c;
+                        });
+                        return { ...p, recentComments: updatedComments };
+                    }
+                    return p;
+                }));
+            }
+        } catch (err) {
+            console.error("Error persisting reply:", err);
+            // Revert optimistic if needed, but for now just logging
+        }
     };
 
     const handleDeleteComment = async (postId: number, commentId: string) => {
@@ -179,7 +219,11 @@ export const usePostInteractions = (
             // Optimistic Update
             setPosts(prev => prev.map(p => {
                 if (p.id === postId) {
-                    const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId);
+                    // FIX: Also filter out replies if the deleted commentId refers to a reply
+                    const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId).map((c: any) => ({
+                        ...c,
+                        replies: (c.replies || []).filter((r: any) => r.id !== commentId)
+                    }));
                     return { ...p, recentComments: updatedComments, comments: Math.max(0, (p.comments || 0) - 1) };
                 }
                 return p;

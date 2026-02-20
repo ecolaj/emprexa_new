@@ -14,6 +14,7 @@ import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
 import { getBaseUrl } from '../utils/environment';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { usePostInteractions } from '../hooks/usePostInteractions';
 
 export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const { user, savedPostIds, toggleSavedPost, followedUserIds, followedSdgIds, sendMentionNotifications, isLoading: authLoading, activateTrial } = useAuth();
@@ -80,7 +81,6 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const [page, setPage] = useState(0);
   const POSTS_PER_PAGE = 20;
   const [showShareSuccessModal, setShowShareSuccessModal] = useState(false);
-  const [copiedUrl, setCopiedUrl] = useState('');
   const [showTrialConfirmModal, setShowTrialConfirmModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeContent, setUpgradeContent] = useState({ title: '', description: '', plan: '' });
@@ -141,7 +141,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
             return {
               ...p,
               user: userData || DEFAULT_USER,
-              time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Hoy',
+              time: p.created_at ? formatRelativeTime(p.created_at) : 'Hoy',
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,
               comments: p.comments_count || 0,
@@ -300,18 +300,48 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const [formImages, setFormImages] = useState<string[]>([]);
   const [formYoutubeUrl, setFormYoutubeUrl] = useState('');
 
-  const [activeMenuPostId, setActiveMenuPostId] = useState<number | null>(null);
-  const [activeCommentSectionId, setActiveCommentSectionId] = useState<number | null>(null);
-  const [activeMenuCommentId, setActiveMenuCommentId] = useState<string | null>(null);
-  const [activeReplyToId, setActiveReplyToId] = useState<string | null>(null);
-  const [editingComment, setEditingComment] = useState<{ postId: number, commentId: string, text: string } | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<{ postId: number, commentId: string } | null>(null);
+  const [postToDelete, setPostToDelete] = useState<number | null>(null);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const [postToDelete, setPostToDelete] = useState<number | null>(null);
-  const [commentToDelete, setCommentToDelete] = useState<{ postId: number, commentId: string } | null>(null);
+  const handleLockedAction = (reason: 'post' | 'dashboard') => {
+    if (reason === 'post') {
+      setUpgradeContent({
+        title: 'Voz Propia',
+        description: 'Publica tus propios avances y genera un impacto visible con una cuenta Premium.',
+        plan: 'Básico'
+      });
+    }
+    setShowUpgradeModal(true);
+  };
+
+  // --- INTERACTION HOOK ---
+  const {
+    activeCommentSectionId,
+    setActiveCommentSectionId,
+    activeMenuPostId,
+    setActiveMenuPostId,
+    activeMenuCommentId,
+    setActiveMenuCommentId,
+    activeReplyToId,
+    setActiveReplyToId,
+    editingComment,
+    setEditingComment,
+    handleToggleLike,
+    handleDeletePost,
+    handleShare,
+    handleAddComment,
+    handleToggleCommentLike,
+    handleAddCommentReply,
+    handleDeleteComment,
+    onSaveEditComment,
+    showShareModal: hookShowShareModal,
+    setShowShareModal: hookSetShowShareModal,
+    copiedUrl
+  } = usePostInteractions(localPosts, setLocalPosts, currentUser, sendMentionNotifications);
 
   // --- ACTIONS ---
 
@@ -425,224 +455,17 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     setActiveMenuPostId(null);
   };
 
-  const handleToggleLike = async (postId: number) => {
-    const post = localPosts.find(p => p.id === postId);
-    if (!post) return;
-
-    const isNowLiked = !post.isLiked;
-    const newLikesCount = isNowLiked ? post.likes + 1 : Math.max(0, post.likes - 1);
-
-    // Optimistic Update
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          isLiked: isNowLiked,
-          likes: newLikesCount
-        };
-      }
-      return p;
-    }));
-
-    if (isNowLiked) {
-      // Insert into post_likes
-      const { error: likeError } = await supabase
-        .from('post_likes')
-        .insert({ user_id: currentUser.id, post_id: postId });
-
-      if (!likeError) {
-        // Incremento manejado por Trigger en DB
-        // await supabase.from('posts').update({ likes_count: newLikesCount }).eq('id', postId);
-      } else {
-        console.error("Error liking post:", likeError);
-        // Revert optimistic? For now simplified.
-      }
-    } else {
-      // Delete from post_likes
-      const { error: unlikeError } = await supabase
-        .from('post_likes')
-        .delete()
-        .match({ user_id: currentUser.id, post_id: postId });
-
-      if (!unlikeError) {
-        // Decremento manejado por Trigger en DB
-        // await supabase.from('posts').update({ likes_count: newLikesCount }).eq('id', postId);
-      } else {
-        console.error("Error unliking post:", unlikeError);
-      }
-    }
-  };
-
-  const handleDeletePost = (postId: number) => {
-    setPostToDelete(postId);
+  const confirmDeleteComment = async () => {
+    if (!commentToDelete) return;
+    const { postId, commentId } = commentToDelete;
+    await handleDeleteComment(postId, commentId);
+    setCommentToDelete(null);
   };
 
   const confirmDeletePost = async () => {
     if (!postToDelete) return;
-
-    // Optimistic remove
-    setLocalPosts(prev => prev.filter(p => p.id !== postToDelete));
-    setActiveMenuPostId(null);
-
-    // DB Remove
-    const { error } = await supabase.from('posts').delete().eq('id', postToDelete);
-    if (!error) {
-      // Actualizar estadísticas del usuario reactivamente
-      setUserStats(prev => ({ ...prev, posts: Math.max(0, prev.posts - 1) }));
-    } else {
-      console.error("Error deleting post:", error);
-      alert("No se pudo eliminar la publicación. Intenta de nuevo.");
-    }
+    await handleDeletePost(postToDelete);
     setPostToDelete(null);
-  };
-
-  const handleShare = (postId: ID) => {
-    // Usar la nueva ruta de react-router-dom /post/:postId
-    const shareUrl = `${getBaseUrl()}/post/${postId}`;
-
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopiedUrl(shareUrl);
-      setShowShareSuccessModal(true);
-
-      // Auto cerrar después de 3 segundos
-      setTimeout(() => {
-        setShowShareSuccessModal(false);
-      }, 3000);
-    }).catch(err => {
-      console.error('Error copying to clipboard:', err);
-      setCopiedUrl(shareUrl);
-      setShowShareSuccessModal(true);
-    });
-  };
-
-  const handleLockedAction = (reason: 'post' | 'dashboard') => {
-    if (reason === 'post') {
-      setUpgradeContent({
-        title: 'Voz Propia',
-        description: 'Publica tus propios avances y genera un impacto visible con una cuenta Premium.',
-        plan: 'Básico'
-      });
-    }
-    setShowUpgradeModal(true);
-  };
-
-  const handleAddComment = (postId: number, text: string) => {
-    const newComment = {
-      id: `new-${Date.now()}`,
-      userId: currentUser.id,
-      text: text,
-      time: formatRelativeTime(new Date()),
-      likes: 0,
-      isLiked: false,
-      replies: []
-    };
-
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return { ...p, recentComments: [...(p.recentComments || []), newComment], comments: (p.comments || 0) + 1 };
-      }
-      return p;
-    }));
-    sendMentionNotifications(text);
-  };
-
-  const handleToggleCommentLike = (postId: number, commentId: string) => {
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const updatedComments = p.recentComments.map((c: any) => {
-          if (c.id === commentId) {
-            const isNowLiked = !c.isLiked;
-            return { ...c, isLiked: isNowLiked, likes: isNowLiked ? (c.likes || 0) + 1 : Math.max(0, (c.likes || 0) - 1) };
-          }
-          const updatedReplies = (c.replies || []).map((r: any) => {
-            if (r.id === commentId) {
-              const isNowLiked = !r.isLiked;
-              return { ...r, isLiked: isNowLiked, likes: isNowLiked ? (r.likes || 0) + 1 : Math.max(0, (r.likes || 0) - 1) };
-            }
-            return r;
-          });
-          return { ...c, replies: updatedReplies };
-        });
-        return { ...p, recentComments: updatedComments };
-      }
-      return p;
-    }));
-  };
-
-  const handleAddCommentReply = (postId: number, commentId: string, text: string) => {
-    const newReply = {
-      id: `reply-${Date.now()}`,
-      userId: currentUser.id,
-      text: text,
-      time: formatRelativeTime(new Date()),
-      likes: 0,
-      isLiked: false
-    };
-
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const updatedComments = p.recentComments.map((c: any) => {
-          if (c.id === commentId) {
-            return { ...c, replies: [...(c.replies || []), newReply] };
-          }
-          return c;
-        });
-        return { ...p, recentComments: updatedComments };
-      }
-      return p;
-    }));
-    setActiveReplyToId(null);
-  };
-
-  const handleDeleteComment = (postId: number, commentId: string) => {
-    setCommentToDelete({ postId, commentId });
-  };
-
-  const confirmDeleteComment = async () => {
-    if (!commentToDelete) return;
-    const { postId, commentId } = commentToDelete;
-
-    // Optimistic remove
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const updatedComments = (p.recentComments || []).filter((c: any) => c.id !== commentId);
-        return { ...p, recentComments: updatedComments, comments: Math.max(0, (p.comments || 0) - 1) };
-      }
-      return p;
-    }));
-    setActiveMenuCommentId(null);
-    setCommentToDelete(null);
-
-    // DB Remove
-    try {
-      const { error } = await supabase.from('comments').delete().eq('id', commentId);
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error deleting comment:", error);
-      alert("No se pudo eliminar el comentario.");
-      // Option: re-fetch posts here if critical
-    }
-  };
-
-  const onSaveEditComment = async (postId: number, commentId: string, text: string) => {
-    // Optimistic update
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const updatedComments = p.recentComments.map((c: any) => c.id === commentId ? { ...c, text } : c);
-        return { ...p, recentComments: updatedComments };
-      }
-      return p;
-    }));
-    setEditingComment(null);
-
-    // DB update
-    try {
-      const { error } = await supabase.from('comments').update({ text }).eq('id', commentId);
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error saving comment edit:", error);
-      alert("No se pudo guardar la edición.");
-    }
   };
 
   return (
@@ -981,8 +804,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         icon="comment_bank"
       />
       <ShareSuccessModal
-        isOpen={showShareSuccessModal}
-        onClose={() => setShowShareSuccessModal(false)}
+        isOpen={hookShowShareModal}
+        onClose={() => hookSetShowShareModal(false)}
         copiedUrl={copiedUrl}
       />
 

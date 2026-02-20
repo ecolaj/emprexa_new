@@ -67,7 +67,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                     const formattedPost = {
                         ...postData,
                         user: userData || DEFAULT_USER,
-                        time: postData.created_at ? new Date(postData.created_at).toLocaleDateString() : 'Hoy',
+                        time: postData.created_at ? formatRelativeTime(postData.created_at) : 'Hoy',
                         sdgIds: postData.sdg_ids || [],
                         likes: postData.likes_count || 0,
                         isLiked: userHasLiked,
@@ -291,6 +291,8 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
 
                 setLocalComments(prev => [...prev, newComment]);
                 setNewCommentText('');
+                // FIX: Update post comments count
+                setPost((prev: any) => ({ ...prev, comments: (prev.comments || 0) + 1 }));
             }
         } catch (error) {
             console.error("Error adding comment:", error);
@@ -318,7 +320,8 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
         try {
             const { error } = await supabase.from('comments').delete().eq('id', commentToDelete);
             if (error) throw error;
-            // Update local count if needed
+            // FIX: Update total comments count
+            setPost((prev: any) => ({ ...prev, comments: Math.max(0, (prev.comments || 0) - 1) }));
         } catch (error) {
             console.error("Error deleting comment:", error);
             alert("No se pudo eliminar el comentario.");
@@ -411,6 +414,9 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                     }
                     return c;
                 }));
+
+                // FIX: Update total comments count
+                setPost((prev: any) => ({ ...prev, comments: (prev.comments || 0) + 1 }));
 
                 setNewReplyText({ ...newReplyText, [commentId]: '' });
                 setActiveReplyToId(null);
@@ -600,7 +606,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4 max-w-2xl mx-auto">
                         <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
                             <span className="material-symbols-outlined text-primary">chat_bubble</span>
-                            Comentarios ({localComments.length})
+                            Comentarios ({post.comments})
                         </h3>
 
                         {/* Comment Input */}
@@ -651,28 +657,31 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                             {author.name}
                                                         </p>
 
-                                                        {user && (author.id === user.id || post.user_id === user.id || user.isAdmin) && (
-                                                            <div className="relative">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id); }}
-                                                                    className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/comment:opacity-100 transition-opacity"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-sm">more_vert</span>
-                                                                </button>
-                                                                {activeMenuCommentId === comment.id && (
-                                                                    <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
-                                                                        {author.id === user.id && (
-                                                                            <button onClick={() => onStartEditComment(comment)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                                <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-slate-400 font-medium">{comment.time}</span>
+                                                            {user && (author.id === user.id || post.user_id === user.id || user.isAdmin) && (
+                                                                <div className="relative">
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === comment.id ? null : comment.id); }}
+                                                                        className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/comment:opacity-100 transition-opacity"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-sm">more_vert</span>
+                                                                    </button>
+                                                                    {activeMenuCommentId === comment.id && (
+                                                                        <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
+                                                                            {author.id === user.id && (
+                                                                                <button onClick={() => onStartEditComment(comment)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
+                                                                                    <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                </button>
+                                                                            )}
+                                                                            <button onClick={() => handleDeleteComment(comment.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
+                                                                                <span className="material-symbols-outlined text-sm">delete</span> Eliminar
                                                                             </button>
-                                                                        )}
-                                                                        <button onClick={() => handleDeleteComment(comment.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
 
                                                     {editingComment?.id === comment.id ? (
@@ -711,7 +720,6 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                     >
                                                         Responder
                                                     </button>
-                                                    <span>{comment.time}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -739,28 +747,31 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                             {replyAuthor.name}
                                                                         </p>
 
-                                                                        {user && (replyAuthor.id === user.id || post.user_id === user.id || user.isAdmin) && (
-                                                                            <div className="relative">
-                                                                                <button
-                                                                                    onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
-                                                                                    className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                                                                                >
-                                                                                    <span className="material-symbols-outlined text-xs">more_vert</span>
-                                                                                </button>
-                                                                                {activeMenuCommentId === reply.id && (
-                                                                                    <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
-                                                                                        {replyAuthor.id === user.id && (
-                                                                                            <button onClick={() => onStartEditComment(reply)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                                                <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[10px] text-slate-400 font-medium">{reply.time}</span>
+                                                                            {user && (replyAuthor.id === user.id || post.user_id === user.id || user.isAdmin) && (
+                                                                                <div className="relative">
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setActiveMenuCommentId(activeMenuCommentId === reply.id ? null : reply.id); }}
+                                                                                        className="text-slate-400 hover:text-slate-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                                                                    >
+                                                                                        <span className="material-symbols-outlined text-xs">more_vert</span>
+                                                                                    </button>
+                                                                                    {activeMenuCommentId === reply.id && (
+                                                                                        <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
+                                                                                            {replyAuthor.id === user.id && (
+                                                                                                <button onClick={() => onStartEditComment(reply)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
+                                                                                                    <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                                </button>
+                                                                                            )}
+                                                                                            <button onClick={() => handleDeleteComment(reply.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
+                                                                                                <span className="material-symbols-outlined text-sm">delete</span> Eliminar
                                                                                             </button>
-                                                                                        )}
-                                                                                        <button onClick={() => handleDeleteComment(reply.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
-                                                                                        </button>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
 
                                                                     {editingComment?.id === reply.id ? (
@@ -786,7 +797,6 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                     >
                                                                         {reply.isLiked ? 'Me gusta' : 'Me gusta'} {reply.likes > 0 && <span>• {reply.likes}</span>}
                                                                     </button>
-                                                                    <span>{reply.time}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
