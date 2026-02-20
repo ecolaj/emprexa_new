@@ -135,6 +135,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // ==================== VERIFICACIÓN DE EXPIRACIÓN DE PLAN ====================
+
+  /**
+   * Verifica si el plan de un usuario con suscripción cancelada ya expiró.
+   * Si plan_expires_at < ahora y subscription_status === 'cancelled', baja a FREE.
+   * Esto es el fallback para cuando PayPal no dispara BILLING.SUBSCRIPTION.EXPIRED.
+   */
+  const checkPlanExpiration = async (currentUser: User) => {
+    if (!currentUser.planExpiresAt || currentUser.subscriptionStatus !== 'cancelled') return;
+    if (currentUser.plan === 'free') return; // Ya es free, nada que hacer
+
+    const now = new Date();
+    const expiresAt = new Date(currentUser.planExpiresAt);
+
+    if (now > expiresAt) {
+      console.log(`⏰ Plan expirado para ${currentUser.email}. Degradando a FREE...`);
+      try {
+        await supabase.from('profiles').update({
+          plan: 'free',
+          plan_expires_at: null,
+          plan_updated_at: new Date().toISOString()
+        }).eq('id', currentUser.id);
+
+        // Actualizar estado local inmediatamente
+        setUser(prev => prev ? {
+          ...prev,
+          plan: 'free',
+          planExpiresAt: null
+        } : null);
+
+        console.log(`✅ Plan degradado a FREE correctamente (período expirado).`);
+      } catch (err) {
+        console.error('Error degradando plan expirado:', err);
+      }
+    } else {
+      console.log(`⏳ Plan cancelado pero activo hasta: ${expiresAt.toLocaleDateString()}`);
+    }
+  };
+
   const checkTrialExpiration = async (currentUser: User) => {
     if (!currentUser.trialEndsAt && !currentUser.trialPostsRemaining) return;
 
@@ -361,6 +400,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               plan: profile.plan as any,
               paypalSubscriptionId: profile.paypal_subscription_id,
               planUpdatedAt: profile.plan_updated_at,
+              planExpiresAt: profile.plan_expires_at,
+              subscriptionStatus: profile.subscription_status as any,
               status: profile.status as any,
               username: profile.username,
               website: profile.website,
@@ -432,6 +473,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Cargar datos iniciales
     loadUserData(user.id);
 
+    // Verificar expiración de plan cancelado (período de gracia)
+    if (user.subscriptionStatus === 'cancelled' && user.planExpiresAt) {
+      checkPlanExpiration(user);
+    }
+
     // Verificar estado del trial
     if (user.isTrialActive) {
       checkTrialExpiration(user);
@@ -488,6 +534,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               plan: updatedProfile.plan ?? prev.plan,
               paypalSubscriptionId: updatedProfile.paypal_subscription_id ?? prev.paypalSubscriptionId,
               planUpdatedAt: updatedProfile.plan_updated_at ?? prev.planUpdatedAt,
+              planExpiresAt: updatedProfile.plan_expires_at ?? prev.planExpiresAt,
+              subscriptionStatus: updatedProfile.subscription_status ?? prev.subscriptionStatus,
               status: updatedProfile.status ?? prev.status,
               username: updatedProfile.username ?? prev.username,
               website: updatedProfile.website ?? prev.website,
@@ -559,6 +607,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             plan: profile.plan as any,
             paypalSubscriptionId: profile.paypal_subscription_id,
             planUpdatedAt: profile.plan_updated_at,
+            planExpiresAt: profile.plan_expires_at,
+            subscriptionStatus: profile.subscription_status as any,
             status: profile.status as any,
             username: profile.username,
             website: profile.website,
@@ -632,6 +682,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updates.status !== undefined) supabaseUpdates.status = updates.status;
       if (updates.paypalSubscriptionId !== undefined) supabaseUpdates.paypal_subscription_id = updates.paypalSubscriptionId;
       if (updates.planUpdatedAt !== undefined) supabaseUpdates.plan_updated_at = updates.planUpdatedAt;
+      if (updates.planExpiresAt !== undefined) supabaseUpdates.plan_expires_at = updates.planExpiresAt;
+      if (updates.subscriptionStatus !== undefined) supabaseUpdates.subscription_status = updates.subscriptionStatus;
 
       // Actualizar o crear en Supabase (Upsert)
       const { data, error } = await supabase

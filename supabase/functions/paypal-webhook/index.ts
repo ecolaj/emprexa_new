@@ -23,9 +23,13 @@ const ACTIVATION_EVENTS = [
   'BILLING.SUBSCRIPTION.CREATED',
 ]
 
-// Eventos que degradan a FREE
-const DEGRADATION_EVENTS = [
+// Cancelación → Período de gracia (el usuario conserva su plan hasta que expire)
+const GRACE_PERIOD_EVENTS = [
   'BILLING.SUBSCRIPTION.CANCELLED',
+]
+
+// Degradación inmediata a FREE (problemas de pago, suspensión forzada, expiración natural)
+const IMMEDIATE_DEGRADATION_EVENTS = [
   'BILLING.SUBSCRIPTION.EXPIRED',
   'BILLING.SUBSCRIPTION.SUSPENDED',
   'BILLING.SUBSCRIPTION.PAYMENT.FAILED',
@@ -105,12 +109,11 @@ serve(async (req: Request) => {
   try {
     const rawBody = await req.text()
     
-    // 🔥 PASO QUIRÚRGICO DE SEGURIDAD
+    // 🔥 VERIFICACIÓN CRIPTOGRÁFICA DE SEGURIDAD
     const isLegit = await verifyPayPalSignature(req, rawBody)
     
     if (!isLegit) {
       console.error(`🚫 ALERTA: Intento de acceso no autorizado o firma inválida de PayPal detectada.`)
-      // Retornamos 401 pero solo logueamos internamente para no dar pistas al atacante
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -130,7 +133,7 @@ serve(async (req: Request) => {
     // ==================== ACTIVACIÓN / RENOVACIÓN ====================
     if (ACTIVATION_EVENTS.includes(eventType)) {
       const planValue = resource.plan_id ? (PAYPAL_PLAN_MAP[resource.plan_id] || null) : null
-      const customId = resource.custom_id 
+      const customId = resource.custom_id
       const subscriptionId = resource.id
 
       console.log(`✅ Procesando ACTIVACIÓN: Plan ${planValue}, User ${customId}`)
@@ -143,36 +146,107 @@ serve(async (req: Request) => {
       const updateData = {
         plan: planValue,
         paypal_subscription_id: subscriptionId,
-        plan_updated_at: new Date().toISOString()
+        plan_updated_at: new Date().toISOString(),
+        plan_expires_at: null,          // Limpiar fecha de expiración al activar/renovar
+        subscription_status: 'active'  // Marcar como activo
       }
 
-      // Intentar por custom_id
+      // Intentar por custom_id (user.id de Supabase)
       if (customId) {
         const { data, error } = await supabaseClient.from('profiles').update(updateData).eq('id', customId).select()
         
         if (error) console.error(`❌ Error actualizando por ID:`, error.message)
         else if (data?.length > 0) console.log(`✅ Perfil actualizado por ID:`, data[0].email)
         else {
-          // Fallback por email
+          // Fallback por email del suscriptor
           const email = resource.subscriber?.email_address
           if (email) {
             const { data: eData } = await supabaseClient.from('profiles').update(updateData).eq('email', email).select()
             if (eData?.length > 0) console.log(`✅ Perfil actualizado por Email:`, email)
+            else console.error(`❌ No se encontró perfil ni por custom_id ni por email`)
           }
         }
       }
     }
-    // ==================== DEGRADACIÓN ====================
-    else if (DEGRADATION_EVENTS.includes(eventType)) {
-      const subscriptionId = resource.id
-      console.log(`🔻 Procesando DEGRADACIÓN: ${subscriptionId}`)
 
-      await supabaseClient.from('profiles')
-        .update({ plan: 'free', plan_updated_at: new Date().toISOString() })
+    // ==================== CANCELACIÓN (PERÍODO DE GRACIA) ====================
+    else if (GRACE_PERIOD_EVENTS.includes(eventType)) {
+      const subscriptionId = resource.id
+      // next_billing_time es la fecha hasta la que el usuario ya pagó → ahí expira su acceso
+      const nextBillingTime = resource.billing_info?.next_billing_time || null
+
+      console.log(`🔶 Procesando CANCELACIÓN con período de gracia: ${subscriptionId}`)
+      console.log(`   Acceso garantizado hasta: ${nextBillingTime || 'No disponible → degradación inmediata'}`)
+
+      let updateData: any
+
+      if (nextBillingTime) {
+        // Hay fecha de fin de período → conservar plan hasta esa fecha
+        updateData = {
+          subscription_status: 'cancelled',
+          plan_expires_at: nextBillingTime,
+          plan_updated_at: new Date().toISOString()
+          // ⚠️ NO tocamos 'plan' — el usuario conserva su plan hasta plan_expires_at
+        }
+        console.log(`✅ Plan conservado hasta ${nextBillingTime}. Degradación automática al vencer.`)
+      } else {
+        // Sin fecha de fin → degradación inmediata como fallback seguro
+        console.warn(`⚠️ No hay next_billing_time. Degradando a FREE inmediatamente.`)
+        updateData = {
+          plan: 'free',
+          subscription_status: 'cancelled',
+          plan_expires_at: null,
+          plan_updated_at: new Date().toISOString()
+        }
+      }
+
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .update(updateData)
         .eq('paypal_subscription_id', subscriptionId)
-      
-      console.log(`✅ Suscripción degradada a FREE`)
+        .select()
+
+      if (error) {
+        console.error(`❌ Error procesando cancelación:`, error.message)
+      } else if (data?.length > 0) {
+        console.log(`✅ Cancelación procesada para:`, data[0].email || data[0].id)
+      } else {
+        console.warn(`⚠️ No se encontró perfil con paypal_subscription_id: ${subscriptionId}`)
+      }
     }
+
+    // ==================== DEGRADACIÓN INMEDIATA ====================
+    else if (IMMEDIATE_DEGRADATION_EVENTS.includes(eventType)) {
+      const subscriptionId = resource.id
+      console.log(`🔻 Procesando DEGRADACIÓN INMEDIATA (${eventType}): ${subscriptionId}`)
+
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .update({
+          plan: 'free',
+          subscription_status: 'cancelled',
+          plan_expires_at: null,
+          plan_updated_at: new Date().toISOString()
+        })
+        .eq('paypal_subscription_id', subscriptionId)
+        .select()
+
+      if (error) {
+        console.error(`❌ Error en degradación inmediata:`, error.message)
+      } else if (data?.length > 0) {
+        console.log(`✅ Suscripción degradada a FREE:`, data[0].email || data[0].id)
+      } else {
+        console.warn(`⚠️ No se encontró perfil con paypal_subscription_id: ${subscriptionId}`)
+      }
+    }
+
+    // ==================== EVENTO NO MANEJADO ====================
+    else {
+      console.log(`ℹ️ Evento no procesado: ${eventType}`)
+    }
+
+    console.log(`\n✅ Webhook procesado exitosamente`)
+    console.log(`${'='.repeat(60)}\n`)
 
     return new Response(JSON.stringify({ received: true }), {
       status: 200,

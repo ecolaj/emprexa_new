@@ -51,6 +51,8 @@ export interface User {
   plan?: 'free' | 'basic' | 'pro' | 'enterprise';
   paypalSubscriptionId?: string;
   planUpdatedAt?: string;
+  planExpiresAt?: string | null;        // Fecha fin del período pagado tras cancelación
+  subscriptionStatus?: 'active' | 'cancelled'; // Estado de la suscripción PayPal
   website?: string;
   linkedin?: string;
   phone?: string;
