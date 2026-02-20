@@ -52,6 +52,7 @@ export interface User {
   paypalSubscriptionId?: string;
   planUpdatedAt?: string;
   planExpiresAt?: string | null;        // Fecha fin del período pagado tras cancelación
+  planPeriodEnd?: string | null;         // Fecha del próximo cobro (período actualmente pagado)
   subscriptionStatus?: 'active' | 'cancelled'; // Estado de la suscripción PayPal
   website?: string;
   linkedin?: string;

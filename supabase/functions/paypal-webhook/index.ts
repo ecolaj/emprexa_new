@@ -143,12 +143,20 @@ serve(async (req: Request) => {
         return new Response(JSON.stringify({ received: true, warning: 'Unknown plan' }), { status: 200, headers: corsHeaders })
       }
 
+      // Guardar next_billing_time para usarlo en caso de cancelación futura
+      const nextBillingTime = resource.billing_info?.next_billing_time || null
+
       const updateData = {
         plan: planValue,
         paypal_subscription_id: subscriptionId,
         plan_updated_at: new Date().toISOString(),
-        plan_expires_at: null,          // Limpiar fecha de expiración al activar/renovar
-        subscription_status: 'active'  // Marcar como activo
+        plan_period_end: nextBillingTime,  // ← Fecha del próximo cobro (período actual pagado)
+        plan_expires_at: null,             // Limpiar expiración al activar/renovar
+        subscription_status: 'active'      // Marcar como activo
+      }
+
+      if (nextBillingTime) {
+        console.log(`📅 Período actual pagado hasta: ${nextBillingTime}`)
       }
 
       // Intentar por custom_id (user.id de Supabase)
@@ -176,22 +184,31 @@ serve(async (req: Request) => {
       const nextBillingTime = resource.billing_info?.next_billing_time || null
 
       console.log(`🔶 Procesando CANCELACIÓN con período de gracia: ${subscriptionId}`)
-      console.log(`   Acceso garantizado hasta: ${nextBillingTime || 'No disponible → degradación inmediata'}`)
+
+      // Leer plan_period_end almacenado en la BD (guardado en la última activación/renovación)
+      const { data: profileData } = await supabaseClient
+        .from('profiles')
+        .select('plan_period_end, email')
+        .eq('paypal_subscription_id', subscriptionId)
+        .maybeSingle()
+
+      const periodEnd = profileData?.plan_period_end || null
+      console.log(`   plan_period_end en BD: ${periodEnd || 'No disponible'}`)
 
       let updateData: any
 
-      if (nextBillingTime) {
-        // Hay fecha de fin de período → conservar plan hasta esa fecha
+      if (periodEnd) {
+        // Tenemos la fecha del período pagado → conservar plan hasta esa fecha
         updateData = {
           subscription_status: 'cancelled',
-          plan_expires_at: nextBillingTime,
+          plan_expires_at: periodEnd,        // El usuario mantiene acceso hasta aquí
           plan_updated_at: new Date().toISOString()
           // ⚠️ NO tocamos 'plan' — el usuario conserva su plan hasta plan_expires_at
         }
-        console.log(`✅ Plan conservado hasta ${nextBillingTime}. Degradación automática al vencer.`)
+        console.log(`✅ Plan conservado hasta ${periodEnd}. Se degradará automáticamente al vencer.`)
       } else {
-        // Sin fecha de fin → degradación inmediata como fallback seguro
-        console.warn(`⚠️ No hay next_billing_time. Degradando a FREE inmediatamente.`)
+        // Sin fecha almacenada → degradación inmediata como fallback seguro
+        console.warn(`⚠️ No hay plan_period_end en BD. Degradando a FREE inmediatamente.`)
         updateData = {
           plan: 'free',
           subscription_status: 'cancelled',
