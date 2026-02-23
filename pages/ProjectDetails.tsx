@@ -222,9 +222,18 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
     const handleUpdateStats = async () => {
         setIsUpdatingStats(true);
         try {
+            // Clean data before sending to Supabase
+            // Postgres date columns do not accept empty strings, they must be valid dates or NULL
+            const statsToUpdate = {
+                ...tempStats,
+                start_date: tempStats.start_date || null,
+                end_date: tempStats.end_date || null,
+                location: tempStats.location || null
+            };
+
             const { error } = await supabase
                 .from('projects')
-                .update(tempStats)
+                .update(statsToUpdate)
                 .eq('id', project?.id);
 
             if (error) throw error;
@@ -234,8 +243,8 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
                 progress: tempStats.progress,
                 raisedAmount: tempStats.raised_amount,
                 volunteersCount: tempStats.volunteers_count,
-                startDate: tempStats.start_date,
-                endDate: tempStats.end_date,
+                startDate: tempStats.start_date || null,
+                endDate: tempStats.end_date || null,
                 location: tempStats.location
             } : null);
             setShowStatsModal(false);
