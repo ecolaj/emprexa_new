@@ -56,7 +56,9 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
     onSaveEditComment,
     showShareModal,
     setShowShareModal,
-    copiedUrl
+    copiedUrl,
+    savedPostIds,
+    toggleSavedPost
   } = usePostInteractions(dbProjects, setDbProjects, currentUser, sendMentionNotifications);
 
   // Lightbox needed for PostCard
@@ -513,8 +515,8 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                       onNavigate={navigate}
                       onToggleLike={handleToggleLike}
                       onShare={handleShare}
-                      onToggleSavedPost={() => { }}
-                      isSaved={false}
+                      onToggleSavedPost={toggleSavedPost}
+                      isSaved={savedPostIds.includes(String(post.id))}
                       activeCommentSectionId={activeCommentSectionId}
                       onToggleCommentSection={(id) => setActiveCommentSectionId(activeCommentSectionId === id ? null : id)}
                       onOpenLightbox={openLightbox}

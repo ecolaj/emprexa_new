@@ -7,7 +7,7 @@ import { formatRelativeTime } from '../utils/timeUtils';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  savedPostIds: number[];
+  savedPostIds: any[];
   followedUserIds: ID[];
   followedSdgIds: number[];
   followedProjectIds: number[];
@@ -18,7 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
-  toggleSavedPost: (postId: number) => Promise<void>;
+  toggleSavedPost: (postId: ID) => Promise<void>;
   toggleFollowUser: (userId: ID) => Promise<void>;
   toggleFollowSdg: (sdgId: number) => void;
   toggleFollowProject: (projectId: number) => void;
@@ -38,7 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [savedPostIds, setSavedPostIds] = useState<number[]>([]);
+  const [savedPostIds, setSavedPostIds] = useState<any[]>([]);
   const [followedUserIds, setFollowedUserIds] = useState<ID[]>([]);
   const [followedSdgIds, setFollowedSdgIds] = useState<number[]>([]);
   const [followedProjectIds, setFollowedProjectIds] = useState<number[]>([]);
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Procesar resultados
       if (saved.data) {
-        setSavedPostIds(saved.data.map(p => p.post_id));
+        setSavedPostIds(saved.data.map(p => String(p.post_id)));
       }
 
       if (following.data) {
@@ -744,41 +744,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const toggleSavedPost = async (postId: number) => {
-    if (!user) {
-      console.warn('toggleSavedPost: No user logged in');
-      return;
-    }
+  const toggleSavedPost = async (postId: ID) => {
+    if (!user) return;
 
-    const isSaved = savedPostIds.includes(postId);
+    const postIdString = String(postId); // Ensure ID is treated as string for consistency
+
+    const isSaved = savedPostIds.includes(postIdString);
 
     try {
       if (isSaved) {
-        // Remove from saved
-        const { error } = await supabase
-          .from('saved_posts')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('post_id', postId);
-
-        if (error) {
-          console.error('Error removing saved post:', error);
-          return;
-        }
-
-        setSavedPostIds(prev => prev.filter(id => id !== postId));
+        await supabase.from('saved_posts').delete().eq('user_id', user.id).eq('post_id', postIdString);
+        setSavedPostIds(prev => prev.filter(id => id !== postIdString));
       } else {
-        // Add to saved
-        const { error } = await supabase
-          .from('saved_posts')
-          .insert({ user_id: user.id, post_id: postId });
-
-        if (error) {
-          console.error('Error saving post:', error);
-          return;
-        }
-
-        setSavedPostIds(prev => [...prev, postId]);
+        await supabase.from('saved_posts').insert({ user_id: user.id, post_id: postIdString });
+        setSavedPostIds(prev => [...prev, postIdString]);
       }
     } catch (error) {
       console.error('Exception in toggleSavedPost:', error);

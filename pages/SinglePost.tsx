@@ -190,7 +190,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
         );
     }
 
-    const isSaved = user ? savedPostIds.includes(post.id) : false;
+    const isSaved = savedPostIds.includes(String(post.id));
 
     const handleLike = async () => {
         if (!user) {

@@ -60,6 +60,9 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
     const [showAddMemberMode, setShowAddMemberMode] = useState(false);
     const [searchMemberQuery, setSearchMemberQuery] = useState('');
     const [memberSuggestions, setMemberSuggestions] = useState<User[]>([]);
+    const [showDeleteMemberModal, setShowDeleteMemberModal] = useState(false);
+    const [memberToDeleteId, setMemberToDeleteId] = useState<string | null>(null);
+    const [isRemovingMember, setIsRemovingMember] = useState(false);
 
     // --- TEAM LOGIC ---
     useEffect(() => {
@@ -107,22 +110,31 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
         }
     };
 
-    const handleRemoveMember = async (userId: string, e: React.MouseEvent) => {
+    const handleRemoveMember = (userId: string, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent navigating to profile
-        if (!project || !confirm("¿Seguro que quieres quitar a este miembro del equipo?")) return;
+        setMemberToDeleteId(userId);
+        setShowDeleteMemberModal(true);
+    };
 
+    const confirmRemoveMember = async () => {
+        if (!project || !memberToDeleteId) return;
+
+        setIsRemovingMember(true);
         const { error } = await supabase
             .from('project_members')
             .delete()
             .eq('project_id', project.id)
-            .eq('user_id', userId);
+            .eq('user_id', memberToDeleteId);
 
         if (!error) {
-            setTeam(team.filter(m => m.id !== userId));
+            setTeam(team.filter(m => m.id !== memberToDeleteId));
+            setShowDeleteMemberModal(false);
         } else {
             console.error(error);
             alert("Error al eliminar miembro");
         }
+        setIsRemovingMember(false);
+        setMemberToDeleteId(null);
     };
 
     const openGalleryLightbox = (index: number) => {
@@ -1094,6 +1106,20 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
                     confirmText={isDeleting ? "Eliminando..." : "Sí, eliminar proyecto"}
                     type="danger"
                     icon="delete_forever"
+                />
+
+                <ConfirmModal
+                    isOpen={showDeleteMemberModal}
+                    onClose={() => {
+                        setShowDeleteMemberModal(false);
+                        setMemberToDeleteId(null);
+                    }}
+                    onConfirm={confirmRemoveMember}
+                    title="¿Quitar miembro del equipo?"
+                    description="Esta acción eliminará al usuario del equipo del proyecto. Podrás volver a agregarlo en cualquier momento."
+                    confirmText={isRemovingMember ? "Quitando..." : "Sí, quitar miembro"}
+                    type="danger"
+                    icon="person_remove"
                 />
 
                 {/* Stats Management Modal */}

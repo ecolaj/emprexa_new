@@ -14,12 +14,13 @@ import { formatRelativeTime } from '../utils/timeUtils';
 import { Logo } from '../components/Logo';
 
 export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
-  const { user: authUser, followedUserIds, toggleFollowUser, sendMentionNotifications } = useAuth();
-  type TabType = 'projects' | 'posts' | 'about';
+  const { user: authUser, followedUserIds, toggleFollowUser, sendMentionNotifications, savedPostIds, toggleSavedPost } = useAuth();
+  type TabType = 'projects' | 'posts' | 'followers' | 'about';
   // State for fetched data
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [localUserPosts, setLocalUserPosts] = useState<Post[]>([]);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [userFollowers, setUserFollowers] = useState<User[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [stats, setStats] = useState({
     projects: 0,
@@ -142,10 +143,20 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       }
 
       // 4. Fetch Stats (Followers)
-      const { count: followersCount } = await supabase
+      const { data: followers, count: followersCount } = await supabase
         .from('follows')
-        .select('*', { count: 'exact', head: true })
+        .select('follower:profiles!follower_id(*)', { count: 'exact' })
         .eq('following_id', profile.id);
+
+      if (followers) {
+        setUserFollowers(followers.map((f: any) => ({
+          ...f.follower,
+          id: f.follower.id,
+          name: f.follower.name,
+          role: f.follower.role,
+          avatar: f.follower.avatar
+        })));
+      }
 
       // 5. Calculate Impact (simplified for now: projects * 100 + posts * 10 + followers * 5)
       const impactScore = ((projects?.length || 0) * 100) + ((posts?.length || 0) * 10) + ((followersCount || 0) * 5);
@@ -584,7 +595,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                 { label: 'Seguidores', value: stats.followers >= 1000 ? (stats.followers / 1000).toFixed(1) + 'k' : stats.followers },
                 { label: 'Impacto', value: stats.impact, color: 'text-green-600' }
               ].map((stat, i) => (
-                <div key={i} className="flex flex-col shrink-0">
+                <div key={i} className="flex flex-col shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => stat.label === 'Seguidores' && setActiveTab('followers')}>
                   <span className={`text-xl font-bold ${stat.color || 'text-slate-900'}`}>{stat.value}</span>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{stat.label}</span>
                 </div>
@@ -599,7 +610,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
 
           {/* Tabs */}
           <div className="px-4 md:px-8 flex gap-8 mt-2">
-            {[{ id: 'projects', label: 'Proyectos' }, { id: 'posts', label: 'Publicaciones' }, { id: 'about', label: 'Información' }].map(tab => (
+            {[{ id: 'projects', label: 'Proyectos' }, { id: 'posts', label: 'Publicaciones' }, { id: 'followers', label: `Seguidores (${stats.followers})` }, { id: 'about', label: 'Información' }].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
@@ -664,8 +675,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                   onNavigate={navigate}
                   onToggleLike={handleToggleLike}
                   onShare={handleShare}
-                  onToggleSavedPost={() => { }} // Not implemented in profile yet
-                  isSaved={false}
+                  onToggleSavedPost={toggleSavedPost}
+                  isSaved={authUser ? savedPostIds.includes(String(post.id)) : false}
                   activeCommentSectionId={activeCommentSectionId}
                   onToggleCommentSection={(id) => setActiveCommentSectionId(activeCommentSectionId === id ? null : id)}
                   onOpenLightbox={openLightbox}
@@ -688,6 +699,51 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                   onDeletePost={handleDeletePost}
                 />
               ))}
+            </div>
+          )}
+
+          {activeTab === 'followers' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-[fade-in_0.3s_ease-out]">
+              {userFollowers.length > 0 ? (
+                userFollowers.map(follower => (
+                  <div
+                    key={follower.id}
+                    className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer group"
+                    onClick={() => navigate(View.PROFILE, { userId: follower.id })}
+                  >
+                    <div className="size-14 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-100">
+                      <img src={follower.avatar} alt={follower.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-slate-900 truncate group-hover:text-primary transition-colors">{follower.name}</h4>
+                      <p className="text-xs text-slate-500 truncate">{follower.role}</p>
+                    </div>
+                    {!isCurrentUser && authUser?.id === follower.id ? null : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFollowUser(follower.id);
+                        }}
+                        className={`size-10 rounded-full flex items-center justify-center transition-all ${followedUserIds.includes(follower.id)
+                            ? 'bg-slate-100 text-primary'
+                            : 'bg-slate-50 text-slate-400 hover:bg-primary/10 hover:text-primary'
+                          }`}
+                      >
+                        <span className={`material-symbols-outlined text-2xl ${followedUserIds.includes(follower.id) ? 'filled' : ''}`}>
+                          {followedUserIds.includes(follower.id) ? 'person_check' : 'person_add'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-16 text-slate-500">
+                  <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="material-symbols-outlined text-3xl">group</span>
+                  </div>
+                  <p>Aún no hay seguidores para mostrar.</p>
+                </div>
+              )}
             </div>
           )}
 

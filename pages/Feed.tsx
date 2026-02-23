@@ -618,7 +618,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
               onToggleLike={handleToggleLike}
               onShare={handleShare}
               onToggleSavedPost={toggleSavedPost}
-              isSaved={savedPostIds.includes(post.id)}
+              isSaved={savedPostIds.includes(String(post.id))}
               activeCommentSectionId={activeCommentSectionId}
               onToggleCommentSection={(id) => setActiveCommentSectionId(activeCommentSectionId === id ? null : id)}
               onOpenLightbox={(imgs, idx) => { setLightboxImages(imgs); setLightboxIndex(idx); setIsLightboxOpen(true); }}

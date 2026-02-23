@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Post, User, View, ID } from '../types';
 import { supabase } from '../utils/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export const usePostInteractions = (
     posts: Post[],
@@ -8,6 +9,8 @@ export const usePostInteractions = (
     currentUser: User,
     sendMentionNotifications: (text: string) => void
 ) => {
+    const { savedPostIds, toggleSavedPost } = useAuth();
+
     // UI State
     const [activeCommentSectionId, setActiveCommentSectionId] = useState<number | null>(null);
     const [activeMenuPostId, setActiveMenuPostId] = useState<number | null>(null);
@@ -288,6 +291,10 @@ export const usePostInteractions = (
         handleToggleCommentLike,
         handleAddCommentReply,
         handleDeleteComment,
-        onSaveEditComment
+        onSaveEditComment,
+        
+        // Saved state logic
+        savedPostIds,
+        toggleSavedPost
     };
 };

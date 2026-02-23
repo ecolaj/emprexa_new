@@ -63,8 +63,11 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
     onSaveEditComment,
     showShareModal,
     setShowShareModal,
-    copiedUrl
+    copiedUrl,
+    savedPostIds,
+    toggleSavedPost
   } = usePostInteractions(relevantPosts, setRelevantPosts, currentUser, sendMentionNotifications);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -228,8 +231,8 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
                   onNavigate={navigate}
                   onToggleLike={handleToggleLike}
                   onShare={handleShare}
-                  onToggleSavedPost={() => { }} // Not implemented here yet
-                  isSaved={false}
+                  onToggleSavedPost={toggleSavedPost}
+                  isSaved={savedPostIds.includes(String(post.id))}
                   activeCommentSectionId={activeCommentSectionId}
                   onToggleCommentSection={(id) => setActiveCommentSectionId(activeCommentSectionId === id ? null : id)}
                   onOpenLightbox={openLightbox}
