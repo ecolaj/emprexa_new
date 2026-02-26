@@ -115,9 +115,15 @@ export const AuthCallback: React.FC = () => {
                                         <h2 className="text-xl font-bold text-slate-800 mb-2">¡Tu enlace expiró!</h2>
                                         <p className="text-sm text-slate-600 mb-6 px-2 leading-relaxed">
                                             {message}
-                                            <br /><br />
-                                            <span className="font-medium text-slate-800">¡Pero no te preocupes!</span> Es muy fácil solucionarlo. Solo haz clic en el botón de abajo para ir a <strong>Iniciar Sesión</strong>, escribe de nuevo tu correo y así te enviaremos un enlace nuevo.
                                         </p>
+                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-left mb-6 w-full">
+                                            <p className="font-bold text-slate-800 mb-3 text-center">Sigue estos 3 pasos para solucionarlo:</p>
+                                            <ol className="text-sm text-slate-600 space-y-3 list-decimal list-outside ml-4">
+                                                <li>Haz clic en el botón de abajo: <strong>"Ir a Iniciar Sesión"</strong>.</li>
+                                                <li>Busca la opción <strong>"¿Olvidaste tu contraseña?"</strong> (letras azules) y hazle clic.</li>
+                                                <li>Escribe tu correo y presiona Enviar. <strong>¡Te llegará un correo nuevo fresquito para entrar directamente!</strong></li>
+                                            </ol>
+                                        </div>
                                         <button
                                             onClick={() => window.location.href = '/'}
                                             className="w-full py-3 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center gap-2"
