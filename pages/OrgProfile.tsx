@@ -103,8 +103,8 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                               <button
                                  onClick={() => setIsFollowing(!isFollowing)}
                                  className={`px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 ${isFollowing
-                                       ? 'bg-white border-2 border-slate-200 text-slate-700 hover:border-red-200 hover:text-red-500'
-                                       : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20'
+                                    ? 'bg-white border-2 border-slate-200 text-slate-700 hover:border-red-200 hover:text-red-500'
+                                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20'
                                     }`}
                               >
                                  {isFollowing ? (
@@ -196,7 +196,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                            <h3 className="text-lg font-bold text-slate-900">Enfoque ODS</h3>
                         </div>
                         <div className="flex gap-4 overflow-x-auto pb-2">
-                           {organization.focusSdgs.map(sdgId => {
+                           {[...(organization.focusSdgs || [])].sort((a, b) => a - b).map(sdgId => {
                               const sdg = getSdgInfo(sdgId);
                               if (!sdg) return null;
                               return (

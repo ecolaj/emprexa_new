@@ -725,8 +725,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                           toggleFollowUser(follower.id);
                         }}
                         className={`size-10 rounded-full flex items-center justify-center transition-all ${followedUserIds.includes(follower.id)
-                            ? 'bg-slate-100 text-primary'
-                            : 'bg-slate-50 text-slate-400 hover:bg-primary/10 hover:text-primary'
+                          ? 'bg-slate-100 text-primary'
+                          : 'bg-slate-50 text-slate-400 hover:bg-primary/10 hover:text-primary'
                           }`}
                       >
                         <span className={`material-symbols-outlined text-2xl ${followedUserIds.includes(follower.id) ? 'filled' : ''}`}>
@@ -759,7 +759,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                 <div className="bg-white rounded-xl border border-slate-200 p-6">
                   <h3 className="font-bold text-slate-900 mb-4">Intereses ODS</h3>
                   <div className="grid grid-cols-5 gap-2">
-                    {user.sdgInterests?.map(id => {
+                    {[...(user.sdgInterests || [])].sort((a, b) => a - b).map(id => {
                       const sdg = getSdgInfo(id);
                       if (!sdg) return null;
                       return (

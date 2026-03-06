@@ -91,7 +91,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap justify-end max-w-[200px]" style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}>
-                    {post.sdgIds.map(id => (
+                    {[...(post.sdgIds || [])].sort((a, b) => a - b).map(id => (
                         <SdgBadge key={id} sdgId={id} navigate={onNavigate} />
                     ))}
 
