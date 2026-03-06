@@ -47,7 +47,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
     useEffect(() => {
         const fetchRange = async () => {
             if (!authUser) return;
-            const { data } = await supabase.from('posts').select('created_at').eq('user_id', authUser.id).order('created_at', { ascending: true });
+            const { data } = await supabase.from('posts').select('created_at').eq('user_id', authUser.id).order('created_at', { ascending: true }).limit(1);
             if (data && data.length > 0) {
                 const start = new Date(data[0].created_at);
                 const end = new Date();
@@ -60,12 +60,13 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                     options.unshift({ value: val, label: lbl.charAt(0).toUpperCase() + lbl.slice(1) });
                     current.setMonth(current.getMonth() + 1);
                 }
+                options.unshift({ value: 'all', label: 'Histórico Acumulado' });
                 setAvailableMonths(options);
             } else {
                 const now = new Date();
                 const val = now.toISOString().substring(0, 7);
                 const lbl = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(now);
-                setAvailableMonths([{ value: val, label: lbl.charAt(0).toUpperCase() + lbl.slice(1) }]);
+                setAvailableMonths([{ value: 'all', label: 'Histórico Acumulado' }, { value: val, label: lbl.charAt(0).toUpperCase() + lbl.slice(1) }]);
             }
         };
         fetchRange();
@@ -80,21 +81,30 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
             if (!authUser) return;
             setIsLoading(true);
 
-            const [year, month] = selectedMonth.split('-').map(Number);
-            const start = new Date(year, month - 1, 1).toISOString();
-            const end = new Date(year, month, 0, 23, 59, 59).toISOString();
+            const isAllTime = selectedMonth === 'all';
+            let start = '', end = '';
+
+            if (!isAllTime) {
+                const [year, month] = selectedMonth.split('-').map(Number);
+                start = new Date(year, month - 1, 1).toISOString();
+                end = new Date(year, month, 0, 23, 59, 59).toISOString();
+            }
 
             try {
-                let postsQuery = supabase.from('posts').select('*').eq('user_id', authUser.id).gte('created_at', start).lte('created_at', end);
-                let projectsQuery = supabase.from('projects').select('*').eq('owner_id', authUser.id).gte('created_at', start).lte('created_at', end);
+                let postsQuery = supabase.from('posts').select('*').eq('user_id', authUser.id);
+                let projectsQuery = supabase.from('projects').select('*').eq('owner_id', authUser.id);
+                let globalImpactQuery = supabase.from('posts').select('likes_count, comments_count');
+
+                if (!isAllTime) {
+                    postsQuery = postsQuery.gte('created_at', start).lte('created_at', end);
+                    projectsQuery = projectsQuery.gte('created_at', start).lte('created_at', end);
+                    globalImpactQuery = globalImpactQuery.gte('created_at', start).lte('created_at', end);
+                }
 
                 if (activeSdgIds.length > 0) {
                     postsQuery = postsQuery.filter('sdg_ids', 'ov', `{${activeSdgIds.join(',')}}`);
                     projectsQuery = projectsQuery.in('sdg_id', activeSdgIds);
                 }
-
-                // Fetch Global Impact for Comparison (ENTERPRISE ONLY)
-                const globalImpactQuery = supabase.from('posts').select('likes_count, comments_count').gte('created_at', start).lte('created_at', end);
 
                 const [postsResponse, projResponse, followCount, globalResponse] = await Promise.all([
                     postsQuery,
@@ -151,20 +161,39 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                 });
                 setActivityData(activity);
 
-                const daysInMonth = new Date(year, month, 0).getDate();
-                if (timeGranularity === 'day') {
-                    setChartData(Array.from({ length: daysInMonth }, (_, i) => {
-                        const d = i + 1;
-                        const dayPosts = posts.filter(p => new Date(p.created_at).getDate() === d);
-                        return { name: `${d}`, value: dayPosts.reduce((acc, p) => acc + (p.likes_count || 0) + (p.comments_count || 0), 0) };
-                    }));
+                if (isAllTime) {
+                    // Group by month for "All Time"
+                    const monthMap: Record<string, number> = {};
+                    posts.forEach(p => {
+                        const date = new Date(p.created_at);
+                        const mLabel = new Intl.DateTimeFormat('es-ES', { month: 'short', year: '2-digit' }).format(date);
+                        monthMap[mLabel] = (monthMap[mLabel] || 0) + (p.likes_count || 0) + (p.comments_count || 0);
+                    });
+
+                    const sortedMonths = Object.keys(monthMap).sort((a, b) => {
+                        const [m1, y1] = a.split(' ');
+                        const [m2, y2] = b.split(' ');
+                        return y1.localeCompare(y2) || m1.localeCompare(m2);
+                    });
+
+                    setChartData(sortedMonths.map(m => ({ name: m, value: monthMap[m] })));
                 } else {
-                    const weeks = Math.ceil(daysInMonth / 7);
-                    setChartData(Array.from({ length: weeks }, (_, i) => {
-                        const s = i * 7 + 1, e = Math.min((i + 1) * 7, daysInMonth);
-                        const wPosts = posts.filter(p => { const d = new Date(p.created_at).getDate(); return d >= s && d <= e; });
-                        return { name: `${i + 1}`, value: wPosts.reduce((acc, p) => acc + (p.likes_count || 0) + (p.comments_count || 0), 0) };
-                    }));
+                    const [year, month] = selectedMonth.split('-').map(Number);
+                    const daysInMonth = new Date(year, month, 0).getDate();
+                    if (timeGranularity === 'day') {
+                        setChartData(Array.from({ length: daysInMonth }, (_, i) => {
+                            const d = i + 1;
+                            const dayPosts = posts.filter(p => new Date(p.created_at).getDate() === d);
+                            return { name: `${d}`, value: dayPosts.reduce((acc, p) => acc + (p.likes_count || 0) + (p.comments_count || 0), 0) };
+                        }));
+                    } else {
+                        const weeks = Math.ceil(daysInMonth / 7);
+                        setChartData(Array.from({ length: weeks }, (_, i) => {
+                            const s = i * 7 + 1, e = Math.min((i + 1) * 7, daysInMonth);
+                            const wPosts = posts.filter(p => { const d = new Date(p.created_at).getDate(); return d >= s && d <= e; });
+                            return { name: `${i + 1}`, value: wPosts.reduce((acc, p) => acc + (p.likes_count || 0) + (p.comments_count || 0), 0) };
+                        }));
+                    }
                 }
 
                 const sdgMap: Record<number, number> = {};
@@ -232,6 +261,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
     };
 
     const heatmapGrid = useMemo(() => {
+        if (selectedMonth === 'all') return { padding: [], days: [], remaining: Array.from({ length: 42 }) };
         const [y, m] = selectedMonth.split('-').map(Number);
         const first = new Date(y, m - 1, 1).getDay();
         const len = new Date(y, m, 0).getDate();
@@ -239,6 +269,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
     }, [selectedMonth]);
 
     const monthName = useMemo(() => {
+        if (selectedMonth === 'all') return 'Histórico Acumulado';
         const [y, m] = selectedMonth.split('-').map(Number);
         const date = new Date(y, m - 1, 1);
         const name = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(date);
@@ -559,10 +590,10 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                             >
                                 <div className="flex justify-between items-center mb-12" onClick={() => setIsChartFlipped(true)} style={{ cursor: 'pointer' }}>
                                     <div>
-                                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Engagement {timeGranularity === 'day' ? 'Diario' : 'Semanal'}</h3>
-                                        <p className="text-slate-400 text-sm font-medium tracking-tight">Interacciones promedio por publicación este mes</p>
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Engagement {selectedMonth === 'all' ? 'Mensual' : timeGranularity === 'day' ? 'Diario' : 'Semanal'}</h3>
+                                        <p className="text-slate-400 text-sm font-medium tracking-tight">Interacciones promedio por publicación este periodo</p>
                                     </div>
-                                    <div className="flex bg-slate-100 p-1.5 rounded-3xl border border-slate-200 shadow-inner">
+                                    <div className={`flex bg-slate-100 p-1.5 rounded-3xl border border-slate-200 shadow-inner ${selectedMonth === 'all' ? 'opacity-50 pointer-events-none' : ''}`}>
                                         <button onClick={(e) => { e.stopPropagation(); setTimeGranularity('day'); }} className={`px-8 py-3 rounded-2xl text-xs font-black transition-all ${timeGranularity === 'day' ? 'bg-white shadow-xl text-slate-900' : 'text-slate-400'}`}>Día</button>
                                         <button onClick={(e) => { e.stopPropagation(); setTimeGranularity('week'); }} className={`px-8 py-3 rounded-2xl text-xs font-black transition-all ${timeGranularity === 'week' ? 'bg-white shadow-xl text-slate-900' : 'text-slate-400'}`}>Semana</button>
                                     </div>
@@ -592,7 +623,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
                                                             <div className="bg-slate-900 border border-slate-800 text-white px-8 py-5 rounded-[32px] shadow-2xl relative translate-y-[-35px] backdrop-blur-2xl bg-opacity-95 ring-8 ring-slate-900/10 text-center">
-                                                                <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.3em] mb-2">{timeGranularity === 'day' ? 'Día ' : 'Semana '}{payload[0].payload.name}</p>
+                                                                <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.3em] mb-2">{selectedMonth === 'all' ? 'Mes ' : timeGranularity === 'day' ? 'Día ' : 'Semana '}{payload[0].payload.name}</p>
                                                                 <p className="text-4xl font-black text-blue-400 tabular-nums">{payload[0].value}</p>
                                                                 <p className="text-[8px] font-black uppercase text-slate-400 mt-1">Interacciones</p>
                                                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-full border-[12px] border-transparent border-t-slate-900 opacity-95"></div>
@@ -754,32 +785,41 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                         <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Actividad Global</span>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-7 gap-5">
-                                    {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, i) => (
-                                        <span key={i} className="text-center text-[10px] font-black text-slate-300 mb-6">{day}</span>
-                                    ))}
-                                    {heatmapGrid.padding.map((_, i) => <div key={`p-${i}`} className="aspect-square"></div>)}
-                                    {heatmapGrid.days.map((day) => {
-                                        const count = activityData[day] || 0;
-                                        const bgColor = count > 3 ? 'bg-blue-600' : count > 1 ? 'bg-blue-400' : count === 1 ? 'bg-blue-200' : 'bg-slate-50';
-                                        return (
-                                            <div
-                                                key={day}
-                                                title={`${day}: ${count} posts`}
-                                                className={`aspect-square rounded-[18px] ${bgColor} hover:ring-[12px] hover:ring-blue-50 transition-all cursor-crosshair shadow-sm relative group/cell`}
-                                                onClick={() => setIsActivityFlipped(true)}
-                                            >
-                                                {count > 0 && (
-                                                    <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black px-4 py-2 rounded-xl opacity-0 group-hover/cell:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-2xl">
-                                                        {count} Publicaciones
+                                <div className="grid grid-cols-7 gap-5 h-full min-h-[180px] relative">
+                                    {selectedMonth === 'all' ? (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm rounded-[32px] border-2 border-dashed border-slate-200 z-20">
+                                            <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">event_busy</span>
+                                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest text-center px-4">Mapa de calor mensual <br /> desactivado en vista de Histórico</h4>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, i) => (
+                                                <span key={i} className="text-center text-[10px] font-black text-slate-300 mb-6">{day}</span>
+                                            ))}
+                                            {heatmapGrid.padding.map((_, i) => <div key={`p-${i}`} className="aspect-square"></div>)}
+                                            {heatmapGrid.days.map((day) => {
+                                                const count = activityData[day] || 0;
+                                                const bgColor = count > 3 ? 'bg-blue-600' : count > 1 ? 'bg-blue-400' : count === 1 ? 'bg-blue-200' : 'bg-slate-50';
+                                                return (
+                                                    <div
+                                                        key={day}
+                                                        title={`${day}: ${count} posts`}
+                                                        className={`aspect-square rounded-[18px] ${bgColor} hover:ring-[12px] hover:ring-blue-50 transition-all cursor-crosshair shadow-sm relative group/cell`}
+                                                        onClick={(e) => { e.stopPropagation(); setIsActivityFlipped(true); }}
+                                                    >
+                                                        {count > 0 && (
+                                                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black px-4 py-2 rounded-xl opacity-0 group-hover/cell:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-2xl">
+                                                                {count} Publicaciones
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                                );
+                                            })}
+                                        </>
+                                    )}
                                 </div>
-                                <div className="mt-auto flex justify-between items-center bg-slate-50/50 p-8 rounded-[40px] border border-slate-100">
-                                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Volumen Mensual</p>
+                                <div className="mt-6 flex justify-between items-center bg-slate-50/50 p-8 rounded-[40px] border border-slate-100">
+                                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Volumen {selectedMonth === 'all' ? 'Histórico' : 'Mensual'}</p>
                                     <div className="flex items-baseline gap-2">
                                         <p className="text-4xl font-black text-slate-900 tabular-nums">{counts.posts}</p>
                                         <p className="text-xs font-black text-blue-500 uppercase">Impactos</p>
@@ -831,7 +871,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                         </div>
 
                         <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar max-h-[400px] pr-4">
-                            {topPosts.map((p, i) => (
+                            {topPosts.slice(0, 10).map((p, i) => (
                                 <div
                                     key={i}
                                     className="group/item flex items-center gap-8 p-8 rounded-[40px] hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all duration-500"
@@ -839,6 +879,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                     <div className="size-24 rounded-[32px] bg-slate-100 overflow-hidden shrink-0 border-4 border-white shadow-xl group-hover/item:scale-105 transition-all duration-500 relative">
                                         <img
                                             src={p.images?.[0] || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=200'}
+                                            crossOrigin="anonymous"
                                             className="w-full h-full object-cover"
                                             alt={p.title}
                                         />
@@ -998,7 +1039,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                         {topPosts.slice(0, 4).map((p, i) => (
                                             <div key={i} className="flex items-center gap-6 p-6 bg-[#f8fafc] rounded-[36px] border border-slate-100 shadow-sm h-32 overflow-hidden flex-nowrap">
                                                 <div className="size-20 rounded-[24px] bg-slate-200 overflow-hidden border-4 border-white shrink-0 shadow-md">
-                                                    <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=200'} className="w-full h-full object-cover" alt="" />
+                                                    <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=200'} crossOrigin="anonymous" className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div className="flex-1 min-w-0 pr-4">
                                                     <h4 className="text-[14px] font-[1000] text-slate-900 uppercase tracking-tighter mb-2 line-clamp-2" style={{ lineHeight: '1.5', paddingBottom: '2px', paddingTop: '2px' }}>
@@ -1017,7 +1058,7 @@ export const DashboardEnterprise: React.FC<NavProps> = ({ navigate }) => {
                                 {/* Simplified Footer with Protection Padding */}
                                 <div className="mt-auto pt-16 pb-12 border-t-[8px] border-slate-900 flex justify-between items-end">
                                     <div className="flex items-center gap-6">
-                                        <img src={authUser?.avatar} className="size-16 rounded-[22px] border-[4px] border-white shadow-lg object-cover" alt="" />
+                                        <img src={authUser?.avatar} crossOrigin="anonymous" className="size-16 rounded-[22px] border-[4px] border-white shadow-lg object-cover" alt="" />
                                         <div>
                                             <p className="text-lg font-black text-slate-900 uppercase tracking-tighter leading-none mb-1">{authUser?.name}</p>
                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Responsable de Reporte Corporativo</p>
