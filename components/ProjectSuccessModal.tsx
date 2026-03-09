@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { View } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProjectSuccessModalProps {
     isOpen: boolean;
@@ -17,6 +18,7 @@ export const ProjectSuccessModal: React.FC<ProjectSuccessModalProps> = ({
     projectName,
     isEdit = false
 }) => {
+    const { t } = useLanguage();
     if (!isOpen) return null;
 
     return (
@@ -39,13 +41,13 @@ export const ProjectSuccessModal: React.FC<ProjectSuccessModalProps> = ({
                     </div>
 
                     <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">
-                        {isEdit ? '¡Cambios Guardados!' : '¡Proyecto Lanzado!'}
+                        {isEdit ? t('projectSuccessModal.editTitle') : t('projectSuccessModal.createTitle')}
                     </h2>
 
                     <p className="text-slate-500 text-sm mb-8 leading-relaxed font-medium">
                         {isEdit
-                            ? `La información de "${projectName}" ha sido actualizada exitosamente.`
-                            : `Tu iniciativa "${projectName}" ya está disponible en Emprexa. ¡Es momento de conectar y generar impacto!`}
+                            ? t('projectSuccessModal.editDesc', { name: projectName })
+                            : t('projectSuccessModal.createDesc', { name: projectName })}
                     </p>
 
                     <div className="space-y-3">
@@ -53,13 +55,13 @@ export const ProjectSuccessModal: React.FC<ProjectSuccessModalProps> = ({
                             onClick={onGoToProject}
                             className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
                         >
-                            <span className="material-symbols-outlined">visibility</span> Ver mi Proyecto
+                            <span className="material-symbols-outlined">visibility</span> {t('projectSuccessModal.viewProject')}
                         </button>
                         <button
                             onClick={onClose}
                             className="w-full py-3 text-slate-400 font-bold hover:text-slate-600 text-sm transition-colors"
                         >
-                            Volver a Explorar
+                            {t('projectSuccessModal.backToExplore')}
                         </button>
                     </div>
                 </div>

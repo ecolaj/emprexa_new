@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { User, ID } from '../types';
 import { renderBadge } from '../utils/renderers';
+import { useLanguage } from '../context/LanguageContext';
 
 interface MentionDropdownProps {
     suggestions: User[];
@@ -10,6 +11,7 @@ interface MentionDropdownProps {
 }
 
 export const MentionDropdown: React.FC<MentionDropdownProps> = ({ suggestions, onSelect, position, activeIndex }) => {
+    const { t } = useLanguage();
     if (suggestions.length === 0) return null;
 
     return (
@@ -21,7 +23,7 @@ export const MentionDropdown: React.FC<MentionDropdownProps> = ({ suggestions, o
             }}
         >
             <div className="px-3 py-1 mb-1 border-b border-slate-50">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sugerencias</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('feed.suggestions')}</span>
             </div>
             {suggestions.map((item: any, index) => (
                 <div
@@ -41,7 +43,7 @@ export const MentionDropdown: React.FC<MentionDropdownProps> = ({ suggestions, o
                                 <span className="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider flex items-center gap-1 border border-indigo-100">
                                     <span className="material-symbols-outlined text-[10px] filled">domain</span> ORG
                                 </span>
-                            ) : renderBadge(item.plan || 'free')}
+                            ) : renderBadge(item.plan || 'free', t)}
                         </div>
                         <div className="flex items-center gap-1.5">
                             <span className="text-[9px] font-black text-slate-400">@{item.username || item.handle || item.name.toLowerCase().replace(/\s/g, '')}</span>

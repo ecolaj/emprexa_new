@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, NavProps, ID, User } from '../types';
 import { SDGS } from '../constants';
+import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { LogoutModal } from '../components/LogoutModal';
 import { SuccessModal } from '../components/SuccessModal';
@@ -11,6 +12,7 @@ import { compressImage } from '../utils/imageUtils';
 
 export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
   const { user, updateUser, logout, deactivateAccount, deleteAccount } = useAuth();
+  const { t } = useLanguage();
 
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -136,7 +138,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
 
       if (uploadError) {
         console.error(`Error uploading ${type}:`, uploadError);
-        throw new Error(`Error al subir ${type}: ${uploadError.message}`);
+        throw new Error(t('profileSettings.genericUploadError').replace('{type}', type).replace('{message}', uploadError.message));
       }
 
       const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(fileName);
@@ -159,7 +161,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
         try {
           finalAvatarUrl = await uploadProfileImage(avatarFile, 'avatar');
         } catch (uploadErr) {
-          alert('Fallo al subir la foto de perfil. Intenta de nuevo.');
+          alert(t('profileSettings.uploadAvatarError'));
           setLoading(false);
           return;
         }
@@ -169,7 +171,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
         try {
           finalCoverUrl = await uploadProfileImage(coverFile, 'cover');
         } catch (uploadErr) {
-          alert('Fallo al subir la imagen de portada. Verifica tu conexión.');
+          alert(t('profileSettings.uploadCoverError'));
           setLoading(false);
           return;
         }
@@ -193,7 +195,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Save error:', error);
-      alert('Hubo un error al guardar los cambios. Intenta nuevamente.');
+      alert(t('profileSettings.saveError'));
     } finally {
       setLoading(false);
     }
@@ -210,11 +212,11 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
       <div className="max-w-5xl mx-auto p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-black text-slate-900">Configuración</h1>
-            <p className="text-slate-500">Gestiona tu perfil público y preferencias de cuenta.</p>
+            <h1 className="text-3xl font-black text-slate-900">{t('profileSettings.title')}</h1>
+            <p className="text-slate-500">{t('profileSettings.subtitle')}</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => navigate(View.PROFILE)} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+            <button onClick={() => navigate(View.PROFILE)} className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-colors">{t('profileSettings.cancel')}</button>
             <button
               onClick={handleSave}
               disabled={loading || !isDirty}
@@ -225,11 +227,11 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
             >
               {loading ? (
                 <>
-                  <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span> Guardando...
+                  <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span> {t('profileSettings.saving')}
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-sm">save</span> Guardar Cambios
+                  <span className="material-symbols-outlined text-sm">save</span> {t('profileSettings.save')}
                 </>
               )}
             </button>
@@ -239,7 +241,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-              <h3 className="text-lg font-bold text-slate-900 mb-6">Perfil Público</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-6">{t('profileSettings.publicProfile')}</h3>
               <div className="mb-8">
                 <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'cover')} />
                 <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'avatar')} />
@@ -249,11 +251,11 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
                   onClick={() => coverInputRef.current?.click()}
                 >
                   {!tempCover && !user.cover && (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-400"><span className="text-xs font-bold">Clic para subir Portada</span></div>
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-400"><span className="text-xs font-bold">{t('profileSettings.clickCover')}</span></div>
                   )}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
                     <span className="bg-white/90 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm">upload</span> Cambiar Portada
+                      <span className="material-symbols-outlined text-sm">upload</span> {t('profileSettings.changeCover')}
                     </span>
                   </div>
                 </div>
@@ -264,23 +266,23 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
                       <span className="material-symbols-outlined text-white">photo_camera</span>
                     </div>
                   </div>
-                  {tempAvatar && <button onClick={() => setTempAvatar(null)} className="ml-4 mb-2 text-red-500 text-sm font-bold hover:underline">Restaurar Original</button>}
+                  {tempAvatar && <button onClick={() => setTempAvatar(null)} className="ml-4 mb-2 text-red-500 text-sm font-bold hover:underline">{t('profileSettings.restoreOriginal')}</button>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Nombre Completo</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.fullName')}</label>
                   <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Título Profesional</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.profTitle')}</label>
                   <input type="text" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
                 </div>
               </div>
 
               <div className="mb-6">
-                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Nombre de usuario</label>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.username')}</label>
                 <div className="relative">
                   <span className="absolute left-4 top-2.5 text-slate-400 font-bold">@</span>
                   <input type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-10 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
@@ -288,30 +290,30 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Biografía</label>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.bio')}</label>
                 <textarea value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none h-32 resize-none focus:border-primary transition-all leading-relaxed"></textarea>
               </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-              <h3 className="text-lg font-bold text-slate-900 mb-6">Información Profesional</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-6">{t('profileSettings.profInfo')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Organización / Empresa</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.orgName')}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">business</span>
                     <input type="text" value={formData.organizationName} onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Sitio Web</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.website')}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">language</span>
                     <input type="text" value={formData.website} onChange={(e) => setFormData({ ...formData, website: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Ubicación</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.location')}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">location_on</span>
                     <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
@@ -330,18 +332,18 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
 
           <div className="space-y-8">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-bold text-slate-900 mb-4">Información de Contacto</h3>
+              <h3 className="font-bold text-slate-900 mb-4">{t('profileSettings.contactInfo')}</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Email</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.email')}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">mail</span>
                     <input type="email" value={user.email || ""} disabled className="w-full bg-slate-100 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium text-slate-500 cursor-not-allowed" />
-                    <span className="absolute right-3 top-3 text-[10px] bg-green-100 text-green-700 font-bold px-1.5 rounded">VERIFIED</span>
+                    <span className="absolute right-3 top-3 text-[10px] bg-green-100 text-green-700 font-bold px-1.5 rounded">{t('profileSettings.verifiedTag')}</span>
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Teléfono</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">{t('profileSettings.phone')}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">phone</span>
                     <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium outline-none focus:border-primary transition-all" />
@@ -352,13 +354,13 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-4">
               <button onClick={() => setShowLogoutModal(true)} className="w-full py-2.5 rounded-xl border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 font-bold text-sm flex items-center justify-center gap-2 transition-colors">
-                <span className="material-symbols-outlined">logout</span> Cerrar Sesión
+                <span className="material-symbols-outlined">logout</span> {t('profileSettings.logout')}
               </button>
-              <button onClick={() => setShowAccountModal(true)} className="text-slate-400 text-xs font-bold hover:underline hover:text-slate-600 transition-colors">Desactivar o eliminar cuenta</button>
+              <button onClick={() => setShowAccountModal(true)} className="text-slate-400 text-xs font-bold hover:underline hover:text-slate-600 transition-colors">{t('profileSettings.accountActions')}</button>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-bold text-slate-900 mb-4">Intereses ODS</h3>
+              <h3 className="font-bold text-slate-900 mb-4">{t('profileSettings.sdgInterests')}</h3>
               <div className="grid grid-cols-4 gap-2">
                 {SDGS.map((sdg) => {
                   const isActive = activeSdgIds.includes(sdg.id);
@@ -375,7 +377,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
                         className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 z-50 whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-xl pointer-events-none"
                         style={{ backgroundColor: sdg.color }}
                       >
-                        {sdg.label}
+                        {t(`sdgs.${sdg.id}.label`) || sdg.label}
                         <div
                           className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-current"
                           style={{ color: sdg.color }}
@@ -391,7 +393,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
       </div>
 
       <LogoutModal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} onConfirm={confirmLogout} />
-      <SuccessModal isOpen={showSuccessModal} onClose={() => { setShowSuccessModal(false); navigate(View.PROFILE); }} title="¡Perfil Actualizado!" message="Tus cambios se han guardado correctamente." />
+      <SuccessModal isOpen={showSuccessModal} onClose={() => { setShowSuccessModal(false); navigate(View.PROFILE); }} title={t('profileSettings.updatedTitle')} message={t('profileSettings.updatedMsg')} />
       <AccountActionModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} onDeactivate={handleDeactivate} onDelete={handleDelete} />
     </div>
   );

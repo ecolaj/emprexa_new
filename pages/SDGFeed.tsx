@@ -12,8 +12,10 @@ import { ComingSoonModal } from '../components/ComingSoonModal';
 import { usePostInteractions } from '../hooks/usePostInteractions';
 import { ProjectCard } from '../components/ProjectCard';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
+  const { t } = useLanguage();
   const { followedSdgIds, toggleFollowSdg, sendMentionNotifications } = useAuth();
   // Use param id or default to 13 (Climate) if none provided
   const sdgId = params?.id || 13;
@@ -118,7 +120,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
             return {
               ...p,
               user: userData,
-              time: p.created_at ? formatRelativeTime(p.created_at) : 'Reciente',
+              time: p.created_at ? formatRelativeTime(p.created_at, t) : t('sdgFeed.reciente'),
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,
               comments: p.comments_count || 0,
@@ -175,14 +177,14 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
             <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none"><span className="material-symbols-outlined text-[400px]">{sdg.icon}</span></div>
             <div className="relative z-10 p-10 flex flex-col md:flex-row items-end justify-between gap-6">
               <div className="max-w-2xl">
-                <div className="inline-block bg-white/20 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider mb-4">ODS {sdg.id}</div>
-                <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-2">{sdg.id}. {sdg.label}</h1>
-                <p className="text-lg opacity-90 font-medium">Conectando innovadores para alcanzar esta meta global.</p>
+                <div className="inline-block bg-white/20 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider mb-4">{t('feed.sdgAbbr')} {sdg.id}</div>
+                <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-2">{sdg.id}. {t(`sdgs.${sdg.id}.label`) || sdg.label}</h1>
+                <p className="text-lg opacity-90 font-medium">{t('sdgFeed.connectingInnovators')}</p>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right border-r border-white/20 pr-6">
                   <span className="block text-2xl font-bold">{globalStats.totalPosts}</span>
-                  <span className="text-xs opacity-80 uppercase">Publicaciones</span>
+                  <span className="text-xs opacity-80 uppercase">{t('sdgFeed.publications')}</span>
                 </div>
                 <button
                   onClick={() => toggleFollowSdg(sdg.id)}
@@ -192,7 +194,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
                   <span className={`material-symbols-outlined ${isFollowing ? 'filled text-white' : ''}`}>
                     {isFollowing ? 'check_circle' : 'add'}
                   </span>
-                  {isFollowing ? 'Siguiendo ODS' : 'Seguir ODS'}
+                  {isFollowing ? t('sdgFeed.following') : t('sdgFeed.follow')}
                 </button>
               </div>
             </div>
@@ -210,14 +212,14 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
               className={`pb-3 border-b-2 font-bold transition-all flex items-center gap-2 ${activeFeedTab === 'posts' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}
             >
               <span className="material-symbols-outlined text-xl">feed</span>
-              Publicaciones
+              {t('sdgFeed.publications')}
             </button>
             <button
               onClick={() => setActiveFeedTab('projects')}
               className={`pb-3 border-b-2 font-bold transition-all flex items-center gap-2 ${activeFeedTab === 'projects' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}
             >
               <span className="material-symbols-outlined text-xl">rocket_launch</span>
-              Proyectos de Impacto
+              {t('sdgFeed.impactProjects')}
             </button>
           </div>
 
@@ -260,13 +262,13 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
                 <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                   <span className="material-symbols-outlined text-3xl">post_add</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">Aún no hay publicaciones</h3>
-                <p className="text-slate-500 mb-4">Sé el primero en compartir un proyecto sobre {sdg.label}.</p>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">{t('sdgFeed.noPosts')}</h3>
+                <p className="text-slate-500 mb-4">{t('sdgFeed.firstPost').replace('{label}', t(`sdgs.${sdg.id}.label`) || sdg.label)}</p>
                 <button
                   onClick={() => navigate(View.FEED)} // Just a redirect to start posting
                   className="text-primary font-bold hover:underline"
                 >
-                  Ir al Feed
+                  {t('sdgFeed.backToFeed')}
                 </button>
               </div>
             )
@@ -285,13 +287,13 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
                   <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                     <span className="material-symbols-outlined text-3xl">rocket_launch</span>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">No hay proyectos activos</h3>
-                  <p className="text-slate-500 mb-4">¿Tienes una iniciativa para el ODS {sdg.id}? ¡Iníciala hoy!</p>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">{t('sdgFeed.noProjects')}</h3>
+                  <p className="text-slate-500 mb-4">{t('sdgFeed.projectPrompt').replace('{id}', String(sdg.id))}</p>
                   <button
                     onClick={() => navigate(View.CREATE_PROJECT)}
                     className="bg-primary text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-primary/20"
                   >
-                    Crear Proyecto
+                    {t('sdgFeed.createProject')}
                   </button>
                 </div>
               )}
@@ -302,29 +304,29 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-slate-900">Métricas de Impacto</h3>
+              <h3 className="font-bold text-slate-900">{t('sdgFeed.impactMetrics')}</h3>
               <span className="material-symbols-outlined text-primary">monitoring</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-green-50 p-4 rounded-lg">
                 <span className="block text-2xl font-bold text-green-700">+{globalStats.totalProjects}</span>
-                <span className="text-xs font-bold text-slate-600">Proyectos</span>
+                <span className="text-xs font-bold text-slate-600">{t('sdgFeed.projects')}</span>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
                 <span className="block text-2xl font-bold text-blue-700">{globalStats.totalInteractions}</span>
-                <span className="text-xs font-bold text-slate-600">Interacciones</span>
+                <span className="text-xs font-bold text-slate-600">{t('sdgFeed.interactions')}</span>
               </div>
             </div>
           </div>
 
           <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
-            <h4 className="font-bold text-slate-900 mb-2">¿Trabajas en el ODS {sdg.id}?</h4>
-            <p className="text-sm text-slate-600 mb-4">Únete a la red de expertos y consigue financiación para tu proyecto.</p>
+            <h4 className="font-bold text-slate-900 mb-2">{t('sdgFeed.workInSdg').replace('{id}', String(sdg.id))}</h4>
+            <p className="text-sm text-slate-600 mb-4">{t('sdgFeed.joinNetwork')}</p>
             <button
               onClick={() => setShowComingSoon(true)}
               className="w-full py-2 bg-slate-900 text-white rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors"
             >
-              Aplicar a Grants
+              {t('sdgFeed.applyGrants')}
             </button>
           </div>
         </div>

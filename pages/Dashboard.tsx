@@ -4,9 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { DashboardBasic } from '../components/dashboard/DashboardBasic';
 import { DashboardPro } from '../components/dashboard/DashboardPro';
 import { DashboardEnterprise } from '../components/dashboard/DashboardEnterprise';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Dashboard: React.FC<NavProps> = (props) => {
   const { user: authUser } = useAuth();
+  const { t } = useLanguage();
 
   if (!authUser) {
     return (
@@ -28,16 +30,18 @@ export const Dashboard: React.FC<NavProps> = (props) => {
           <div className="size-24 bg-blue-50 text-blue-500 rounded-[32px] flex items-center justify-center mx-auto mb-10 rotate-6 shadow-inner">
             <span className="material-symbols-outlined text-5xl filled">analytics</span>
           </div>
-          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter">Impacto Inteligente</h2>
+          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter">{t('dashboard.gateTitle')}</h2>
           <p className="text-slate-500 mb-10 text-lg leading-relaxed">
-            Obtén análisis profundos, reportes descargables y monitoreo ODS en tiempo real con una cuenta <span className="text-blue-500 font-extrabold">Premium</span>.
+            {t('dashboard.gateSubtitle').split('{premium}')[0]}
+            <span className="text-blue-500 font-extrabold">{t('dashboard.premiumLabel')}</span>
+            {t('dashboard.gateSubtitle').split('{premium}')[1]}
           </p>
           <button
             onClick={() => props.navigate(View.PRICING)}
             className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black shadow-2xl hover:bg-slate-800 hover:scale-[1.02] active:scale-95 transition-all text-lg flex items-center justify-center gap-3"
           >
             <span className="material-symbols-outlined font-black">upgrade</span>
-            Actualizar Ahora
+            {t('dashboard.upgradeBtn')}
           </button>
         </div>
       </div>

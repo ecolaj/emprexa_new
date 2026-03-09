@@ -96,7 +96,7 @@ export interface Comment {
 }
 
 export interface Post {
-  id: number; // Keeping number for now for the mocks, but in DB will be UUID
+  id: ID; // Supports legacy numbers (mocks) and future UUIDs (Supabase)
   user: User; // In DB this is a Join/Foreign Key relation
   userId?: ID; // For DB insertion
   time: string;
@@ -113,7 +113,7 @@ export interface Post {
 }
 
 export interface Project {
-  id: number; // Mocks use numbers
+  id: ID; // Mocks use numbers, Supabase uses UUIDs
   ownerId: ID;
   orgId?: ID;
   title: string;

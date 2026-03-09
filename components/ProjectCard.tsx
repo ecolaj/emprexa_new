@@ -1,6 +1,7 @@
 import React from 'react';
 import { Project, View } from '../types';
 import { SDGS } from '../constants';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProjectCardProps {
     project: Project;
@@ -8,6 +9,7 @@ interface ProjectCardProps {
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onNavigate }) => {
+    const { t } = useLanguage();
     const sdg = SDGS.find(s => s.id === project.sdgId);
 
     return (
@@ -32,7 +34,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onNavigate })
                 )}
                 <div className="absolute bottom-4 left-4 right-4">
                     <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter text-white border border-white/20">
-                        {project.status || 'Activo'}
+                        {project.status === 'Activo' || project.status === 'Active' ? t('projectCard.statusActive') : project.status === 'Concluido' || project.status === 'Concluded' ? t('projectCard.statusConcluded') : project.status}
                     </div>
                 </div>
             </div>
@@ -47,7 +49,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onNavigate })
 
                 <div className="space-y-4">
                     <div className="flex justify-between items-end mb-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-xs">Progreso</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-xs">{t('projectCard.progress')}</span>
                         <span className="text-sm font-black text-slate-900">{project.progress}%</span>
                     </div>
                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -59,11 +61,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onNavigate })
 
                     <div className="flex justify-between items-center pt-4 border-t border-slate-50">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Recaudado</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">{t('projectCard.raised')}</span>
                             <span className="font-black text-slate-900 text-sm">${(project.raisedAmount || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex flex-col text-right">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Voluntarios</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">{t('projectCard.volunteers')}</span>
                             <span className="font-black text-slate-900 text-sm">{project.volunteersCount || 0}</span>
                         </div>
                     </div>

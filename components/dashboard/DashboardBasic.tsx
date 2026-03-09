@@ -4,10 +4,12 @@ import { NavProps, User, View } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabase';
 import { getSdgInfo } from '../../utils/sdgUtils';
+import { useLanguage } from '../../context/LanguageContext';
 import { SDGS } from '../../constants';
 
 export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
     const { user: authUser } = useAuth();
+    const { t, language } = useLanguage();
 
     // --- STATE MANAGEMENT ---
     const [chartData, setChartData] = useState<any[]>([]);
@@ -96,9 +98,9 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
     const monthName = useMemo(() => {
         const [year, month] = selectedMonth.split('-').map(Number);
         const date = new Date(year, month - 1, 1);
-        const name = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(date);
+        const name = new Intl.DateTimeFormat(language === 'es' ? 'es-ES' : 'en-US', { month: 'long' }).format(date);
         return name.charAt(0).toUpperCase() + name.slice(1) + ' ' + year;
-    }, [selectedMonth]);
+    }, [selectedMonth, language]);
 
     const heatmapGrid = useMemo(() => {
         const [year, month] = selectedMonth.split('-').map(Number);
@@ -114,7 +116,7 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
             {isLoading && (
                 <div className="fixed top-8 right-8 z-[110] flex items-center gap-3 bg-white/90 backdrop-blur-md px-6 py-3 rounded-2xl shadow-xl border border-blue-50">
                     <div className="size-4 border-2 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div>
-                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Sincronizando...</span>
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{t('dashboard.syncing')}</span>
                 </div>
             )}
 
@@ -122,12 +124,12 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-12">
                     <div>
-                        <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter mb-2">Mi Impacto</h1>
-                        <p className="text-slate-400 font-medium tracking-tight">Hola {authUser?.name?.split(' ')[0]}, mira cómo has impactado este mes.</p>
+                        <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter mb-2">{t('dashboard.myImpact')}</h1>
+                        <p className="text-slate-400 font-medium tracking-tight">{t('dashboard.hello').replace('{name}', authUser?.name?.split(' ')[0] || '')}</p>
                     </div>
                     <div className="bg-blue-50 border border-blue-100 px-6 py-3 rounded-2xl shadow-sm flex items-center gap-3">
                         <span className="material-symbols-outlined text-blue-500 filled text-xl">verified_user</span>
-                        <span className="text-sm font-black text-blue-700 uppercase tracking-widest">Plan Básico</span>
+                        <span className="text-sm font-black text-blue-700 uppercase tracking-widest">{t('dashboard.basicPlan')}</span>
                     </div>
                 </div>
 
@@ -135,31 +137,31 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                     {[
                         {
-                            label: 'Alcance Estimado',
+                            label: t('dashboard.reachLabel'),
                             value: (counts.reach / 1000).toFixed(1) + 'k',
                             icon: 'rocket_launch',
                             color: 'text-blue-500',
                             bg: 'bg-blue-50',
                             backBg: 'bg-blue-600',
-                            desc: 'Proyección basada en tus interacciones y red social.'
+                            desc: t('dashboard.reachDesc')
                         },
                         {
-                            label: 'Vistas Perfil',
+                            label: t('dashboard.viewsLabel'),
                             value: (counts.views / 1000).toFixed(1) + 'k',
                             icon: 'visibility',
                             color: 'text-purple-500',
                             bg: 'bg-purple-50',
                             backBg: 'bg-purple-600',
-                            desc: 'Interés directo generado en tu perfil este mes.'
+                            desc: t('dashboard.viewsDesc')
                         },
                         {
-                            label: 'Impact Score',
+                            label: t('dashboard.impactScoreLabel'),
                             value: Math.round(counts.impact) + '/100',
                             icon: 'stars',
                             color: 'text-amber-500',
                             bg: 'bg-amber-50',
                             backBg: 'bg-amber-500',
-                            desc: 'Calificación de tu relevancia e impacto social.',
+                            desc: t('dashboard.impactScoreDesc'),
                             showProgress: true
                         }
                     ].map((card, i) => (
@@ -191,7 +193,7 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                     <div className="size-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-4">
                                         <span className="material-symbols-outlined filled">info</span>
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-60">Sobre {card.label}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-60">{t('dashboard.about').replace('{label}', card.label)}</p>
                                     <p className="text-sm font-bold leading-tight">{card.desc}</p>
                                 </div>
                             </div>
@@ -216,12 +218,12 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                             >
                                 <div className="flex justify-between items-center mb-12 cursor-pointer" onClick={() => setIsChartFlipped(true)}>
                                     <div>
-                                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Engagement Diario</h3>
-                                        <p className="text-slate-400 text-sm font-medium tracking-tight">Interacciones en {monthName}</p>
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{t('dashboard.dailyEngagement')}</h3>
+                                        <p className="text-slate-400 text-sm font-medium tracking-tight">{t('dashboard.interactionsMonth').replace('{month}', monthName)}</p>
                                     </div>
                                     <div className="flex items-center gap-2 bg-slate-50 px-5 py-2 rounded-full border border-slate-100">
                                         <span className="size-2 rounded-full bg-blue-500 animate-pulse"></span>
-                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">En Tiempo Real</span>
+                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{t('dashboard.realTime')}</span>
                                     </div>
                                 </div>
                                 <div className="h-[350px] w-full cursor-pointer" onClick={() => setIsChartFlipped(true)}>
@@ -241,7 +243,7 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                                     if (active && payload && payload.length) {
                                                         return (
                                                             <div className="bg-slate-900 text-white px-8 py-4 rounded-2xl shadow-2xl text-center relative translate-y-[-20px]">
-                                                                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-1">Día {payload[0].payload.name}</p>
+                                                                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest mb-1">{t('dashboard.day').replace('{day}', payload[0].payload.name)}</p>
                                                                 <p className="text-3xl font-black text-blue-400 tabular-nums">{payload[0].value}</p>
                                                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 translate-y-full border-[10px] border-transparent border-t-slate-900"></div>
                                                             </div>
@@ -267,17 +269,17 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                 onClick={() => setIsChartFlipped(false)}
                             >
                                 <span className="material-symbols-outlined text-6xl mb-8 filled text-blue-400">insights</span>
-                                <h4 className="text-2xl font-black uppercase tracking-widest mb-6">Métricas de Interacción</h4>
+                                <h4 className="text-2xl font-black uppercase tracking-widest mb-6">{t('dashboard.interactionMetrics')}</h4>
                                 <div className="space-y-6 max-w-md">
                                     <p className="text-lg font-medium leading-relaxed opacity-90">
-                                        Este gráfico muestra la actividad capturada en todas tus redes conectadas.
+                                        {t('dashboard.chartDesc1')}
                                     </p>
                                     <p className="text-sm font-medium leading-relaxed opacity-70">
-                                        Sumamos cada <span className="text-blue-400 font-bold">Corazón</span>, <span className="text-blue-400 font-bold">Comentario</span> y <span className="text-blue-400 font-bold">Compartido</span> para darte una visión clara de tu resonancia social diaria.
+                                        {t('dashboard.chartDesc2')}
                                     </p>
                                 </div>
                                 <div className="mt-12 px-8 py-4 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/20 transition-colors">
-                                    Click para volver al Gráfico
+                                    {t('dashboard.backToChart')}
                                 </div>
                             </div>
                         </div>
@@ -302,8 +304,8 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                             >
                                 <div className="flex justify-between items-start mb-12 cursor-pointer" onClick={() => setIsActivityFlipped(true)}>
                                     <div>
-                                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Actividad</h3>
-                                        <p className="text-slate-400 text-sm font-medium tracking-tight">Publicaciones en {monthName}</p>
+                                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{t('dashboard.activity')}</h3>
+                                        <p className="text-slate-400 text-sm font-medium tracking-tight">{t('dashboard.postsMonth').replace('{month}', monthName)}</p>
                                     </div>
                                     <div className="size-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center shadow-inner">
                                         <span className="material-symbols-outlined filled text-3xl">calendar_today</span>
@@ -327,7 +329,7 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                                 <span className={`text-[9px] font-black ${textColor}`}>{day}</span>
                                                 {count > 0 && (
                                                     <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-3 py-1.5 rounded-lg opacity-0 group-hover/day:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-xl">
-                                                        {count} Impactos
+                                                        {t('dashboard.impacts').replace('{count}', String(count))}
                                                     </div>
                                                 )}
                                             </div>
@@ -335,8 +337,8 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                     })}
                                 </div>
                                 <div className="mt-auto bg-slate-50 p-6 rounded-[32px] border border-slate-100 flex justify-between items-center">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Mensual</span>
-                                    <span className="text-2xl font-black text-slate-900">{counts.posts} Historias</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('dashboard.monthlyTotal')}</span>
+                                    <span className="text-2xl font-black text-slate-900">{t('dashboard.stories').replace('{count}', String(counts.posts))}</span>
                                 </div>
                             </div>
 
@@ -353,17 +355,17 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                 <div className="size-20 bg-blue-100 text-blue-600 rounded-[28px] flex items-center justify-center mb-8 shadow-inner">
                                     <span className="material-symbols-outlined text-4xl filled">event_note</span>
                                 </div>
-                                <h4 className="text-2xl font-black text-slate-900 uppercase tracking-widest mb-6">Frecuencia de Impacto</h4>
+                                <h4 className="text-2xl font-black text-slate-900 uppercase tracking-widest mb-6">{t('dashboard.impactFrequency')}</h4>
                                 <div className="space-y-6 max-w-sm">
                                     <p className="text-lg font-medium text-slate-600 leading-relaxed">
-                                        Este mapa registra cada vez que generas contenido social.
+                                        {t('dashboard.activityDesc1')}
                                     </p>
                                     <p className="text-sm font-medium text-slate-400 leading-relaxed">
-                                        Mantener una frecuencia constante es la clave para aumentar tu <span className="text-blue-600 font-bold">Impact Score</span> y ser más visible para las empresas.
+                                        {t('dashboard.activityDesc2')}
                                     </p>
                                 </div>
                                 <div className="mt-12 px-10 py-4 bg-slate-900 text-white rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-lg">
-                                    Volver al Calendario
+                                    {t('dashboard.backToCalendar')}
                                 </div>
                             </div>
                         </div>
@@ -373,10 +375,10 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                     <div className="bg-white p-12 rounded-[56px] border border-slate-100 shadow-sm flex flex-col overflow-hidden">
                         <div className="flex justify-between items-center mb-10">
                             <div>
-                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Top Historias</h3>
-                                <p className="text-slate-400 text-sm font-medium tracking-tight">Mejor rendimiento este mes</p>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{t('dashboard.topStories')}</h3>
+                                <p className="text-slate-400 text-sm font-medium tracking-tight">{t('dashboard.bestMonth')}</p>
                             </div>
-                            <div className="bg-blue-50 text-blue-600 px-5 py-2 rounded-2xl text-[10px] font-black border border-blue-100">Engagement</div>
+                            <div className="bg-blue-50 text-blue-600 px-5 py-2 rounded-2xl text-[10px] font-black border border-blue-100">{t('dashboard.engagement')}</div>
                         </div>
                         <div className="space-y-6 overflow-y-auto no-scrollbar max-h-[350px] pr-2">
                             {topPosts.length > 0 ? topPosts.map((post, i) => (
@@ -385,7 +387,7 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                                         <img src={post.images?.[0] || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=200'} className="w-full h-full object-cover" alt="" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-base font-black text-slate-900 truncate tracking-tight mb-2 group-hover:text-blue-600 transition-colors uppercase">{post.title || 'Iniciativa'}</p>
+                                        <p className="text-base font-black text-slate-900 truncate tracking-tight mb-2 group-hover:text-blue-600 transition-colors uppercase">{post.title || t('dashboard.initiative')}</p>
                                         <div className="flex gap-6">
                                             <div className="flex items-center gap-1.5 opacity-60">
                                                 <span className="material-symbols-outlined text-[14px] text-blue-500 filled">favorite</span>
@@ -404,7 +406,7 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                             )) : (
                                 <div className="flex flex-col items-center justify-center py-20 opacity-20">
                                     <span className="material-symbols-outlined text-6xl mb-4">analytics</span>
-                                    <p className="text-xs font-black uppercase tracking-[0.2em]">Esperando datos de impacto</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em]">{t('dashboard.waitingData')}</p>
                                 </div>
                             )}
                         </div>
@@ -412,8 +414,8 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                             <div className="mt-8 p-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-[32px] shadow-xl relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 <div className="relative z-10 flex items-center justify-between">
-                                    <p className="text-white text-[10px] font-black uppercase tracking-widest">¡Excelente ritmo!</p>
-                                    <p className="text-blue-400 text-[9px] font-bold uppercase tracking-widest">Sigue publicando</p>
+                                    <p className="text-white text-[10px] font-black uppercase tracking-widest">{t('dashboard.excellentPace')}</p>
+                                    <p className="text-blue-400 text-[9px] font-bold uppercase tracking-widest">{t('dashboard.keepPublishing')}</p>
                                 </div>
                             </div>
                         )}
@@ -424,15 +426,15 @@ export const DashboardBasic: React.FC<NavProps> = ({ navigate }) => {
                 <div className="mt-12 bg-gradient-to-br from-slate-900 to-blue-900 rounded-[56px] p-12 text-center relative overflow-hidden shadow-2xl">
                     <div className="absolute top-0 right-0 size-64 bg-blue-500/10 blur-[100px] rounded-full"></div>
                     <div className="relative z-10">
-                        <h3 className="text-3xl font-black text-white tracking-tighter mb-4">¿Quieres ver más?</h3>
+                        <h3 className="text-3xl font-black text-white tracking-tighter mb-4">{t('dashboard.wantToSeeMore')}</h3>
                         <p className="text-blue-200/80 mb-8 max-w-lg mx-auto text-sm leading-relaxed">
-                            El plan <strong>Pro</strong> te permite filtrar por meses anteriores, ver tu impacto por ODS y descargar reportes corporativos en alta resolución.
+                            {t('dashboard.upgradeDesc')}
                         </p>
                         <button
                             onClick={() => navigate(View.PRICING)}
                             className="bg-blue-500 text-white px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-400 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/25"
                         >
-                            Ver Planes Premium
+                            {t('dashboard.viewPremium')}
                         </button>
                     </div>
                 </div>

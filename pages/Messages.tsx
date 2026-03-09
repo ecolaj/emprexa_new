@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { MentionDropdown } from '../components/MentionDropdown';
 import { supabase } from '../utils/supabase';
 import { formatMessageTime, formatRelativeTime } from '../utils/timeUtils';
-import { renderContent } from '../utils/renderers';
+import { renderBadge, renderContent } from '../utils/renderers';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Message {
   id: string;
@@ -16,6 +17,7 @@ interface Message {
 
 export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, markAsRead, unreadConversations, followedUserIds } = useAuth();
+  const { t } = useLanguage();
   const currentUser = authUser;
 
   if (!authUser) return null;
@@ -273,14 +275,6 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
     }
   };
 
-  const renderBadge = (plan: string) => {
-    switch (plan) {
-      case 'basic': return <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Basic</span>;
-      case 'pro': return <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1"><span className="material-symbols-outlined text-[10px] filled">verified</span> Pro</span>;
-      case 'enterprise': return <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1"><span className="material-symbols-outlined text-[10px] filled">verified_user</span> Enterprise</span>;
-      default: return null;
-    }
-  };
 
   const formatTime = (date: Date) => {
     return formatMessageTime(date);
@@ -317,7 +311,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
 
     if (error) {
       console.error('Error sending message:', error);
-      alert('Error al enviar el mensaje: ' + error.message);
+      alert(t('messages.sendError') + error.message);
       // Remove the optimistic message if it failed
       setMessages(prev => prev.filter(m => m.id !== tempId));
       setInputText(textToSend); // Restore text on error
@@ -342,7 +336,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
             <span className="absolute left-3 top-2.5 text-slate-400 material-symbols-outlined text-sm">search</span>
             <input
               className="w-full bg-slate-50 rounded-lg py-2 pl-9 pr-4 text-sm outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Buscar usuarios..."
+              placeholder={t('messages.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => handleSearchUsers(e.target.value)}
             />
@@ -397,7 +391,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
                       <span className="text-[10px] text-slate-400">{u.lastMessageTime ? formatRelativeTime(u.lastMessageTime) : ''}</span>
                     </div>
                     <p className={`text-xs truncate ${unreadCount > 0 ? 'text-black font-bold' : 'text-slate-500'}`}>
-                      {unreadCount > 0 ? 'Mensaje nuevo...' : 'Haz clic para chatear'}
+                      {unreadCount > 0 ? t('messages.newMessage') : t('messages.clickToChat')}
                     </p>
                   </div>
                 </div>
@@ -414,8 +408,8 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
             <div className="size-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <span className="material-symbols-outlined text-4xl text-primary">chat_bubble</span>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Tus Mensajes</h3>
-            <p className="text-slate-500 max-w-xs">Selecciona una conversación o busca un usuario para empezar a chatear.</p>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{t('messages.title')}</h3>
+            <p className="text-slate-500 max-w-xs">{t('messages.subtitle')}</p>
           </div>
         ) : (
           <>
@@ -432,7 +426,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-slate-900">{activeUser.name}</h3>
-                      {renderBadge(activeUser.plan || 'free')}
+                      {renderBadge(activeUser.plan || 'free', t)}
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-1">{activeUser.role}</p>
                   </div>
@@ -454,7 +448,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
                     {showDivider && (
                       <div className="flex justify-center my-4">
                         <span className="bg-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                          {new Date(msg.createdAt).toDateString() === new Date().toDateString() ? 'Hoy' : msgDate}
+                          {new Date(msg.createdAt).toDateString() === new Date().toDateString() ? t('time.today') : msgDate}
                         </span>
                       </div>
                     )}
@@ -483,7 +477,7 @@ export const Messages: React.FC<NavProps> = ({ navigate, params }) => {
                   <textarea
                     ref={textareaRef}
                     className="w-full bg-transparent text-sm outline-none resize-none pt-1 overflow-y-auto max-h-32 no-scrollbar"
-                    placeholder={`Mensaje a ${activeUser.name}...`}
+                    placeholder={t('messages.messageTo').replace('{name}', activeUser.name)}
                     rows={1}
                     value={inputText}
                     onChange={(e) => handleInputChange(e.target.value)}

@@ -8,20 +8,22 @@ import { useAuth } from '../context/AuthContext';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { supabase } from '../utils/supabase';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 type FilterType = 'all' | 'projects' | 'people' | 'orgs' | 'real_projects';
 
 export const Search: React.FC<NavProps> = ({ navigate }) => {
   const { user, sendMentionNotifications, isLoading: authLoading, params } = useAuth();
+  const { t } = useLanguage();
 
   const [query, setQuery] = useState(params?.query || '');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   const filters: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'Todo' },
-    { id: 'real_projects', label: 'Proyectos' },
-    { id: 'projects', label: 'Publicaciones' },
-    { id: 'people', label: 'Personas' },
+    { id: 'all', label: t('search.filters.all') },
+    { id: 'real_projects', label: t('search.filters.projects') },
+    { id: 'projects', label: t('search.filters.posts') },
+    { id: 'people', label: t('search.filters.people') },
   ];
 
   const getSdgInfo = (id: number) => SDGS.find(s => s.id === id);
@@ -73,21 +75,15 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
   };
 
   // Recent Searches State
-  // Recent Searches State
-  // STORAGE STRATEGY: LocalStorage
-  // We use LocalStorage because it is the most SCALABLE solution. 
-  // It costs $0 in database, has 0ms latency, and respects user privacy.
-  // Storing millions of user searches in the DB would be inefficient and expensive.
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('recentSearches');
-    return saved ? JSON.parse(saved) : []; // Default to empty, no fake data
+    return saved ? JSON.parse(saved) : [];
   });
 
   const addToHistory = (term: string) => {
     if (!term.trim()) return;
     setRecentSearches(prev => {
-      // Keep unique, put newest first, limit to 5 items
       const newHistory = [term, ...prev.filter(t => t !== term)].slice(0, 5);
       localStorage.setItem('recentSearches', JSON.stringify(newHistory));
       return newHistory;
@@ -161,7 +157,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
             setDbOrgs(orgs.map(o => ({
               ...o,
               img: o.logo || 'https://via.placeholder.com/150',
-              members: o.members_count || 'Verificado'
+              members: o.members_count || 0
             })));
           }
         } else {
@@ -169,15 +165,12 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
         }
 
         // --- 2. SEARCH POSTS (PROJECTS) ---
-        // Run this query if filter is 'all' OR 'projects'
         if (activeFilter === 'all' || activeFilter === 'projects') {
-          // Strategy A: Content matches query
           const contentRes = await supabase
             .from('posts')
             .select('*, user:profiles!user_id(*)')
             .or(`title.ilike.%${query}%,content.ilike.%${query}%`);
 
-          // Strategy B: Author matches query (using IDs found in step 1)
           let authorRes = { data: [], error: null } as any;
 
           if (matchingUserIds.length > 0) {
@@ -190,7 +183,6 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
           const contentPosts = contentRes.data || [];
           const authorPosts = authorRes.data || [];
 
-          // Merge and Deduplicate
           const allPosts = [...contentPosts, ...authorPosts];
           const uniquePostsMap = new Map();
           allPosts.forEach(post => {
@@ -201,13 +193,13 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
           if (finalPosts.length > 0) {
             const mappedPosts = finalPosts.map(post => ({
               ...post,
-              user: post.user || { name: 'Unknown', id: '' },
+              user: post.user || { name: t('profile.userRole'), id: '' },
               isLiked: post.isLiked || false,
               likes: post.likes_count || 0,
               comments: post.comments_count || 0,
               sdgIds: post.sdg_ids || [],
               images: post.images || [],
-              time: post.created_at ? formatRelativeTime(post.created_at) : 'Reciente'
+              time: post.created_at ? formatRelativeTime(post.created_at, t) : t('search.recent_time')
             }));
             setDbProjects(mappedPosts);
           } else {
@@ -217,15 +209,13 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
           setDbProjects([]);
         }
 
-        // --- 3. SEARCH REAL PROJECTS (from 'projects' table) ---
+        // --- 3. SEARCH REAL PROJECTS ---
         if (activeFilter === 'all' || activeFilter === 'real_projects') {
-          // Strategy A: Content matches query (title or description)
           const projContentRes = await supabase
             .from('projects')
             .select('*, owner:profiles!owner_id(*)')
             .or(`title.ilike.%${query}%,description.ilike.%${query}%`);
 
-          // Strategy B: Owner name/username matches query
           let projOwnerRes = { data: [], error: null } as any;
           if (matchingUserIds.length > 0) {
             projOwnerRes = await supabase
@@ -237,7 +227,6 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
           const contentProjects = projContentRes.data || [];
           const ownerProjects = projOwnerRes.data || [];
 
-          // Merge and Deduplicate
           const allRealProjects = [...contentProjects, ...ownerProjects];
           const uniqueProjectsMap = new Map();
           allRealProjects.forEach(proj => {
@@ -250,11 +239,11 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
               ...p,
               sdgId: p.sdg_id || p.sdgId,
               ownerId: p.owner_id || p.ownerId,
-              title: p.title || 'Proyecto sin título',
+              title: p.title || t('explore.untitledProject'),
               description: p.description || '',
               image: p.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
               progress: p.progress || 0,
-              status: p.status || 'Activo',
+              status: p.status || t('projectDetails.statusActive'),
               lookingFor: p.looking_for || [],
             }));
             setDbRealProjects(mapped);
@@ -274,7 +263,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
 
     const debounce = setTimeout(fetchResults, 300);
     return () => clearTimeout(debounce);
-  }, [query, activeFilter]);
+  }, [query, activeFilter, t]);
 
   const results = useMemo(() => {
     if (!query) return { people: [], projects: [], orgs: [], realProjects: [] };
@@ -289,7 +278,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
 
         {/* Search Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-black text-slate-900 mb-6">Buscar</h1>
+          <h1 className="text-3xl font-black text-slate-900 mb-6">{t('search.title')}</h1>
 
           <div className="relative mb-6">
             <span className="absolute left-5 top-4 text-slate-400 material-symbols-outlined text-2xl">search</span>
@@ -297,7 +286,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar proyectos, personas, ODS..."
+              placeholder={t('search.placeholder')}
               className="w-full h-14 pl-14 pr-6 rounded-2xl border-none shadow-lg shadow-slate-200/50 text-lg outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-400"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && addToHistory(query)}
@@ -334,8 +323,8 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
             {recentSearches.length > 0 && (
               <div className="mb-10">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-slate-900">Búsquedas Recientes</h3>
-                  <button onClick={clearHistory} className="text-xs font-bold text-primary hover:underline">Borrar</button>
+                  <h3 className="font-bold text-slate-900">{t('search.recent')}</h3>
+                  <button onClick={clearHistory} className="text-xs font-bold text-primary hover:underline">{t('search.clear')}</button>
                 </div>
                 <div className="space-y-2">
                   {recentSearches.map((term, i) => (
@@ -352,7 +341,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
             )}
 
             <div>
-              <h3 className="font-bold text-slate-900 mb-4">Explorar por ODS</h3>
+              <h3 className="font-bold text-slate-900 mb-4">{t('search.exploreSdg')}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {SDGS.map(sdg => (
                   <div
@@ -362,12 +351,12 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                     style={{ backgroundColor: sdg.color }}
                   >
                     <span className="material-symbols-outlined text-3xl mb-1 relative z-10">{sdg.icon}</span>
-                    <span className="text-xs font-bold relative z-10">ODS {sdg.id}</span>
+                    <span className="text-xs font-bold relative z-10">{t('feed.sdgAbbr')} {sdg.id}</span>
                     <div className="absolute -right-4 -bottom-4 text-white/20">
                       <span className="material-symbols-outlined text-6xl">{sdg.icon}</span>
                     </div>
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center z-20">
-                      <span className="text-[10px] font-bold leading-tight">{sdg.short}</span>
+                      <span className="text-[10px] font-bold leading-tight">{t(`sdgs.${sdg.id}.short`) || sdg.short}</span>
                     </div>
                   </div>
                 ))}
@@ -380,17 +369,23 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
         {query && (
           <div className="space-y-8 animate-[fade-in_0.3s_ease-out]">
 
-            {!hasResults && (
+            {!hasResults && !loading && (
               <div className="text-center py-12 text-slate-500">
                 <span className="material-symbols-outlined text-4xl mb-2 opacity-50">search_off</span>
-                <p>No se encontraron resultados para "{query}"</p>
+                <p>{t('search.noResults').replace('{query}', query)}</p>
+              </div>
+            )}
+
+            {loading && (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full"></div>
               </div>
             )}
 
             {/* Organizations Results */}
             {(activeFilter === 'all' || activeFilter === 'orgs') && results.orgs.length > 0 && (
               <div>
-                <h3 className="font-bold text-slate-900 mb-4 text-lg">Organizaciones</h3>
+                <h3 className="font-bold text-slate-900 mb-4 text-lg">{t('search.organizations')}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {results.orgs.map(org => (
                     <div key={org.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer">
@@ -400,9 +395,9 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-slate-900 truncate">{org.name}</h4>
                         <p className="text-xs text-slate-500 uppercase font-bold">{org.category}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{org.members} miembros</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{typeof org.members === 'number' ? t('search.members').replace('{count}', String(org.members)) : t('search.verified')}</p>
                       </div>
-                      <button className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-xs font-bold hover:bg-slate-200">Seguir</button>
+                      <button className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-xs font-bold hover:bg-slate-200">{t('search.follow')}</button>
                     </div>
                   ))}
                 </div>
@@ -412,11 +407,11 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
             {/* Real Projects Results */}
             {(activeFilter === 'all' || activeFilter === 'real_projects') && results.realProjects.length > 0 && (
               <div>
-                <h3 className="font-bold text-slate-900 mb-4 text-lg">Proyectos</h3>
+                <h3 className="font-bold text-slate-900 mb-4 text-lg">{t('search.projectsTitle')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {results.realProjects.map((project: any) => {
                     const sdg = SDGS.find(s => s.id === project.sdgId);
-                    const owner = project.owner || { name: 'Usuario', avatar: '' };
+                    const owner = project.owner || { name: t('profile.userRole'), avatar: '' };
                     return (
                       <div
                         key={project.id}
@@ -436,12 +431,12 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                               <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
                               {sdg && (
                                 <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
-                                  <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                                  <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {t(`sdgs.${sdg.id}.short`) || sdg.short}
                                 </div>
                               )}
                               <div className="absolute bottom-3 right-3">
-                                <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
-                                  {project.status}
+                                <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' || project.status === t('projectDetails.statusActive') ? 'bg-green-500' : 'bg-slate-400'}`}>
+                                  {project.status === 'Activo' ? t('projectDetails.statusActive') : project.status === 'Concluido' ? t('projectDetails.statusConcluded') : project.status}
                                 </span>
                               </div>
                             </div>
@@ -452,7 +447,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                           <p className="text-sm text-slate-500 line-clamp-2 mb-3 flex-1">{project.description}</p>
                           <div className="mt-auto">
                             <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1">
-                              <span>Progreso</span>
+                              <span>{t('search.progress')}</span>
                               <span className="text-primary">{project.progress}%</span>
                             </div>
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-3">
@@ -477,7 +472,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
             {/* People Results */}
             {(activeFilter === 'all' || activeFilter === 'people') && results.people.length > 0 && (
               <div>
-                <h3 className="font-bold text-slate-900 mb-4 text-lg">Personas</h3>
+                <h3 className="font-bold text-slate-900 mb-4 text-lg">{t('search.peopleTitle')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {results.people.map(person => (
                     <div
@@ -491,7 +486,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-slate-900 truncate hover:text-primary transition-colors">{person.name}</h4>
                         <p className="text-sm text-slate-500 truncate">{person.role}</p>
-                        <p className="text-xs text-slate-400 mt-1">{person.mutual} contactos en común</p>
+                        <p className="text-xs text-slate-400 mt-1">{t('search.mutualConnections').replace('{count}', String(person.mutual))}</p>
                       </div>
                       <button className="size-8 rounded-full bg-slate-50 text-slate-400 hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors">
                         <span className="material-symbols-outlined text-xl">person_add</span>
@@ -505,7 +500,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
             {/* Projects (Posts) Results */}
             {(activeFilter === 'all' || activeFilter === 'projects') && results.projects.length > 0 && (
               <div>
-                <h3 className="font-bold text-slate-900 mb-4 text-lg">Publicaciones</h3>
+                <h3 className="font-bold text-slate-900 mb-4 text-lg">{t('search.postsTitle')}</h3>
                 <div className="grid grid-cols-1 gap-6">
                   {results.projects.map(post => (
                     <PostCard

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface LogoutModalProps {
     isOpen: boolean;
@@ -8,6 +9,7 @@ interface LogoutModalProps {
 }
 
 export const LogoutModal: React.FC<LogoutModalProps> = ({ isOpen, onClose, onConfirm }) => {
+    const { t } = useLanguage();
     if (!isOpen) return null;
 
     return (
@@ -21,9 +23,9 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({ isOpen, onClose, onCon
                         <span className="material-symbols-outlined text-3xl">logout</span>
                     </div>
 
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">¿Cerrar sesión ahora?</h2>
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">{t('logoutModal.title')}</h2>
                     <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                        Tu sesión actual terminará. Tendrás que volver a ingresar tus credenciales para acceder a tu cuenta de Emprexa.
+                        {t('logoutModal.subtitle')}
                     </p>
 
                     <div className="flex flex-col gap-3">
@@ -31,13 +33,13 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({ isOpen, onClose, onCon
                             onClick={onConfirm}
                             className="w-full py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
                         >
-                            Cerrar Sesión
+                            {t('logoutModal.confirm')}
                         </button>
                         <button
                             onClick={onClose}
                             className="w-full py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors"
                         >
-                            Cancelar
+                            {t('logoutModal.cancel')}
                         </button>
                     </div>
                 </div>

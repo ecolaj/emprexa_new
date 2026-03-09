@@ -7,20 +7,21 @@ import { MentionDropdown } from './MentionDropdown';
 import { supabase } from '../utils/supabase';
 import { renderContent } from '../utils/renderers';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CommentSectionProps {
     post: Post;
     currentUser: User | null; // Allow null for public views
     onNavigate: (view: View, params?: any) => void;
-    onToggleCommentLike: (postId: number, commentId: string) => void;
-    onAddCommentReply: (postId: number, commentId: string, text: string) => void;
-    onDeleteComment: (postId: number, commentId: string) => void;
-    onStartEditComment: (postId: number, comment: any) => void;
-    onSaveEditComment: (postId: number, commentId: string, text: string) => void;
-    onAddComment: (postId: number, text: string) => void;
+    onToggleCommentLike: (postId: ID, commentId: string) => void;
+    onAddCommentReply: (postId: ID, commentId: string, text: string) => void;
+    onDeleteComment: (postId: ID, commentId: string) => void;
+    onStartEditComment: (postId: ID, comment: any) => void;
+    onSaveEditComment: (postId: ID, commentId: string, text: string) => void;
+    onAddComment: (postId: ID, text: string) => void;
     activeReplyToId: string | null;
     setActiveReplyToId: (id: string | null) => void;
-    editingComment: { postId: number; commentId: string; text: string } | null;
+    editingComment: { postId: ID; commentId: string; text: string } | null;
     setEditingComment: (val: any) => void;
     activeMenuCommentId: string | null;
     setActiveMenuCommentId: (id: string | null) => void;
@@ -44,6 +45,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     setActiveMenuCommentId
 }) => {
     const { user: authUser, followedUserIds } = useAuth();
+    const { t } = useLanguage();
     const [comments, setComments] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [newCommentText, setNewCommentText] = useState('');
@@ -111,7 +113,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                         ...c,
                         user: userData,
                         userId: c.user_id,
-                        time: c.created_at ? formatRelativeTime(c.created_at) : 'Ahora',
+                        time: c.created_at ? formatRelativeTime(c.created_at) : t('feed.now'),
                         // Map likes_count from DB to likes prop
                         likes: c.likes_count || c.likes || 0,
                         isLiked: userLikesSet.has(c.id),
@@ -127,7 +129,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                 ...r,
                                 user: replyUser,
                                 userId: r.user_id,
-                                time: r.created_at ? formatRelativeTime(r.created_at) : 'Ahora',
+                                time: r.created_at ? formatRelativeTime(r.created_at) : t('feed.now'),
                                 likes: r.likes_count || r.likes || 0,
                                 isLiked: userLikesSet.has(r.id)
                             };
@@ -248,7 +250,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
         if (error) {
             console.error("Error adding comment:", error);
-            alert("No se pudo enviar el comentario. Intenta de nuevo.");
+            alert(t('feed.errorSendingComment'));
             return;
         }
 
@@ -266,7 +268,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 ...data,
                 // Use authUser directly for the most up-to-date profile info instantly
                 user: authUser,
-                time: 'Ahora',
+                time: t('feed.now'),
                 replies: [],
                 likes: 0,
                 isLiked: false
@@ -303,7 +305,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
         if (error) {
             console.error("Error adding reply:", error);
-            alert("Error al publicar respuesta. Intenta de nuevo.");
+            alert(t('feed.errorPublishingReply'));
             return;
         }
 
@@ -317,7 +319,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 replies: [...(c.replies || []), {
                     ...data,
                     user: authUser, // Optimistic author
-                    time: 'Ahora',
+                    time: t('feed.now'),
                     likes: 0,
                     isLiked: false
                 }]
@@ -440,12 +442,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                 <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.1s_ease-out]">
                                                                     {canEdit && (
                                                                         <button onClick={() => { onStartEditComment(post.id, comment); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                            <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                            <span className="material-symbols-outlined text-sm">edit</span> {t('feed.edit')}
                                                                         </button>
                                                                     )}
                                                                     {canDelete && (
                                                                         <button onClick={(e) => { e.stopPropagation(); handleLocalDelete(comment.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                            <span className="material-symbols-outlined text-sm">delete</span> {t('feed.delete')}
                                                                         </button>
                                                                     )}
                                                                 </div>
@@ -463,8 +465,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-primary resize-none h-16"
                                                     />
                                                     <div className="flex justify-end gap-2 mt-2">
-                                                        <button onClick={() => setEditingComment(null)} className="text-[10px] font-bold text-slate-500 hover:underline">Cancelar</button>
-                                                        <button onClick={() => onSaveEditComment(post.id, comment.id, editingComment.text)} className="text-[10px] font-bold text-primary hover:underline">Guardar</button>
+                                                        <button onClick={() => setEditingComment(null)} className="text-[10px] font-bold text-slate-500 hover:underline">{t('feed.cancelEdit')}</button>
+                                                        <button onClick={() => onSaveEditComment(post.id, comment.id, editingComment.text)} className="text-[10px] font-bold text-primary hover:underline">{t('feed.save')}</button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -477,13 +479,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                 onClick={() => handleLocalToggleLike(comment.id)}
                                                 className={`hover:text-primary transition-colors flex items-center gap-1 ${comment.isLiked ? 'text-primary' : ''}`}
                                             >
-                                                {comment.isLiked ? 'Me gusta' : 'Me gusta'} {comment.likes > 0 && <span>• {comment.likes}</span>}
+                                                {comment.isLiked ? t('feed.like') : t('feed.like')} {comment.likes > 0 && <span>• {comment.likes}</span>}
                                             </button>
                                             <button
                                                 onClick={() => setActiveReplyToId(activeReplyToId === comment.id ? null : comment.id)}
                                                 className="hover:text-primary transition-colors"
                                             >
-                                                Responder
+                                                {t('feed.reply')}
                                             </button>
                                         </div>
                                     </div>
@@ -533,12 +535,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                                 <div className="absolute right-0 top-4 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.1s_ease-out]">
                                                                                     {canEditReply && (
                                                                                         <button onClick={() => { onStartEditComment(post.id, reply); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-[10px] font-bold text-slate-700 flex items-center gap-2">
-                                                                                            <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                            <span className="material-symbols-outlined text-sm">edit</span> {t('feed.edit')}
                                                                                         </button>
                                                                                     )}
                                                                                     {canDeleteReply && (
                                                                                         <button onClick={(e) => { e.stopPropagation(); handleLocalDelete(reply.id); setActiveMenuCommentId(null); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-[10px] font-bold text-red-600 flex items-center gap-2">
-                                                                                            <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                                            <span className="material-symbols-outlined text-sm">delete</span> {t('feed.delete')}
                                                                                         </button>
                                                                                     )}
                                                                                 </div>
@@ -555,8 +557,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] focus:outline-none focus:border-primary resize-none h-12"
                                                                     />
                                                                     <div className="flex justify-end gap-2 mt-1">
-                                                                        <button onClick={() => setEditingComment(null)} className="text-[9px] font-bold text-slate-500 hover:underline">Cancelar</button>
-                                                                        <button onClick={() => onSaveEditComment(post.id, reply.id, editingComment.text)} className="text-[9px] font-bold text-primary hover:underline">Guardar</button>
+                                                                        <button onClick={() => setEditingComment(null)} className="text-[9px] font-bold text-slate-500 hover:underline">{t('feed.cancelEdit')}</button>
+                                                                        <button onClick={() => onSaveEditComment(post.id, reply.id, editingComment.text)} className="text-[9px] font-bold text-primary hover:underline">{t('feed.save')}</button>
                                                                     </div>
                                                                 </div>
                                                             ) : (
@@ -568,7 +570,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                                                 onClick={() => handleLocalToggleLike(reply.id)}
                                                                 className={`hover:text-primary transition-colors flex items-center gap-1 ${reply.isLiked ? 'text-primary' : ''}`}
                                                             >
-                                                                {reply.isLiked ? 'Me gusta' : 'Me gusta'} {reply.likes > 0 && <span>• {reply.likes}</span>}
+                                                                {reply.isLiked ? t('feed.like') : t('feed.like')} {reply.likes > 0 && <span>• {reply.likes}</span>}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -585,7 +587,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                                         <div className="flex-1 relative">
                                             <textarea
                                                 ref={(el) => (replyInputRefs.current[comment.id] = el)}
-                                                placeholder={`Responde a ${author.name}...`}
+                                                placeholder={`${t('feed.replyTo')} ${author.name}...`}
                                                 className="w-full bg-white border border-slate-200 rounded-xl py-1.5 pl-3 pr-10 text-xs focus:outline-none focus:border-primary resize-none h-8"
                                                 value={newReplyText[comment.id] || ''}
                                                 onChange={(e) => handleTextChange(e.target.value, { current: replyInputRefs.current[comment.id] } as any, (val) => setNewReplyText({ ...newReplyText, [comment.id]: val }))}
@@ -610,7 +612,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                     <div className="flex-1 relative">
                         <textarea
                             ref={mainInputRef}
-                            placeholder="Escribe un comentario..."
+                            placeholder={t('feed.writeComment')}
                             className="w-full bg-white border border-slate-200 rounded-2xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:border-primary resize-none h-10"
                             value={newCommentText}
                             onChange={(e) => handleTextChange(e.target.value, mainInputRef, setNewCommentText)}
@@ -634,7 +636,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                         onClick={() => onNavigate(View.LOGIN)}
                         className="text-xs font-bold text-slate-500 hover:text-primary transition-colors"
                     >
-                        Inicia sesión para participar en la conversación
+                        {t('feed.loginToParticipate')}
                     </button>
                 </div>
             )}

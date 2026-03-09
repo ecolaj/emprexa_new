@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, NavProps, User, ID, Post } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Notifications: React.FC<NavProps> = ({ navigate }) => {
+  const { t } = useLanguage();
   const {
     user: authUser,
     notifications,
@@ -21,13 +23,13 @@ export const Notifications: React.FC<NavProps> = ({ navigate }) => {
     <div className="flex-1 overflow-y-auto bg-slate-50">
       <div className="max-w-2xl mx-auto p-4 md:p-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-black text-slate-900">Notificaciones</h1>
+          <h1 className="text-2xl font-black text-slate-900">{t('notifications.title')}</h1>
           {notifications.some(n => !n.read) && (
             <button
               onClick={markAllNotificationsAsRead}
               className="text-sm font-bold text-primary hover:underline"
             >
-              Marcar todo como leído
+              {t('notifications.markAllRead')}
             </button>
           )}
         </div>
@@ -38,8 +40,8 @@ export const Notifications: React.FC<NavProps> = ({ navigate }) => {
               <div className="size-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                 <span className="material-symbols-outlined text-3xl">notifications_off</span>
               </div>
-              <h3 className="text-lg font-bold text-slate-900">Sin notificaciones</h3>
-              <p className="text-sm text-slate-500">Te avisaremos cuando pase algo interesante.</p>
+              <h3 className="text-lg font-bold text-slate-900">{t('notifications.emptyTitle')}</h3>
+              <p className="text-sm text-slate-500">{t('notifications.emptyDesc')}</p>
             </div>
           ) : (
             notifications.map((notif) => {
@@ -103,8 +105,8 @@ export const Notifications: React.FC<NavProps> = ({ navigate }) => {
                       }}>{notif.user.name}</span> {notif.content}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-slate-400 font-medium">{notif.time}</span>
-                      {!notif.read && <span className="text-[10px] text-primary font-bold uppercase tracking-wider">Nuevo</span>}
+                      {notif.time && <span className="text-xs text-slate-400 font-medium">{notif.time}</span>}
+                      {!notif.read && <span className="text-[10px] text-primary font-bold uppercase tracking-wider">{t('notifications.new')}</span>}
                     </div>
                   </div>
                 </div>

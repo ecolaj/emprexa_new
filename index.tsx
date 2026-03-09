@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { LanguageProvider } from './context/LanguageContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -8,4 +9,8 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
-root.render(<App />); // Sin StrictMode - se soluciona el doble montaje
+root.render(
+  <LanguageProvider>
+    <App />
+  </LanguageProvider>
+); // Sin StrictMode - se soluciona el doble montaje

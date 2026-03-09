@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Post, User, View, ID } from '../types';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export const usePostInteractions = (
     posts: Post[],
@@ -10,17 +11,18 @@ export const usePostInteractions = (
     sendMentionNotifications: (text: string) => void
 ) => {
     const { savedPostIds, toggleSavedPost } = useAuth();
+    const { t } = useLanguage();
 
     // UI State
-    const [activeCommentSectionId, setActiveCommentSectionId] = useState<number | null>(null);
-    const [activeMenuPostId, setActiveMenuPostId] = useState<number | null>(null);
+    const [activeCommentSectionId, setActiveCommentSectionId] = useState<ID | null>(null);
+    const [activeMenuPostId, setActiveMenuPostId] = useState<ID | null>(null);
     const [activeMenuCommentId, setActiveMenuCommentId] = useState<string | null>(null);
     const [activeReplyToId, setActiveReplyToId] = useState<string | null>(null);
-    const [editingComment, setEditingComment] = useState<{ postId: number, commentId: string, text: string } | null>(null);
+    const [editingComment, setEditingComment] = useState<{ postId: ID, commentId: string, text: string } | null>(null);
 
     // --- ACTIONS ---
 
-    const handleToggleLike = async (postId: number) => {
+    const handleToggleLike = async (postId: ID) => {
         const post = posts.find(p => p.id === postId);
         if (!post) return;
 
@@ -38,11 +40,6 @@ export const usePostInteractions = (
         }));
 
         // DB Update
-        if (postId > 1000) { // Assuming ID < 1000 are mocks if applicable, or just check logic. 
-            // In this project, IDs are numbers but DB uses IDs. Seed data had 101, 102.
-            // We'll just try to update.
-        }
-
         // Using Supabase to persist like
         try {
             if (isNowLiked) {
@@ -60,8 +57,8 @@ export const usePostInteractions = (
         }
     };
 
-    const handleDeletePost = async (postId: number) => {
-        if (window.confirm("¿Estás seguro de que deseas eliminar esta publicación?")) {
+    const handleDeletePost = async (postId: ID) => {
+        if (window.confirm(t('feed.deletePostTitle'))) {
             // Optimistic
             setPosts(prev => prev.filter(p => p.id !== postId));
             setActiveMenuPostId(null);
@@ -95,12 +92,12 @@ export const usePostInteractions = (
         });
     };
 
-    const handleAddComment = (postId: number, text: string) => {
+    const handleAddComment = (postId: ID, text: string) => {
         const newComment = {
             id: `new-${Date.now()}`,
             userId: currentUser.id,
             text: text,
-            time: 'Ahora',
+            time: t('feed.now'),
             likes: 0,
             isLiked: false,
             replies: []
@@ -129,7 +126,7 @@ export const usePostInteractions = (
         sendMentionNotifications(text);
     };
 
-    const handleToggleCommentLike = (postId: number, commentId: string) => {
+    const handleToggleCommentLike = (postId: ID, commentId: string) => {
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const updatedComments = p.recentComments.map((c: any) => {
@@ -152,13 +149,13 @@ export const usePostInteractions = (
         }));
     };
 
-    const handleAddCommentReply = async (postId: number, commentId: string, text: string) => {
+    const handleAddCommentReply = async (postId: ID, commentId: string, text: string) => {
         const tempId = `reply-${Date.now()}`;
         const newReply = {
             id: tempId,
             userId: currentUser.id,
             text: text,
-            time: 'Ahora',
+            time: t('feed.now'),
             likes: 0,
             isLiked: false
         };
@@ -217,8 +214,8 @@ export const usePostInteractions = (
         }
     };
 
-    const handleDeleteComment = async (postId: number, commentId: string) => {
-        if (window.confirm("¿Eliminar comentario?")) {
+    const handleDeleteComment = async (postId: ID, commentId: string) => {
+        if (window.confirm(t('feed.deleteCommentTitle'))) {
             // Optimistic Update
             setPosts(prev => prev.map(p => {
                 if (p.id === postId) {
@@ -239,12 +236,12 @@ export const usePostInteractions = (
                 if (error) throw error;
             } catch (error) {
                 console.error("Error deleting comment:", error);
-                alert("No se pudo eliminar el comentario.");
+                alert(t('feed.errorDeletingComment'));
             }
         }
     };
 
-    const onSaveEditComment = async (postId: number, commentId: string, text: string) => {
+    const onSaveEditComment = async (postId: ID, commentId: string, text: string) => {
         // Optimistic Update
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
@@ -261,7 +258,7 @@ export const usePostInteractions = (
             if (error) throw error;
         } catch (error) {
             console.error("Error updating comment:", error);
-            alert("No se pudo guardar el comentario.");
+            alert(t('feed.errorSavingEdit'));
         }
     };
 

@@ -4,9 +4,12 @@ import { SDGS, POSTS, USERS, PROJECTS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
 import { UpgradeModal } from '../components/UpgradeModal';
+import { renderBadge } from '../utils/renderers';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Explore: React.FC<NavProps> = ({ navigate }) => {
   const { user, followedUserIds, toggleFollowUser } = useAuth();
+  const { t } = useLanguage();
 
   type TabType = 'trends' | 'projects' | 'ods' | 'users';
   const [activeTab, setActiveTab] = useState<TabType>('trends');
@@ -22,8 +25,8 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
   // FIX: Safe currentUser reference - never use users[0] when array might be empty
   const currentUser = user || {
     id: 'guest',
-    name: 'Usuario',
-    role: 'Invitado',
+    name: t('profile.guestName'),
+    role: t('profile.guestRole'),
     avatar: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
     sdgInterests: [],
     plan: 'free'
@@ -51,11 +54,11 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             sdgId: p.sdg_id || p.sdgId,
             ownerId: p.owner_id || p.ownerId,
             orgId: p.org_id || p.orgId,
-            title: p.title || 'Proyecto sin título',
+            title: p.title || t('explore.untitledProject'),
             description: p.description || '',
             image: p.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
             progress: p.progress || 0,
-            status: p.status || 'Activo',
+            status: p.status || t('projectDetails.statusActive'),
             lookingFor: p.looking_for || [],
             team: (p.team || []).map((m: any) => m.profiles || {}).filter((t: any) => t && t.id),
             donationsEnabled: p.donations_enabled || false
@@ -76,11 +79,11 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             sdgId: p.sdg_id || p.sdgId,
             ownerId: p.owner_id || p.ownerId,
             orgId: p.org_id || p.orgId,
-            title: p.title || 'Proyecto sin título',
+            title: p.title || t('explore.untitledProject'),
             description: p.description || '',
             image: p.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
             progress: p.progress || 0,
-            status: p.status || 'Activo',
+            status: p.status || t('projectDetails.statusActive'),
             lookingFor: p.looking_for || [],
             team: (p.team || []).map((m: any) => m.profiles || {}).filter((t: any) => t && t.id),
             donationsEnabled: p.donations_enabled || false
@@ -101,8 +104,8 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
         } else if (userData) {
           const formattedUsers = userData.map(u => ({
             id: u.id,
-            name: u.name || 'Usuario',
-            role: u.role || 'Miembro',
+            name: u.name || t('profile.userRole'),
+            role: u.role || t('profile.userRole'),
             avatar: u.avatar || 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
             email: u.email,
             cover: u.cover,
@@ -196,8 +199,8 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
 
             return {
               id: id,
-              tag: sdg?.label || `ODS ${id}`,
-              short: sdg?.short || 'Impacto',
+              tag: t(`sdgs.${id}.label`) || sdg?.label || `${t('feed.sdgAbbr')} ${id}`,
+              short: t(`sdgs.${id}.short`) || sdg?.short || t('explore.impactFallback'),
               posts: count > 1000 ? `${(count / 1000).toFixed(1)}k` : count,
               image: localImage,
               color: sdg?.color || '#000',
@@ -221,7 +224,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
 
     fetchData();
     return () => { mounted = false; };
-  }, [user]);
+  }, [user, t]);
 
   const [sdgStats, setSdgStats] = useState<Record<number, { projects: number, posts: number }>>({});
 
@@ -301,8 +304,8 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
     // Fallback user object
     return {
       id: id,
-      name: 'Usuario',
-      role: 'Miembro',
+      name: t('profile.userRole'),
+      role: t('profile.userRole'),
       avatar: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
       plan: 'free'
     };
@@ -321,27 +324,13 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
   // Display all fetched users, not just a slice
   const displayUsers = otherUsers;
 
-  const renderBadge = (plan: string | undefined) => {
-    if (!plan) return null;
-
-    switch (plan) {
-      case 'basic':
-        return <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0">Basic</span>;
-      case 'pro':
-        return <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1 shrink-0"><span className="material-symbols-outlined text-[10px] filled">verified</span> Pro</span>;
-      case 'enterprise':
-        return <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1 shrink-0"><span className="material-symbols-outlined text-[10px] filled">verified_user</span> Enterprise</span>;
-      default:
-        return null; // Free users get no badge
-    }
-  };
 
   if (isLoading) {
     return (
       <div className="flex-1 overflow-y-auto bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-slate-500">Cargando contenido de exploración...</p>
+          <p className="text-slate-500">{t('explore.loading')}</p>
         </div>
       </div>
     );
@@ -351,15 +340,15 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
     <div className="flex-1 overflow-y-auto bg-slate-50">
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 pt-8 pb-0">
-          <h1 className="text-3xl font-black text-slate-900 mb-2">Explorar el Impacto</h1>
-          <p className="text-slate-500 mb-6">Descubre lo que está moviendo al mundo hoy.</p>
+          <h1 className="text-3xl font-black text-slate-900 mb-2">{t('explore.title')}</h1>
+          <p className="text-slate-500 mb-6">{t('explore.subtitle')}</p>
 
           <div className="flex gap-8">
             {[
-              { id: 'trends', label: 'Tendencias' },
-              { id: 'projects', label: 'Proyectos' },
-              { id: 'ods', label: 'ODS' },
-              { id: 'users', label: 'Usuarios' }
+              { id: 'trends', label: t('explore.tabs.trends') },
+              { id: 'projects', label: t('explore.tabs.projects') },
+              { id: 'ods', label: t('explore.tabs.ods') },
+              { id: 'users', label: t('explore.tabs.users') }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -384,38 +373,38 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             {/* Hero Section: Trending Topics */}
             <section>
               <h2 className="font-bold text-slate-900 text-xl mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">trending_up</span> Temas del Momento
+                <span className="material-symbols-outlined text-primary">trending_up</span> {t('explore.trendingTopics')}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(trendingTopics.length > 0 ? trendingTopics : trendingTags).map((t, i) => (
+                {(trendingTopics.length > 0 ? trendingTopics : trendingTags).map((topic, i) => (
                   <div
                     key={i}
-                    onClick={() => t.id ? navigate(View.SDG_FEED, { id: t.id }) : navigate(View.HASHTAG, { tag: t.tag })}
+                    onClick={() => topic.id ? navigate(View.SDG_FEED, { id: topic.id }) : navigate(View.HASHTAG, { tag: topic.tag })}
                     className="group relative h-40 rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 border border-slate-100"
                   >
-                    <img src={t.image} alt={t.tag} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={topic.image} alt={topic.tag} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
 
                     {/* Badge for interests */}
-                    {t.isInterest && (
+                    {topic.isInterest && (
                       <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg animate-pulse">
-                        Para ti
+                        {t('explore.forYou')}
                       </div>
                     )}
 
                     <div className="absolute bottom-4 left-4 right-4 text-white">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="material-symbols-outlined text-sm opacity-80">{t.icon || 'trending_up'}</span>
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{t.short || 'Tendencia'}</p>
+                        <span className="material-symbols-outlined text-sm opacity-80">{topic.icon || 'trending_up'}</span>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{topic.short || t('explore.trend')}</p>
                       </div>
-                      <p className="font-bold text-lg leading-tight group-hover:underline line-clamp-2">{t.tag}</p>
+                      <p className="font-bold text-lg leading-tight group-hover:underline line-clamp-2">{topic.tag}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <div className="flex -space-x-1">
                           {[1, 2, 3].map(dot => (
                             <div key={dot} className="size-3 rounded-full border border-white/20 bg-slate-400/50"></div>
                           ))}
                         </div>
-                        <p className="text-[10px] opacity-70 font-bold uppercase">{t.posts} interacciones</p>
+                        <p className="text-[10px] opacity-70 font-bold uppercase">{topic.posts} {t('explore.interactions').replace('{count}', '')}</p>
                       </div>
                     </div>
                   </div>
@@ -427,13 +416,13 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             <section>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
-                  <span className="material-symbols-outlined text-amber-500 filled">star</span> Proyectos Destacados
+                  <span className="material-symbols-outlined text-amber-500 filled">star</span> {t('explore.featuredProjects')}
                 </h2>
                 <button
                   className="text-sm font-bold text-slate-500 hover:text-primary"
                   onClick={() => setActiveTab('projects')}
                 >
-                  Ver todos
+                  {t('explore.viewAll')}
                 </button>
               </div>
 
@@ -460,12 +449,12 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                             <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
                             {sdg && (
                               <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
-                                <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                                <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {t(`sdgs.${sdg.id}.short`) || sdg.short}
                               </div>
                             )}
                             <div className="absolute bottom-3 right-3">
-                              <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
-                                {project.status}
+                              <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' || project.status === 'Active' ? 'bg-green-500' : 'bg-slate-400'}`}>
+                                {project.status === 'Activo' || project.status === 'Active' ? t('projectCard.statusActive') : project.status === 'Concluido' || project.status === 'Concluded' ? t('projectCard.statusConcluded') : project.status}
                               </span>
                             </div>
                           </div>
@@ -477,7 +466,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
 
                         <div className="mt-auto">
                           <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1">
-                            <span>Meta alcanzada</span>
+                            <span>{t('explore.metaReached')}</span>
                             <span className="text-primary">{project.progress}%</span>
                           </div>
                           <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
@@ -521,9 +510,9 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                 <div className="size-16 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/10">
                   <span className="material-symbols-outlined text-3xl text-blue-400">rocket_launch</span>
                 </div>
-                <h3 className="text-3xl font-black mb-4 tracking-tighter">¿Tienes una iniciativa de impacto?</h3>
+                <h3 className="text-3xl font-black mb-4 tracking-tighter">{t('explore.initiativeTitle')}</h3>
                 <p className="text-slate-400 mb-8 max-w-xl mx-auto text-lg leading-relaxed">
-                  Conecta con organizaciones, encuentra voluntarios y amplifica tu alcance global.
+                  {t('explore.initiativeDesc')}
                 </p>
                 <button
                   onClick={() => {
@@ -531,8 +520,8 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                       navigate(View.CREATE_PROJECT);
                     } else {
                       setUpgradeContent({
-                        title: 'Gestión Institucional',
-                        description: 'La creación de proyectos y equipos está reservada para cuentas Enterprise.',
+                        title: t('explore.institutionalManagement'),
+                        description: t('explore.enterpriseCreationOnly'),
                         plan: 'Enterprise'
                       });
                       setShowUpgradeModal(true);
@@ -540,7 +529,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                   }}
                   className="bg-white text-slate-900 px-12 py-4 rounded-2xl font-black hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center gap-3 mx-auto"
                 >
-                  <span className="material-symbols-outlined font-black">add_circle</span> Empezar Proyecto
+                  <span className="material-symbols-outlined font-black">add_circle</span> {t('explore.startProject')}
                 </button>
               </div>
             </div>
@@ -563,9 +552,9 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">rocket_launch</span> Todos los Proyectos
+                  <span className="material-symbols-outlined text-primary">rocket_launch</span> {t('explore.allProjects')}
                 </h2>
-                <p className="text-sm text-slate-500">Explora todas las iniciativas de la comunidad.</p>
+                <p className="text-sm text-slate-500">{t('explore.allProjectsSubtitle')}</p>
               </div>
             </div>
 
@@ -592,12 +581,12 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
                           {sdg && (
                             <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1" style={{ color: sdg.color }}>
-                              <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {sdg.short}
+                              <span className="material-symbols-outlined text-sm">{sdg.icon}</span> {t(`sdgs.${sdg.id}.short`) || sdg.short}
                             </div>
                           )}
                           <div className="absolute bottom-3 right-3">
-                            <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
-                              {project.status}
+                            <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' || project.status === 'Active' ? 'bg-green-500' : 'bg-slate-400'}`}>
+                              {project.status === 'Activo' || project.status === 'Active' ? t('projectCard.statusActive') : project.status === 'Concluido' || project.status === 'Concluded' ? t('projectCard.statusConcluded') : project.status}
                             </span>
                           </div>
                         </div>
@@ -609,7 +598,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
 
                       <div className="mt-auto">
                         <div className="flex justify-between items-center text-xs font-bold text-slate-500 mb-1">
-                          <span>Meta alcanzada</span>
+                          <span>{t('explore.metaReached')}</span>
                           <span className="text-primary">{project.progress}%</span>
                         </div>
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
@@ -665,15 +654,15 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                   <div className="absolute bottom-0 left-0 p-5 w-full z-20">
-                    <h3 className="text-white text-lg font-bold leading-tight mb-2">{sdg.label}</h3>
+                    <h3 className="text-white text-lg font-bold leading-tight mb-2">{t(`sdgs.${sdg.id}.label`) || sdg.label}</h3>
                     <div className="flex flex-col gap-1 text-white/90">
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm">folder_open</span>
-                        <span className="text-xs font-bold">{projectCount} proyectos</span>
+                        <span className="text-xs font-bold">{t('explore.projectCount').replace('{count}', String(projectCount))}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm">dynamic_feed</span>
-                        <span className="text-xs font-bold">{postCount} publicaciones</span>
+                        <span className="text-xs font-bold">{t('explore.postCount').replace('{count}', String(postCount))}</span>
                       </div>
                     </div>
                   </div>
@@ -689,9 +678,9 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
             <section>
               <div className="mb-6">
                 <h2 className="font-bold text-slate-900 text-xl flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">handshake</span> Recomendados para ti
+                  <span className="material-symbols-outlined text-primary">handshake</span> {t('explore.recommendedTitle')}
                 </h2>
-                <p className="text-sm text-slate-500">Personas que comparten tus intereses en ODS.</p>
+                <p className="text-sm text-slate-500">{t('explore.recommendedSubtitle')}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -716,7 +705,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                               >
                                 {recUser.name}
                               </h3>
-                              {renderBadge(recUser.plan)}
+                              {renderBadge(recUser.plan, t)}
                             </div>
                             <p className="text-sm text-slate-500 truncate mb-2">{recUser.role}</p>
                           </div>
@@ -734,7 +723,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                         </div>
                         {commonSdgs.length > 0 && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-400 font-medium shrink-0">Intereses comunes:</span>
+                            <span className="text-xs text-slate-400 font-medium shrink-0">{t('explore.commonInterests')}</span>
                             <div className="flex -space-x-1">
                               {commonSdgs.slice(0, 3).map(id => {
                                 const sdg = getSdgInfo(id);
@@ -744,7 +733,7 @@ export const Explore: React.FC<NavProps> = ({ navigate }) => {
                                     key={id}
                                     className="size-5 rounded-full border border-white flex items-center justify-center text-white text-[8px] font-bold"
                                     style={{ backgroundColor: sdg.color }}
-                                    title={sdg.short}
+                                    title={t(`sdgs.${id}.short`) || sdg.short}
                                   >
                                     {sdg.id}
                                   </div>

@@ -1,10 +1,9 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { View, NavProps } from '../types';
 import { Logo } from './Logo';
 import { useAuth } from '../context/AuthContext';
 import { LogoutModal } from './LogoutModal';
-import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SidebarProps extends NavProps {
   isOpen?: boolean;
@@ -13,21 +12,22 @@ interface SidebarProps extends NavProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen = false, onClose }) => {
   const { logout, totalUnreadMessages, totalUnreadNotifications } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const menuItems = [
-    { view: View.SEARCH, icon: 'search', label: 'Buscar' },
-    { view: View.FEED, icon: 'public', label: 'Feed' },
-    { view: View.EXPLORE, icon: 'rocket_launch', label: 'Explorar' },
-    { view: View.MESSAGES, icon: 'chat', label: 'Mensajes', badge: totalUnreadMessages },
-    { view: View.SAVED, icon: 'bookmark', label: 'Guardados' },
-    { view: View.NOTIFICATIONS, icon: 'notifications', label: 'Notificaciones', badge: totalUnreadNotifications },
-    { view: View.PROFILE, icon: 'person', label: 'Mi Perfil' },
-    { view: View.DASHBOARD, icon: 'dashboard', label: 'Panel de Impacto' },
+    { view: View.SEARCH, icon: 'search', label: t('nav.search') },
+    { view: View.FEED, icon: 'public', label: t('nav.feed') },
+    { view: View.EXPLORE, icon: 'rocket_launch', label: t('nav.explore') },
+    { view: View.MESSAGES, icon: 'chat', label: t('nav.messages'), badge: totalUnreadMessages },
+    { view: View.SAVED, icon: 'bookmark', label: t('nav.saved') },
+    { view: View.NOTIFICATIONS, icon: 'notifications', label: t('nav.notifications'), badge: totalUnreadNotifications },
+    { view: View.PROFILE, icon: 'person', label: t('nav.profile') },
+    { view: View.DASHBOARD, icon: 'dashboard', label: t('nav.dashboard') },
   ];
 
   const settingsItems = [
-    { view: View.SETTINGS, icon: 'settings', label: 'Cuenta' },
+    { view: View.SETTINGS, icon: 'settings', label: t('nav.settings') },
   ];
 
   const handleLogout = () => {
@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
           </nav>
 
           <div className="mt-8">
-            <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Configuración</p>
+            <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t('nav.config')}</p>
             <nav className="space-y-1">
               {settingsItems.map((item) => (
                 <button
@@ -119,6 +119,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
                   {item.label}
                 </button>
               ))}
+
+              {/* Language Switcher */}
+              <button
+                onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors font-medium text-sm text-slate-600 hover:bg-slate-50 group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined group-hover:rotate-180 transition-transform duration-500">translate</span>
+                  {language === 'es' ? 'Idioma' : 'Language'}
+                </div>
+                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <span className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${language === 'es' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}>ES</span>
+                  <span className={`text-[10px] font-black px-2 py-1 rounded-md transition-all ${language === 'en' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}>EN</span>
+                </div>
+              </button>
             </nav>
           </div>
         </div>
@@ -126,13 +141,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
         {/* Footer Area */}
         <div className="p-4 border-t border-slate-100 space-y-4 bg-white">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 text-white">
-            <p className="text-xs font-bold text-slate-300 mb-1">Actualizar tu plan</p>
-            <p className="text-xs text-slate-400 mb-3 leading-snug">Desbloquea función de post, creación de proyectos, dashboards, métricas de impacto.</p>
+            <p className="text-xs font-bold text-slate-300 mb-1">{t('nav.upgradePlan')}</p>
+            <p className="text-xs text-slate-400 mb-3 leading-snug">{t('nav.upgradeDesc')}</p>
             <button
               onClick={() => handleNavigation(View.PRICING)}
               className="w-full py-2 bg-white text-slate-900 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors"
             >
-              Ver Planes
+              {t('nav.viewPlans')}
             </button>
           </div>
 
@@ -141,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, navigate, isOpen 
             className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors font-medium text-sm"
           >
             <span className="material-symbols-outlined">logout</span>
-            Cerrar Sesión
+            {t('nav.logout')}
           </button>
         </div>
       </aside>

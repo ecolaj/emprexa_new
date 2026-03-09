@@ -11,9 +11,11 @@ import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { getBaseUrl } from '../utils/environment';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
     const { user, savedPostIds, toggleSavedPost } = useAuth();
+    const { t } = useLanguage();
     const postId = params?.postId || params?.id;
     const [post, setPost] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +37,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             try {
                 setIsLoading(true);
 
-                // Buscar post en Supabase
+                // Find post in Supabase
                 const { data: postData, error } = await supabase
                     .from('posts')
                     .select('*')
@@ -45,7 +47,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                 if (error) throw error;
 
                 if (postData) {
-                    // Buscar usuario del post
+                    // Find post user
                     const { data: userData } = await supabase
                         .from('profiles')
                         .select('*')
@@ -67,7 +69,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                     const formattedPost = {
                         ...postData,
                         user: userData || DEFAULT_USER,
-                        time: postData.created_at ? formatRelativeTime(postData.created_at) : 'Hoy',
+                        time: postData.created_at ? formatRelativeTime(postData.created_at, t) : t('time.today'),
                         sdgIds: postData.sdg_ids || [],
                         likes: postData.likes_count || 0,
                         isLiked: userHasLiked,
@@ -124,7 +126,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                 ...c,
                                 user: userData,
                                 userId: c.user_id,
-                                time: c.created_at ? formatRelativeTime(new Date(c.created_at)) : 'Ahora',
+                                time: c.created_at ? formatRelativeTime(new Date(c.created_at), t) : t('time.now'),
                                 likes: c.likes_count || 0,
                                 isLiked: userLikesSet.has(c.id),
                                 replies: replies.filter(r => r.parent_id === c.id).map(r => {
@@ -133,7 +135,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                         ...r,
                                         user: replyUser,
                                         userId: r.user_id,
-                                        time: r.created_at ? formatRelativeTime(new Date(r.created_at)) : 'Ahora',
+                                        time: r.created_at ? formatRelativeTime(new Date(r.created_at), t) : t('time.now'),
                                         likes: r.likes_count || 0,
                                         isLiked: userLikesSet.has(r.id)
                                     };
@@ -183,9 +185,9 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                 <div className="size-20 bg-slate-200 rounded-full flex items-center justify-center mb-4 text-slate-400">
                     <span className="material-symbols-outlined text-4xl">broken_image</span>
                 </div>
-                <h2 className="text-xl font-bold text-slate-900">Publicación no encontrada</h2>
-                <p className="text-slate-500 mt-2 mb-6">El enlace podría estar roto o la publicación fue eliminada.</p>
-                <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">Ir al Feed</button>
+                <h2 className="text-xl font-bold text-slate-900">{t('feed.postNotFound')}</h2>
+                <p className="text-slate-500 mt-2 mb-6">{t('feed.linkBroken')}</p>
+                <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">{t('feed.backToFeed')}</button>
             </div>
         );
     }
@@ -243,7 +245,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             setCopiedUrl(shareUrl);
             setShowShareSuccessModal(true);
 
-            // Auto cerrar después de 3 segundos
+            // Auto close after 3 seconds
             setTimeout(() => {
                 setShowShareSuccessModal(false);
             }, 3000);
@@ -283,7 +285,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                     userId: user.id,
                     user: user, // Ensure user object is present for rendering
                     text: text,
-                    time: formatRelativeTime(new Date()),
+                    time: formatRelativeTime(new Date(), t),
                     likes: 0,
                     isLiked: false,
                     replies: []
@@ -296,7 +298,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             }
         } catch (error) {
             console.error("Error adding comment:", error);
-            alert("No se pudo enviar el comentario.");
+            alert(t('feed.errorSendingComment'));
         }
     };
 
@@ -324,7 +326,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             setPost((prev: any) => ({ ...prev, comments: Math.max(0, (prev.comments || 0) - 1) }));
         } catch (error) {
             console.error("Error deleting comment:", error);
-            alert("No se pudo eliminar el comentario.");
+            alert(t('feed.errorDeletingComment'));
         }
     };
 
@@ -350,7 +352,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             if (error) throw error;
         } catch (error) {
             console.error("Error saving comment:", error);
-            alert("No se pudo guardar el comentario.");
+            alert(t('feed.errorSendingComment'));
         }
     };
 
@@ -403,7 +405,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                 const newReply = {
                     ...data,
                     user: user,
-                    time: 'Ahora',
+                    time: t('time.now'),
                     likes: 0,
                     isLiked: false
                 };
@@ -423,7 +425,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             }
         } catch (error) {
             console.error("Error adding reply:", error);
-            alert("No se pudo enviar la respuesta.");
+            alert(t('feed.errorPublishingReply'));
         }
     };
 
@@ -463,8 +465,8 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         <Logo className="h-8" />
                     </div>
                     <div className="flex gap-4 text-sm">
-                        <button onClick={() => navigate(View.LOGIN)} className="font-bold text-slate-600 hover:text-slate-900">Entrar</button>
-                        <button onClick={() => navigate(View.ONBOARDING)} className="font-bold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">Registrarse</button>
+                        <button onClick={() => navigate(View.LOGIN)} className="font-bold text-slate-600 hover:text-slate-900">{t('login.submitButton')}</button>
+                        <button onClick={() => navigate(View.ONBOARDING)} className="font-bold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">{t('profile.register')}</button>
                     </div>
                 </div>
             )}
@@ -478,7 +480,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                         className="mb-6 flex items-center gap-2 text-slate-500 font-bold hover:text-slate-800 transition-colors"
                     >
                         <span className="material-symbols-outlined">arrow_back</span>
-                        {user ? 'Volver al Feed' : 'Ver más publicaciones'}
+                        {user ? t('feed.backToFeed') : t('feed.seeMorePosts')}
                     </button>
 
                     <article className="rounded-2xl overflow-hidden max-w-2xl mx-auto">
@@ -512,7 +514,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                 className="px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer hover:bg-slate-100 transition-colors"
                                             >
                                                 <span className="material-symbols-outlined text-sm" style={{ color: sdg.color }}>{sdg.icon}</span>
-                                                ODS {sdg.id}
+                                                {t('feed.sdgAbbr')} {sdg.id}
                                             </span>
                                         );
                                     })}
@@ -568,7 +570,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                         className={`flex items-center gap-2 text-sm transition-all group ${isLiked ? 'text-red-500 font-bold' : 'hover:text-red-500'}`}
                                     >
                                         <span className={`material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform ${isLiked ? 'filled animate-[pulse_0.2s_ease-out]' : ''}`}>favorite</span>
-                                        {likesCount} {isLiked ? 'Te gusta' : 'Me gusta'}
+                                        {likesCount} {isLiked ? t('feed.liked') : t('feed.like')}
                                     </button>
                                     <button
                                         onClick={() => {
@@ -577,24 +579,24 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                 setShowLoginModal(true);
                                                 return;
                                             }
-                                            // Focus en el textarea de comentarios
+                                            // Focus on comments textarea
                                             document.querySelector('textarea')?.focus();
                                         }}
                                         className="flex items-center gap-2 hover:text-primary text-sm transition-colors"
                                     >
-                                        <span className="material-symbols-outlined text-[20px]">chat_bubble</span> Comentar
+                                        <span className="material-symbols-outlined text-[20px]">chat_bubble</span> {t('feed.comment')}
                                     </button>
                                     <button
                                         onClick={() => handleShare(post.id)}
                                         className="flex items-center gap-2 hover:text-primary text-sm transition-colors"
                                     >
-                                        <span className="material-symbols-outlined text-[20px]">share</span> Compartir
+                                        <span className="material-symbols-outlined text-[20px]">share</span> {t('feed.share')}
                                     </button>
                                 </div>
                                 <button
                                     onClick={handleBookmark}
                                     className={`text-slate-400 hover:text-indigo-600 transition-colors ${isSaved ? 'text-indigo-600' : ''}`}
-                                    title={isSaved ? "Quitar marcador" : "Guardar para leer después"}
+                                    title={isSaved ? t('feed.removeBookmark') : t('feed.saveBookmark')}
                                 >
                                     <span className={`material-symbols-outlined ${isSaved ? 'filled' : ''}`}>bookmark</span>
                                 </button>
@@ -606,7 +608,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4 max-w-2xl mx-auto">
                         <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
                             <span className="material-symbols-outlined text-primary">chat_bubble</span>
-                            Comentarios ({post.comments})
+                            {t('feed.commentsCount').replace('{count}', String(post.comments))}
                         </h3>
 
                         {/* Comment Input */}
@@ -615,7 +617,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                 <div className="size-10 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${user.avatar}")` }}></div>
                                 <div className="flex-1 relative">
                                     <textarea
-                                        placeholder="Añade un comentario..."
+                                        placeholder={t('feed.addCommentPlaceholder')}
                                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-primary resize-none h-12"
                                         value={newCommentText}
                                         onChange={(e) => setNewCommentText(e.target.value)}
@@ -631,7 +633,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                             </div>
                         ) : (
                             <div className="bg-slate-50 rounded-xl p-4 mb-8 border border-slate-200 text-center">
-                                <p className="text-sm text-slate-600">Inicia sesión para dejar un comentario.</p>
+                                <p className="text-sm text-slate-600">{t('feed.loginToComment')}</p>
                             </div>
                         )}
 
@@ -671,11 +673,11 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                         <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
                                                                             {author.id === user.id && (
                                                                                 <button onClick={() => onStartEditComment(comment)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                                    <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                    <span className="material-symbols-outlined text-sm">edit</span> {t('feed.edit')}
                                                                                 </button>
                                                                             )}
                                                                             <button onClick={() => handleDeleteComment(comment.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                                <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                                <span className="material-symbols-outlined text-sm">delete</span> {t('feed.delete')}
                                                                             </button>
                                                                         </div>
                                                                     )}
@@ -692,8 +694,8 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                 className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary resize-none h-20"
                                                             />
                                                             <div className="flex justify-end gap-2 mt-2">
-                                                                <button onClick={() => setEditingComment(null)} className="text-xs font-bold text-slate-500 hover:underline">Cancelar</button>
-                                                                <button onClick={() => saveEditedComment(comment.id, editingComment.text)} className="text-xs font-bold text-primary hover:underline">Guardar</button>
+                                                                <button onClick={() => setEditingComment(null)} className="text-xs font-bold text-slate-500 hover:underline">{t('feed.cancel')}</button>
+                                                                <button onClick={() => saveEditedComment(comment.id, editingComment.text)} className="text-xs font-bold text-primary hover:underline">{t('feed.save')}</button>
                                                             </div>
                                                         </div>
                                                     ) : (
@@ -705,7 +707,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                         onClick={() => handleToggleCommentLike(comment.id)}
                                                         className={`hover:text-primary transition-colors flex items-center gap-1 ${comment.isLiked ? 'text-primary' : ''}`}
                                                     >
-                                                        {comment.isLiked ? 'Me gusta' : 'Me gusta'} {comment.likes > 0 && <span>• {comment.likes}</span>}
+                                                        {comment.isLiked ? t('feed.liked') : t('feed.like')} {comment.likes > 0 && <span>• {comment.likes}</span>}
                                                     </button>
                                                     <button
                                                         onClick={() => {
@@ -718,7 +720,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                         }}
                                                         className="hover:text-primary transition-colors"
                                                     >
-                                                        Responder
+                                                        {t('feed.reply')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -761,11 +763,11 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                                         <div className="absolute right-0 top-6 w-32 bg-white rounded-lg shadow-xl border border-slate-100 z-30 overflow-hidden">
                                                                                             {replyAuthor.id === user.id && (
                                                                                                 <button onClick={() => onStartEditComment(reply)} className="w-full text-left px-3 py-2 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-2">
-                                                                                                    <span className="material-symbols-outlined text-sm">edit</span> Editar
+                                                                                                    <span className="material-symbols-outlined text-sm">edit</span> {t('feed.edit')}
                                                                                                 </button>
                                                                                             )}
                                                                                             <button onClick={() => handleDeleteComment(reply.id)} className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-bold text-red-600 flex items-center gap-2">
-                                                                                                <span className="material-symbols-outlined text-sm">delete</span> Eliminar
+                                                                                                <span className="material-symbols-outlined text-sm">delete</span> {t('feed.delete')}
                                                                                             </button>
                                                                                         </div>
                                                                                     )}
@@ -782,8 +784,8 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                                 className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-primary resize-none h-16"
                                                                             />
                                                                             <div className="flex justify-end gap-2 mt-2">
-                                                                                <button onClick={() => setEditingComment(null)} className="text-[10px] font-bold text-slate-500 hover:underline">Cancelar</button>
-                                                                                <button onClick={() => saveEditedComment(reply.id, editingComment.text)} className="text-[10px] font-bold text-primary hover:underline">Guardar</button>
+                                                                                <button onClick={() => setEditingComment(null)} className="text-[10px] font-bold text-slate-500 hover:underline">{t('feed.cancel')}</button>
+                                                                                <button onClick={() => saveEditedComment(reply.id, editingComment.text)} className="text-[10px] font-bold text-primary hover:underline">{t('feed.save')}</button>
                                                                             </div>
                                                                         </div>
                                                                     ) : (
@@ -795,7 +797,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                                         onClick={() => handleToggleCommentLike(reply.id)}
                                                                         className={`hover:text-primary transition-colors flex items-center gap-1 ${reply.isLiked ? 'text-primary' : ''}`}
                                                                     >
-                                                                        {reply.isLiked ? 'Me gusta' : 'Me gusta'} {reply.likes > 0 && <span>• {reply.likes}</span>}
+                                                                        {reply.isLiked ? t('feed.liked') : t('feed.like')} {reply.likes > 0 && <span>• {reply.likes}</span>}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -811,7 +813,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                                 <div className="size-8 rounded-full bg-cover bg-center shrink-0 border border-slate-200" style={{ backgroundImage: `url("${user.avatar}")` }}></div>
                                                 <div className="flex-1 relative">
                                                     <textarea
-                                                        placeholder={`Responde a ${author.name}...`}
+                                                        placeholder={`${t('feed.replyTo')} ${author.name}...`}
                                                         className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-3 pr-10 text-xs focus:outline-none focus:border-primary resize-none h-10"
                                                         value={newReplyText[comment.id] || ''}
                                                         onChange={(e) => setNewReplyText({ ...newReplyText, [comment.id]: e.target.value })}
@@ -838,10 +840,10 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                 {/* Public CTA Footer - Separate Card */}
                 {!user && (
                     <div className="bg-slate-50 p-6 border border-slate-200 rounded-2xl mt-4 text-center max-w-2xl mx-auto">
-                        <h4 className="font-bold text-slate-900 mb-2">¿Te interesa este proyecto?</h4>
-                        <p className="text-sm text-slate-600 mb-4">Únete a Emprexa para conectar con {post.user.name} y miles de otros agentes de cambio.</p>
+                        <h4 className="font-bold text-slate-900 mb-2">{t('singlePost.interestedTitle')}</h4>
+                        <p className="text-sm text-slate-600 mb-4">{t('singlePost.interestedDesc').replace('{name}', post.user.name)}</p>
                         <button onClick={() => navigate(View.ONBOARDING)} className="bg-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-primary-dark transition-all">
-                            Crear Cuenta Gratis
+                            {t('singlePost.createAccountFree')}
                         </button>
                     </div>
                 )}
@@ -884,23 +886,23 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                 </div>
 
                                 <h2 className="text-xl font-bold text-slate-900 mb-2">
-                                    {actionRequiringLogin === 'like' ? 'Me gusta esta publicación' :
-                                        actionRequiringLogin === 'comment' ? 'Comentar en esta publicación' :
-                                            actionRequiringLogin === 'view_profile' ? 'Ver perfil del usuario' :
-                                                actionRequiringLogin === 'view_sdg' ? 'Explorar ODS' :
-                                                    'Guardar esta publicación'}
+                                    {actionRequiringLogin === 'like' ? t('singlePost.loginToAction.like') :
+                                        actionRequiringLogin === 'comment' ? t('singlePost.loginToAction.comment') :
+                                            actionRequiringLogin === 'view_profile' ? t('singlePost.loginToAction.viewProfile') :
+                                                actionRequiringLogin === 'view_sdg' ? t('singlePost.loginToAction.viewSdg') :
+                                                    t('singlePost.loginToAction.save')}
                                 </h2>
 
                                 <p className="text-slate-500 text-sm mb-8 leading-relaxed">
                                     {actionRequiringLogin === 'like'
-                                        ? 'Únete a Emprexa para apoyar esta historia de impacto y conectar con otros agentes de cambio.'
+                                        ? t('singlePost.loginToDesc.like')
                                         : actionRequiringLogin === 'comment'
-                                            ? 'Regístrate para compartir tu perspectiva y construir comunidad alrededor de este proyecto.'
+                                            ? t('singlePost.loginToDesc.comment')
                                             : actionRequiringLogin === 'view_profile'
-                                                ? 'Crea una cuenta para ver perfiles de otros agentes de cambio y conectar con ellos.'
+                                                ? t('singlePost.loginToDesc.viewProfile')
                                                 : actionRequiringLogin === 'view_sdg'
-                                                    ? 'Únete a la comunidad para explorar más proyectos relacionados con los Objetivos de Desarrollo Sostenible.'
-                                                    : 'Crea una cuenta para guardar esta publicación y revisarla más tarde.'
+                                                    ? t('singlePost.loginToDesc.viewSdg')
+                                                    : t('singlePost.loginToDesc.save')
                                     }
                                 </p>
 
@@ -912,7 +914,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                         }}
                                         className="w-full py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20"
                                     >
-                                        Iniciar Sesión
+                                        {t('login.submitButton')}
                                     </button>
 
                                     <button
@@ -922,14 +924,14 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                                         }}
                                         className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
                                     >
-                                        Crear Cuenta Gratis
+                                        {t('singlePost.createAccountFree')}
                                     </button>
 
                                     <button
                                         onClick={() => setShowLoginModal(false)}
                                         className="w-full py-3 text-slate-500 hover:text-slate-900 font-medium"
                                     >
-                                        Seguir viendo como invitado
+                                        {t('singlePost.guestViewing')}
                                     </button>
                                 </div>
                             </div>
@@ -948,10 +950,10 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
                 isOpen={commentToDelete !== null}
                 onClose={() => setCommentToDelete(null)}
                 onConfirm={confirmDeleteComment}
-                title="¿Eliminar comentario?"
-                description="¿Estás seguro de que quieres borrar este comentario? No podrás recuperarlo."
-                confirmText="Eliminar"
-                cancelText="Cancelar"
+                title={t('feed.deleteCommentTitle')}
+                description={t('feed.deleteCommentDesc')}
+                confirmText={t('feed.delete')}
+                cancelText={t('feed.cancel')}
                 icon="comment_bank"
             />
         </div >

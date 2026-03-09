@@ -33,10 +33,14 @@ export const DEFAULT_PROJECT: Project = {
 export const DEFAULT_POST: Post = {
   id: 'empty-post',
   userId: 'none',
+  user: DEFAULT_USER,
+  time: '---',
+  location: 'Global',
   title: 'Publicación no disponible',
   content: 'El contenido no está disponible.',
   images: [],
   sdgIds: [],
   likes: 0,
-  comments: 0
+  comments: 0,
+  recentComments: []
 };

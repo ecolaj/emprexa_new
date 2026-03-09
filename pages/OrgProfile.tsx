@@ -4,13 +4,14 @@ import { View, NavProps } from '../types';
 import { SDGS, USERS, ORGANIZATIONS, PROJECTS } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { DEFAULT_USER } from '../utils/defaults';
-import { isImageDark } from '../utils';
+import { useLanguage } from '../context/LanguageContext';
 
 export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
    type TabType = 'overview' | 'projects' | 'team';
    const [activeTab, setActiveTab] = useState<TabType>('overview');
    const [isFollowing, setIsFollowing] = useState(false);
    const [isMenuOpen, setIsMenuOpen] = useState(false);
+   const { t } = useLanguage();
 
    // 1. Get Organization ID from params, default to 1 if not present
    const orgId = params?.orgId ? Number(params.orgId) : 1;
@@ -48,7 +49,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                         onClick={() => navigate(View.ORG_SETTINGS, { orgId: organization.id, editMode: true })}
                         className="bg-black/40 hover:bg-black/60 text-white backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold border border-white/20 transition-all flex items-center gap-2"
                      >
-                        <span className="material-symbols-outlined text-sm">edit</span> Editar Portada
+                        <span className="material-symbols-outlined text-sm">edit</span> {t('orgProfile.editCover')}
                      </button>
                   )}
                </div>
@@ -76,7 +77,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                               <h1 className="text-3xl font-black text-slate-900 leading-tight">{organization.name}</h1>
                               {organization.verified && (
-                                 <span className="material-symbols-outlined text-blue-500 filled text-xl" title="Organización Verificada">verified</span>
+                                 <span className="material-symbols-outlined text-blue-500 filled text-xl" title={t('orgProfile.verifiedTitle')}>verified</span>
                               )}
                            </div>
                            <p className="text-slate-500 text-lg leading-relaxed max-w-3xl mb-4">{organization.description}</p>
@@ -85,7 +86,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                            <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm font-medium text-slate-600 mb-6">
                               <span className="flex items-center gap-1"><span className="material-symbols-outlined text-slate-400">location_on</span> {organization.location}</span>
                               <a href={`https://${organization.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline"><span className="material-symbols-outlined">link</span> {organization.website}</a>
-                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-slate-400">group</span> {organization.membersCount} Miembros</span>
+                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-slate-400">group</span> {t('orgProfile.members').replace('{count}', String(organization.membersCount))}</span>
                               <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded text-xs uppercase tracking-wide text-slate-500 border border-slate-200">{organization.category}</span>
                            </div>
                         </div>
@@ -97,7 +98,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                                  onClick={() => navigate(View.ORG_SETTINGS, { orgId: organization.id, editMode: true })}
                                  className="px-5 py-2.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center gap-2"
                               >
-                                 <span className="material-symbols-outlined text-sm">settings</span> Gestionar Página
+                                 <span className="material-symbols-outlined text-sm">settings</span> {t('orgProfile.managePage')}
                               </button>
                            ) : (
                               <button
@@ -108,9 +109,9 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                                     }`}
                               >
                                  {isFollowing ? (
-                                    <><span className="material-symbols-outlined filled">check</span> Siguiendo</>
+                                    <><span className="material-symbols-outlined filled">check</span> {t('orgProfile.following')}</>
                                  ) : (
-                                    <><span className="material-symbols-outlined">add</span> Seguir</>
+                                    <><span className="material-symbols-outlined">add</span> {t('orgProfile.follow')}</>
                                  )}
                               </button>
                            )}
@@ -125,10 +126,10 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                               {isMenuOpen && (
                                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-30 overflow-hidden animate-[fade-in_0.2s_ease-out]">
                                     <button className="w-full text-left px-4 py-3 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center gap-2">
-                                       <span className="material-symbols-outlined text-sm">share</span> Compartir
+                                       <span className="material-symbols-outlined text-sm">share</span> {t('orgProfile.share')}
                                     </button>
                                     <button className="w-full text-left px-4 py-3 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center gap-2">
-                                       <span className="material-symbols-outlined text-sm">flag</span> Reportar
+                                       <span className="material-symbols-outlined text-sm">flag</span> {t('orgProfile.report')}
                                     </button>
                                  </div>
                               )}
@@ -141,9 +142,9 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                {/* Navigation Tabs */}
                <div className="flex gap-8 mt-4 border-t border-slate-100 pt-1 overflow-x-auto no-scrollbar">
                   {[
-                     { id: 'overview', label: 'Impacto' },
-                     { id: 'projects', label: `Proyectos (${orgProjects.length})` },
-                     { id: 'team', label: 'Equipo' },
+                     { id: 'overview', label: t('orgProfile.tabs.impact') },
+                     { id: 'projects', label: t('orgProfile.tabs.projects').replace('{count}', String(orgProjects.length)) },
+                     { id: 'team', label: t('orgProfile.tabs.team') },
                   ].map(tab => (
                      <button
                         key={tab.id}
@@ -173,27 +174,27 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                               <span className="material-symbols-outlined text-2xl">forest</span>
                            </div>
                            <h4 className="text-3xl font-black text-slate-900">{organization.stats.trees}</h4>
-                           <p className="text-xs font-bold text-green-700 uppercase tracking-wide mt-1">Ecosistema</p>
+                           <p className="text-xs font-bold text-green-700 uppercase tracking-wide mt-1">{t('orgProfile.stats.ecosystem')}</p>
                         </div>
                         <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 text-center">
                            <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-3">
                               <span className="material-symbols-outlined text-2xl">groups</span>
                            </div>
                            <h4 className="text-3xl font-black text-slate-900">{organization.stats.lives}</h4>
-                           <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mt-1">Personas</p>
+                           <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mt-1">{t('orgProfile.stats.people')}</p>
                         </div>
                         <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 text-center">
                            <div className="w-12 h-12 mx-auto bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-3">
                               <span className="material-symbols-outlined text-2xl">co2</span>
                            </div>
                            <h4 className="text-3xl font-black text-slate-900">{organization.stats.carbon}</h4>
-                           <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mt-1">Carbono</p>
+                           <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mt-1">{t('orgProfile.stats.carbon')}</p>
                         </div>
                      </div>
 
                      <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
                         <div className="flex justify-between items-center mb-6">
-                           <h3 className="text-lg font-bold text-slate-900">Enfoque ODS</h3>
+                           <h3 className="text-lg font-bold text-slate-900">{t('orgProfile.sections.focus')}</h3>
                         </div>
                         <div className="flex gap-4 overflow-x-auto pb-2">
                            {[...(organization.focusSdgs || [])].sort((a, b) => a - b).map(sdgId => {
@@ -206,7 +207,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                                        <span className="material-symbols-outlined text-4xl">{sdg.icon}</span>
                                     </div>
                                     <span className="text-xs font-bold text-slate-500 text-center leading-tight">
-                                       {sdg.short}
+                                       {t(`sdgs.${sdg.id}.short`) || sdg.short}
                                     </span>
                                  </div>
                               );
@@ -218,27 +219,27 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                   {/* Right Column */}
                   <div className="space-y-6">
                      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h3 className="font-bold text-slate-900 mb-4">Transparencia</h3>
+                        <h3 className="font-bold text-slate-900 mb-4">{t('orgProfile.sections.transparency')}</h3>
                         {organization.verified ? (
                            <div className="space-y-3">
                               <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
                                  <span className="material-symbols-outlined text-green-600">verified_user</span>
                                  <div>
-                                    <p className="font-bold text-sm text-green-800">Entidad Verificada</p>
-                                    <p className="text-xs text-green-600">Documentación legal revisada.</p>
+                                    <p className="font-bold text-sm text-green-800">{t('orgProfile.sections.verifiedEntity')}</p>
+                                    <p className="text-xs text-green-600">{t('orgProfile.sections.verifiedDesc')}</p>
                                  </div>
                               </div>
                               <button className="w-full py-2 bg-white border border-slate-200 text-slate-600 font-bold rounded-lg text-sm hover:bg-slate-50">
-                                 Ver Reporte Anual
+                                 {t('orgProfile.sections.viewReport')}
                               </button>
                            </div>
                         ) : (
                            <div className="bg-slate-50 p-4 rounded-xl text-center">
-                              <p className="text-sm text-slate-500 mb-2">Esta organización aún no ha verificado su perfil.</p>
+                              <p className="text-sm text-slate-500 mb-2">{t('orgProfile.sections.noVerification')}</p>
                               {isAdmin ? (
-                                 <button onClick={() => navigate(View.ORG_SETTINGS, { orgId: organization.id, editMode: true })} className="text-primary text-xs font-bold hover:underline">Verificar ahora</button>
+                                 <button onClick={() => navigate(View.ORG_SETTINGS, { orgId: organization.id, editMode: true })} className="text-primary text-xs font-bold hover:underline">{t('orgProfile.sections.verifyNow')}</button>
                               ) : (
-                                 <span className="text-xs text-slate-400">Solo administradores pueden verificar.</span>
+                                 <span className="text-xs text-slate-400">{t('orgProfile.sections.onlyAdmins')}</span>
                               )}
                            </div>
                         )}
@@ -253,11 +254,11 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                   {isAdmin && (
                      <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between">
                         <div>
-                           <h4 className="font-bold text-primary text-sm">Gestionar Proyectos</h4>
-                           <p className="text-xs text-slate-500">Como administrador, puedes vincular proyectos existentes o crear nuevos.</p>
+                           <h4 className="font-bold text-primary text-sm">{t('orgProfile.projects.manage')}</h4>
+                           <p className="text-xs text-slate-500">{t('orgProfile.projects.manageDesc')}</p>
                         </div>
                         <button onClick={() => navigate(View.CREATE_PROJECT)} className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary-dark">
-                           + Nuevo Proyecto
+                           {t('orgProfile.projects.newProject')}
                         </button>
                      </div>
                   )}
@@ -272,10 +273,10 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                                     <img src={project.image} alt="Project" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-slate-900 shadow-sm flex items-center gap-1">
                                        <span className="material-symbols-outlined text-xs" style={{ color: sdg?.color }}>{sdg?.icon}</span>
-                                       ODS {sdg?.id}
+                                       {t('feed.sdgAbbr')} {sdg?.id}
                                     </div>
                                     <div className="absolute bottom-3 right-3 bg-green-500 text-white px-2 py-1 rounded text-xs font-bold shadow-sm flex items-center gap-1">
-                                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> {project.status}
+                                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> {project.status === 'Activo' ? t('projectDetails.statusActive') : project.status === 'Concluido' ? t('projectDetails.statusConcluded') : project.status}
                                     </div>
                                  </div>
                                  <div className="p-5">
@@ -285,7 +286,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                                        <div className="bg-primary h-full rounded-full" style={{ width: `${project.progress}%` }}></div>
                                     </div>
                                     <div className="flex justify-between text-xs font-medium text-slate-500">
-                                       <span>Progreso</span>
+                                       <span>{t('orgProfile.projects.progress')}</span>
                                        <span className="text-slate-900 font-bold">{project.progress}%</span>
                                     </div>
                                  </div>
@@ -295,7 +296,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
                      </div>
                   ) : (
                      <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-dashed border-slate-200">
-                        <p>No hay proyectos activos en este momento.</p>
+                        <p>{t('orgProfile.projects.noProjects')}</p>
                      </div>
                   )}
                </div>
@@ -321,7 +322,7 @@ export const OrgProfile: React.FC<NavProps> = ({ navigate, params }) => {
 
                      {orgMembers.length === 0 && (
                         <div className="col-span-full text-center py-12 text-slate-500">
-                           <p>Esta organización aún no ha listado a sus miembros públicos.</p>
+                           <p>{t('orgProfile.team.noMembers')}</p>
                         </div>
                      )}
                   </div>

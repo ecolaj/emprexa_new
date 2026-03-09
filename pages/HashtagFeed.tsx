@@ -8,10 +8,12 @@ import { usePostInteractions } from '../hooks/usePostInteractions';
 import { useAuth } from '../context/AuthContext';
 import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { renderContent } from '../utils/renderers';
-import { supabase } from '../utils/supabase'; // Keep renderContent if needed for other things, but PostCard handles post content.
+import { supabase } from '../utils/supabase';
+import { useLanguage } from '../context/LanguageContext';
 
 export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, sendMentionNotifications } = useAuth();
+  const { t } = useLanguage();
   const currentUser = authUser || DEFAULT_USER;
 
   const tag = params?.tag || '#Impact';
@@ -49,7 +51,7 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
 
   const toggleFollow = async () => {
     if (!currentUser?.id) {
-      alert("Inicia sesión para seguir hashtags");
+      alert(t('hashtag.loginToFollow'));
       return;
     }
 
@@ -85,7 +87,7 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
       console.error("Error toggling follow:", err);
       // Revert on error
       setIsFollowing(oldState);
-      alert("Error al actualizar el seguimiento. Asegúrate de ejecutar el script de base de datos 'setup_hashtag_follows.sql'.");
+      alert(t('hashtag.errorUpdating'));
     } finally {
       setFollowLoading(false);
     }
@@ -155,7 +157,7 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
             return {
               ...p,
               user: userData,
-              time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Reciente',
+              time: p.created_at ? new Date(p.created_at).toLocaleDateString() : t('time.recent_time'),
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,
               comments: p.comments_count || 0,
@@ -197,20 +199,20 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
             {tag}
           </h1>
           <p className="text-slate-300 text-lg md:text-xl max-w-2xl font-medium">
-            Explorando conversaciones y proyectos sobre este tema.
+            {t('hashtag.exploring')}
           </p>
 
           <div className="flex gap-8 mt-8 text-white/80">
             <div className="flex flex-col">
               <span className="text-2xl font-bold text-white">{relevantPosts.length}</span>
-              <span className="text-xs uppercase tracking-wider font-bold">Publicaciones</span>
+              <span className="text-xs uppercase tracking-wider font-bold">{t('hashtag.postsCount')}</span>
             </div>
             <div className="w-px bg-white/20"></div>
             <div className="flex flex-col">
               <span className="text-2xl font-bold text-white">
                 {new Set(relevantPosts.map(p => p.user?.id || p.user_id)).size}
               </span>
-              <span className="text-xs uppercase tracking-wider font-bold">Personas</span>
+              <span className="text-xs uppercase tracking-wider font-bold">{t('hashtag.peopleCount')}</span>
             </div>
           </div>
 
@@ -229,17 +231,17 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
                 {isFollowing ? 'notifications_active' : 'notifications'}
               </span>
             )}
-            {isFollowing ? 'Siguiendo' : 'Seguir Hashtag'}
+            {isFollowing ? t('hashtag.following') : t('hashtag.follow')}
           </button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-bold text-slate-700">Resultados para <span className="text-primary">{tag}</span></h2>
+          <h2 className="font-bold text-slate-700">{t('hashtag.resultsFor')} <span className="text-primary">{tag}</span></h2>
           <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-            <button className="px-3 py-1 bg-slate-100 text-slate-800 rounded text-xs font-bold">Top</button>
-            <button className="px-3 py-1 text-slate-500 hover:bg-slate-50 rounded text-xs font-bold">Recientes</button>
+            <button className="px-3 py-1 bg-slate-100 text-slate-800 rounded text-xs font-bold">{t('hashtag.top')}</button>
+            <button className="px-3 py-1 text-slate-500 hover:bg-slate-50 rounded text-xs font-bold">{t('hashtag.recent')}</button>
           </div>
         </div>
 
@@ -285,8 +287,8 @@ export const HashtagFeed: React.FC<NavProps> = ({ navigate, params }) => {
             <div className="size-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
               <span className="material-symbols-outlined text-4xl">tag</span>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">No hay resultados</h3>
-            <p className="text-slate-500">Sé el primero en usar este hashtag.</p>
+            <h3 className="text-xl font-bold text-slate-900">{t('hashtag.noResults')}</h3>
+            <p className="text-slate-500">{t('hashtag.beFirst')}</p>
           </div>
         )}
       </div>

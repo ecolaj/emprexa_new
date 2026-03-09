@@ -1,6 +1,7 @@
 import React from 'react';
 import { getSdgInfo } from '../utils/sdgUtils';
 import { View } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SdgBadgeProps {
     sdgId: number;
@@ -8,6 +9,7 @@ interface SdgBadgeProps {
 }
 
 export const SdgBadge: React.FC<SdgBadgeProps> = ({ sdgId, navigate }) => {
+    const { t } = useLanguage();
     const sdg = getSdgInfo(sdgId);
     if (!sdg) return null;
 
@@ -36,7 +38,7 @@ export const SdgBadge: React.FC<SdgBadgeProps> = ({ sdgId, navigate }) => {
             onClick={handleClick}
             onTouchStart={handleTouch}
         >
-            <span className="material-symbols-outlined text-[14px]">{sdg.icon}</span> ODS {sdg.id}
+            <span className="material-symbols-outlined text-[14px]">{sdg.icon}</span> {t('feed.sdgAbbr')} {sdg.id}
         </button>
     );
 };

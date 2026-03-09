@@ -7,9 +7,11 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
 import { compressImage } from '../utils/imageUtils';
 import { ProjectSuccessModal } from '../components/ProjectSuccessModal';
+import { useLanguage } from '../context/LanguageContext';
 
 export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, params }) => {
     const { user } = useAuth();
+    const { t } = useLanguage();
     const currentUser = user || DEFAULT_USER; // Fallback to neutral data if no auth
 
     const isEditing = currentView === View.EDIT_PROJECT;
@@ -23,9 +25,9 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     <div className="size-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-4xl text-purple-600">domain</span>
                     </div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-2">Exclusivo Enterprise</h2>
+                    <h2 className="text-2xl font-black text-slate-900 mb-2">{t('createProject.enterpriseTitle')}</h2>
                     <p className="text-slate-500 mb-8 leading-relaxed">
-                        La creación y gestión de proyectos de alto impacto requiere un plan <strong>Enterprise</strong>.
+                        {t('createProject.enterpriseDesc', { enterprise: <strong>Enterprise</strong> })}
                     </p>
 
                     <div className="space-y-3">
@@ -33,13 +35,13 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                             onClick={() => navigate(View.PRICING)}
                             className="w-full py-3.5 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-600/20 hover:bg-purple-700 transition-all flex items-center justify-center gap-2"
                         >
-                            <span className="material-symbols-outlined">upgrade</span> Actualizar a Enterprise
+                            <span className="material-symbols-outlined">upgrade</span> {t('createProject.upgradeBtn')}
                         </button>
                         <button
                             onClick={() => navigate(View.EXPLORE)}
                             className="w-full py-3 text-slate-500 font-bold hover:text-slate-700"
                         >
-                            Volver
+                            {t('createProject.returnBtn')}
                         </button>
                     </div>
                 </div>
@@ -126,13 +128,13 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
 
     const handlePublish = async () => {
         if (!formData.title || !formData.sdgId) {
-            alert("Por favor completa el nombre y el ODS principal.");
+            alert(t('createProject.validationError'));
             return;
         }
 
         // Validación de Auth: No permitir publicar con IDs de mock (números)
         if (typeof currentUser.id === 'number') {
-            alert("Sesión de invitado detectada. Por favor inicia sesión con una cuenta real para publicar proyectos.");
+            alert(t('createProject.guestError'));
             return;
         }
 
@@ -168,7 +170,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     console.log('✅ Imagen subida con éxito:', imageUrl);
                 } else {
                     console.error('❌ Error subiendo imagen:', uploadError);
-                    alert("Error al subir la imagen. Se usará la imagen anterior o una por defecto.");
+                    alert(t('createProject.uploadError'));
                     // Reset to original or fallback to avoid base64 payload crash
                     imageUrl = isEditing ? (originalImage || fallbackImage) : (currentUser.cover || fallbackImage);
                 }
@@ -231,9 +233,9 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
             console.error("Error publishing project:", err);
             // Si el error es Failed to fetch, sugerir que puede ser el tamaño de la imagen o conexión literal
             const helpfulMessage = err.message === 'Failed to fetch'
-                ? "Error de conexión (posiblemente imagen demasiado grande o sesión expirada). Intenta de nuevo."
+                ? t('createProject.connectionError')
                 : err.message;
-            alert("Error al publicar el proyecto: " + helpfulMessage);
+            alert(t('createProject.publishError', { error: helpfulMessage }));
         } finally {
             setLoading(false);
         }
@@ -302,9 +304,9 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                 <div className="px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={prevStep} className="text-slate-400 hover:text-slate-600 flex items-center gap-1 text-sm font-bold">
-                            <span className="material-symbols-outlined text-lg">arrow_back</span> Atrás
+                            <span className="material-symbols-outlined text-lg">arrow_back</span> {t('createProject.back')}
                         </button>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Paso {step} de {totalSteps}</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('createProject.step', { current: step, total: totalSteps })}</span>
                     </div>
                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${(step / totalSteps) * 100}%` }}></div>
@@ -318,16 +320,16 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     {step === 1 && (
                         <div className="animate-[fade-in_0.3s_ease-out]">
                             <h2 className="text-3xl font-black text-slate-900 mb-2">
-                                {isEditing ? 'Actualiza lo básico' : 'Comencemos con lo básico'}
+                                {isEditing ? t('createProject.step1Edit') : t('createProject.step1')}
                             </h2>
-                            <p className="text-slate-500 mb-8 text-lg">Define el nombre y la causa de tu iniciativa.</p>
+                            <p className="text-slate-500 mb-8 text-lg">{t('createProject.step1Desc')}</p>
 
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Proyecto</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('createProject.nameLabel')}</label>
                                     <input
                                         type="text"
-                                        placeholder="Ej. Reforestación Urbana Zona Norte"
+                                        placeholder={t('createProject.namePlaceholder')}
                                         className="w-full text-xl p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors"
                                         value={formData.title}
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -336,7 +338,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-3">ODS Principal</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-3">{t('createProject.sdgLabel')}</label>
                                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                                         {SDGS.map(sdg => (
                                             <button
@@ -347,10 +349,10 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                                     : 'opacity-60 hover:opacity-100 hover:scale-105'
                                                     }`}
                                                 style={{ backgroundColor: sdg.color }}
-                                                title={sdg.label}
+                                                title={t(`sdgs.${sdg.id}.label`) || sdg.label}
                                             >
                                                 <span className="material-symbols-outlined text-white text-2xl">{sdg.icon}</span>
-                                                <span className="text-[10px] text-white font-bold mt-1">{sdg.id}</span>
+                                                <span className="text-[10px] text-white font-bold mt-1">{t('feed.sdgAbbr')} {sdg.id}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -362,14 +364,14 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     {/* STEP 2: DETAILS */}
                     {step === 2 && (
                         <div className="animate-[fade-in_0.3s_ease-out]">
-                            <h2 className="text-3xl font-black text-slate-900 mb-2">Detalles del Impacto</h2>
-                            <p className="text-slate-500 mb-8 text-lg">Describe qué quieres lograr y dónde.</p>
+                            <h2 className="text-3xl font-black text-slate-900 mb-2">{t('createProject.step2')}</h2>
+                            <p className="text-slate-500 mb-8 text-lg">{t('createProject.step2Desc')}</p>
 
                             <div className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Descripción Corta</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('createProject.descLabel')}</label>
                                     <textarea
-                                        placeholder="Describe el objetivo, el problema que resuelves y cómo lo harás..."
+                                        placeholder={t('createProject.descPlaceholder')}
                                         className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors leading-relaxed"
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -377,12 +379,12 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Ubicación</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('createProject.locationLabel')}</label>
                                     <div className="relative">
                                         <span className="material-symbols-outlined absolute left-4 top-3.5 text-slate-400">location_on</span>
                                         <input
                                             type="text"
-                                            placeholder="Ciudad, País o 'Remoto'"
+                                            placeholder={t('createProject.locationPlaceholder')}
                                             className="w-full p-3 pl-12 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors"
                                             value={formData.location}
                                             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -391,7 +393,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Portada del Proyecto</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('createProject.coverLabel')}</label>
                                     <input
                                         type="file"
                                         id="project-image"
@@ -421,14 +423,14 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                                 />
                                                 <div className={`relative z-10 flex flex-col items-center bg-white/40 backdrop-blur-md p-4 rounded-2xl border border-white/30 shadow-xl transition-all ${isDragging ? 'scale-90 opacity-0' : 'scale-100 opacity-100'}`}>
                                                     <span className="material-symbols-outlined text-4xl mb-1 text-slate-900">drag_pan</span>
-                                                    <span className="font-bold text-sm text-slate-900">Arrastra para mover</span>
-                                                    <div className="mt-2 text-[10px] uppercase tracking-widest font-black text-slate-700 bg-white/50 px-2 py-0.5 rounded">O haz clic para cambiar</div>
+                                                    <span className="font-bold text-sm text-slate-900">{t('createProject.dragToMove')}</span>
+                                                    <div className="mt-2 text-[10px] uppercase tracking-widest font-black text-slate-700 bg-white/50 px-2 py-0.5 rounded">{t('createProject.clickToChange')}</div>
                                                 </div>
                                             </>
                                         ) : (
                                             <>
                                                 <span className="material-symbols-outlined text-4xl mb-2">add_photo_alternate</span>
-                                                <span className="font-bold text-sm">Subir Imagen de Portada</span>
+                                                <span className="font-bold text-sm">{t('createProject.uploadLabel')}</span>
                                             </>
                                         )}
                                     </label>
@@ -436,7 +438,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                     {imagePreview && (
                                         <div className="mt-3 text-center">
                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                                                Interacción táctil y ratón habilitada para el encuadre
+                                                {t('createProject.touchTip')}
                                             </p>
                                         </div>
                                     )}
@@ -448,26 +450,35 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                     {/* STEP 3: NEEDS & REVIEW */}
                     {step === 3 && (
                         <div className="animate-[fade-in_0.3s_ease-out]">
-                            <h2 className="text-3xl font-black text-slate-900 mb-2">¿Qué necesitas?</h2>
-                            <p className="text-slate-500 mb-8 text-lg">Selecciona las etiquetas para atraer a los colaboradores correctos.</p>
+                            <h2 className="text-3xl font-black text-slate-900 mb-2">{t('createProject.step3')}</h2>
+                            <p className="text-slate-500 mb-8 text-lg">{t('createProject.step3Desc')}</p>
 
                             <div className="space-y-4">
                                 <div className="flex flex-wrap gap-3">
-                                    {['Voluntarios', 'Financiación', 'Socios', 'Mentoría', 'Materiales', 'Difusión', 'Desarrolladores', 'Diseñadores'].map(tag => (
+                                    {[
+                                        { key: 'volunteers', label: t('needs.volunteers') },
+                                        { key: 'funding', label: t('needs.funding') },
+                                        { key: 'partners', label: t('needs.partners') },
+                                        { key: 'mentorship', label: t('needs.mentorship') },
+                                        { key: 'materials', label: t('needs.materials') },
+                                        { key: 'diffusion', label: t('needs.diffusion') },
+                                        { key: 'developers', label: t('needs.developers') },
+                                        { key: 'designers', label: t('needs.designers') }
+                                    ].map(need => (
                                         <button
-                                            key={tag}
-                                            onClick={() => toggleTag(tag)}
-                                            className={`px-4 py-2 rounded-full border font-bold text-sm transition-all ${formData.lookingFor.includes(tag)
+                                            key={need.key}
+                                            onClick={() => toggleTag(need.label)}
+                                            className={`px-4 py-2 rounded-full border font-bold text-sm transition-all ${formData.lookingFor.includes(need.label)
                                                 ? 'bg-primary border-primary text-white shadow-md'
                                                 : 'border-slate-200 text-slate-600 hover:border-primary hover:text-primary bg-white'
                                                 }`}
                                         >
-                                            {formData.lookingFor.includes(tag) ? '✓ ' : '+ '} {tag}
+                                            {formData.lookingFor.includes(need.label) ? '✓ ' : '+ '} {need.label}
                                         </button>
                                     ))}
 
                                     {/* Render custom tags that are not in the default list */}
-                                    {formData.lookingFor.filter(t => !['Voluntarios', 'Financiación', 'Socios', 'Mentoría', 'Materiales', 'Difusión', 'Desarrolladores', 'Diseñadores'].includes(t)).map(tag => (
+                                    {formData.lookingFor.filter(t_tag => ![t('needs.volunteers'), t('needs.funding'), t('needs.partners'), t('needs.mentorship'), t('needs.materials'), t('needs.diffusion'), t('needs.developers'), t('needs.designers')].includes(t_tag)).map(tag => (
                                         <button
                                             key={tag}
                                             onClick={() => toggleTag(tag)}
@@ -479,11 +490,11 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                 </div>
 
                                 <div className="mt-6">
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">¿Necesitas algo más? (Otros)</label>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('createProject.customNeedLabel')}</label>
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
-                                            placeholder="Ej. Espacio de oficina, Equipamiento..."
+                                            placeholder={t('createProject.customNeedPlaceholder')}
                                             className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary outline-none transition-colors"
                                             value={formData.customTag}
                                             onChange={(e) => setFormData({ ...formData, customTag: (e.target as HTMLInputElement).value })}
@@ -493,16 +504,16 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                                             onClick={handleAddCustomTag}
                                             className="px-6 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
                                         >
-                                            Agregar
+                                            {t('createProject.add')}
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 mb-6">
-                                <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="material-symbols-outlined">info</span> Resumen</h4>
-                                <p className="text-sm text-blue-800/80 mb-1"><span className="font-bold">Nombre:</span> {formData.title || 'Sin nombre'}</p>
-                                <p className="text-sm text-blue-800/80"><span className="font-bold">ODS:</span> {formData.sdgId ? `ODS ${formData.sdgId}` : 'No seleccionado'}</p>
+                                <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="material-symbols-outlined">info</span> {t('createProject.summary')}</h4>
+                                <p className="text-sm text-blue-800/80 mb-1"><span className="font-bold">{t('createProject.name')}:</span> {formData.title || t('needs.noName')}</p>
+                                <p className="text-sm text-blue-800/80"><span className="font-bold">{t('createProject.sdg')}:</span> {formData.sdgId ? `${t('feed.sdgAbbr')} ${formData.sdgId}` : t('needs.notSelected')}</p>
                             </div>
                         </div>
                     )}
@@ -515,7 +526,7 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                             onClick={nextStep}
                             className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-lg shadow-slate-900/20"
                         >
-                            Continuar <span className="material-symbols-outlined">arrow_forward</span>
+                            {t('createProject.next')} <span className="material-symbols-outlined">arrow_forward</span>
                         </button>
                     ) : (
                         <button
@@ -524,9 +535,9 @@ export const CreateProject: React.FC<NavProps> = ({ navigate, currentView, param
                             className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary-dark transition-colors flex items-center gap-2 shadow-lg shadow-primary/30 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {loading ? (
-                                <><span className="material-symbols-outlined animate-spin">progress_activity</span> {isEditing ? 'Guardando...' : 'Publicando...'}</>
+                                <><span className="material-symbols-outlined animate-spin">progress_activity</span> {isEditing ? t('createProject.saving') : t('createProject.publishing')}</>
                             ) : (
-                                <><span className="material-symbols-outlined">{isEditing ? 'save' : 'rocket_launch'}</span> {isEditing ? 'Guardar Cambios' : 'Lanzar Proyecto'}</>
+                                <><span className="material-symbols-outlined">{isEditing ? 'save' : 'rocket_launch'}</span> {isEditing ? t('createProject.save') : t('createProject.publish')}</>
                             )}
                         </button>
                     )}

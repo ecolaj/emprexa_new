@@ -1,41 +1,42 @@
 import React from 'react';
-import { User, Post, View } from '../types';
+import { User, Post, View, ID } from '../types';
 import { renderBadge, renderContent } from '../utils/renderers';
 import { SdgBadge } from './SdgBadge';
 import { CommentSection } from './CommentSection';
+import { useLanguage } from '../context/LanguageContext';
 
 interface PostCardProps {
     post: Post;
     currentUser: User;
     onNavigate: (view: View, params?: any) => void;
-    onToggleLike: (postId: number) => void;
-    onShare: (postId: number) => void;
-    onToggleSavedPost: (postId: number) => void;
+    onToggleLike: (postId: ID) => void;
+    onShare: (postId: ID) => void;
+    onToggleSavedPost: (postId: ID) => void;
     isSaved: boolean;
-    activeCommentSectionId: number | null;
-    onToggleCommentSection: (postId: number) => void;
+    activeCommentSectionId: ID | null;
+    onToggleCommentSection: (postId: ID) => void;
     onOpenLightbox: (images: string[], index: number) => void;
 
     // Comment props (proxied to CommentSection)
-    onToggleCommentLike: (postId: number, commentId: string) => void;
-    onAddCommentReply: (postId: number, commentId: string, text: string) => void;
-    onDeleteComment: (postId: number, commentId: string) => void;
-    onStartEditComment: (postId: number, comment: any) => void;
-    onSaveEditComment: (postId: number, commentId: string, text: string) => void;
-    onAddComment: (postId: number, text: string) => void;
+    onToggleCommentLike: (postId: ID, commentId: string) => void;
+    onAddCommentReply: (postId: ID, commentId: string, text: string) => void;
+    onDeleteComment: (postId: ID, commentId: string) => void;
+    onStartEditComment: (postId: ID, comment: any) => void;
+    onSaveEditComment: (postId: ID, commentId: string, text: string) => void;
+    onAddComment: (postId: ID, text: string) => void;
     activeReplyToId: string | null;
     setActiveReplyToId: (id: string | null) => void;
-    editingComment: { postId: number; commentId: string; text: string } | null;
+    editingComment: { postId: ID; commentId: string; text: string } | null;
     setEditingComment: (val: any) => void;
     activeMenuCommentId: string | null;
     setActiveMenuCommentId: (id: string | null) => void;
 
     // Post owner actions
     isOwner: boolean;
-    activeMenuPostId: number | null;
-    setActiveMenuPostId: (id: number | null) => void;
+    activeMenuPostId: ID | null;
+    setActiveMenuPostId: (id: ID | null) => void;
     onStartEditPost: (post: Post) => void;
-    onDeletePost: (postId: number) => void;
+    onDeletePost: (postId: ID) => void;
     onLockedAction?: (reason: 'comment' | 'post' | 'dashboard') => void;
 }
 
@@ -69,6 +70,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     onDeletePost,
     onLockedAction
 }) => {
+    const { t } = useLanguage();
     const isCommentsOpen = activeCommentSectionId === post.id;
     const postUser = post.user.id === currentUser.id ? currentUser : post.user;
 
@@ -84,7 +86,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-sm text-slate-900 cursor-pointer hover:text-primary hover:underline" onClick={() => onNavigate(View.PROFILE, { userId: postUser.id })}>{postUser.name}</h3>
-                            {renderBadge(postUser.plan || 'free')}
+                            {renderBadge(postUser.plan || 'free', t)}
                         </div>
                         <p className="text-xs text-slate-400">{post.time} • {post.location}</p>
                     </div>
@@ -106,10 +108,10 @@ export const PostCard: React.FC<PostCardProps> = ({
                             {activeMenuPostId === post.id && (
                                 <div className="absolute right-0 top-8 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-20 overflow-hidden animate-[fade-in_0.1s_ease-out]">
                                     <button onClick={() => onStartEditPost(post)} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-sm font-medium text-slate-700 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-lg">edit</span> Editar
+                                        <span className="material-symbols-outlined text-lg">edit</span> {t('feed.edit')}
                                     </button>
                                     <button onClick={() => onDeletePost(post.id)} className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-sm font-medium text-red-600 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-lg">delete</span> Eliminar
+                                        <span className="material-symbols-outlined text-lg">delete</span> {t('feed.delete')}
                                     </button>
                                 </div>
                             )}
@@ -188,13 +190,13 @@ export const PostCard: React.FC<PostCardProps> = ({
                         onClick={() => onShare(post.id)}
                         className="flex items-center gap-2 hover:text-primary text-sm transition-colors"
                     >
-                        <span className="material-symbols-outlined text-[20px]">share</span> Compartir
+                        <span className="material-symbols-outlined text-[20px]">share</span> {t('feed.share')}
                     </button>
                 </div>
                 <button
                     onClick={() => onToggleSavedPost(post.id)}
                     className={`text-slate-400 hover:text-indigo-600 transition-colors ${isSaved ? 'text-indigo-600' : ''}`}
-                    title={isSaved ? "Quitar marcador" : "Guardar para leer después"}
+                    title={isSaved ? t('feed.removeBookmark') : t('feed.saveBookmark')}
                 >
                     <span className={`material-symbols-outlined ${isSaved ? 'filled' : ''}`}>bookmark</span>
                 </button>

@@ -5,6 +5,7 @@ import { MentionDropdown } from './MentionDropdown';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabase';
 import { compressImage } from '../utils/imageUtils';
+import { useLanguage } from '../context/LanguageContext';
 
 interface PostFormModalProps {
     show: boolean;
@@ -42,6 +43,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     onRemoveImage
 }) => {
     const { user: authUser, followedUserIds } = useAuth();
+    const { t } = useLanguage();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -198,7 +200,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
             }
         } catch (err) {
             console.error("Error crítico en selección de imágenes:", err);
-            alert("Hubo un problema al subir las imágenes. Por favor, verifica tu conexión.");
+            alert(t('feed.imageUploadError'));
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -211,7 +213,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[600px] flex flex-col overflow-hidden animate-[fade-in_0.2s_ease-out]">
                 <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100 bg-white">
-                    <h2 className="text-base font-bold text-slate-800">{isEditing ? 'Editar Publicación' : 'Crear Publicación'}</h2>
+                    <h2 className="text-base font-bold text-slate-800">{isEditing ? t('feed.editPost') : t('feed.createPost')}</h2>
                     <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
                         <span className="material-symbols-outlined text-[20px]">close</span>
                     </button>
@@ -220,7 +222,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 <div className="p-5 space-y-3 overflow-y-auto max-h-[75vh] overflow-x-hidden">
                     <input
                         type="text"
-                        placeholder="Escribe un título atractivo..."
+                        placeholder={t('feed.titlePlaceholder')}
                         className="w-full text-lg font-bold placeholder-slate-400 outline-none bg-transparent"
                         value={formTitle}
                         onChange={(e) => setFormTitle(e.target.value)}
@@ -228,7 +230,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     />
                     <textarea
                         ref={textareaRef}
-                        placeholder="¿Qué logro, desafío o historia de impacto quieres compartir hoy?"
+                        placeholder={t('feed.contentPlaceholder')}
                         className="w-full h-20 resize-none outline-none text-sm text-slate-600 placeholder-slate-400 bg-transparent leading-relaxed"
                         value={formContent}
                         onChange={(e) => handleContentChange(e.target.value)}
@@ -241,7 +243,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                         </div>
                         <input
                             type="text"
-                            placeholder="Enlace de YouTube (Opcional)"
+                            placeholder={t('feed.youtubePlaceholder')}
                             className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                             value={formYoutubeUrl}
                             onChange={(e) => setFormYoutubeUrl(e.target.value)}
@@ -251,7 +253,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
                     {isUploading && (
                         <div className="flex items-center gap-2 text-xs font-bold text-primary animate-pulse">
-                            <span className="material-symbols-outlined spin">sync</span> Cargando imágenes...
+                            <span className="material-symbols-outlined spin">sync</span> {t('feed.loadingImages')}
                         </div>
                     )}
 
@@ -294,13 +296,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                         className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 cursor-pointer transition-colors group"
                     >
                         <span className="material-symbols-outlined text-2xl mb-1 group-hover:text-primary transition-colors">add_photo_alternate</span>
-                        <span className="text-xs font-bold group-hover:text-primary transition-colors">Añadir Media</span>
+                        <span className="text-xs font-bold group-hover:text-primary transition-colors">{t('feed.addMedia')}</span>
                     </div>
 
                     <div>
                         <div className="flex justify-between items-center mb-2">
-                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">Seleccionar ODS</label>
-                            <span className={`text-xs font-bold ${formSdgs.length > 0 ? 'text-primary' : 'text-slate-400'}`}>{formSdgs.length} seleccionados</span>
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide">{t('feed.selectSdg')}</label>
+                            <span className={`text-xs font-bold ${formSdgs.length > 0 ? 'text-primary' : 'text-slate-400'}`}>{formSdgs.length} {t('feed.selected')}</span>
                         </div>
                         <div className="grid grid-cols-6 sm:grid-cols-9 gap-2 justify-items-center">
                             {SDGS.map(sdg => (
@@ -316,7 +318,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                                         className="absolute -top-9 left-1/2 -translate-x-1/2 text-white text-[10px] py-1 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-all duration-200 shadow-xl font-bold tracking-wide -translate-y-2 group-hover:translate-y-0"
                                         style={{ backgroundColor: sdg.color }}
                                     >
-                                        {sdg.short}
+                                        {t(`sdgs.${sdg.id}.short`) || sdg.short}
                                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45" style={{ backgroundColor: sdg.color }}></div>
                                     </div>
 
@@ -330,13 +332,13 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                 </div>
 
                 <div className="px-5 py-3 bg-slate-50 flex justify-end gap-3 border-t border-slate-100 shrink-0">
-                    <button onClick={onClose} className="px-4 py-2 text-slate-600 font-bold text-xs hover:bg-slate-200 rounded-lg transition-colors">Cancelar</button>
+                    <button onClick={onClose} className="px-4 py-2 text-slate-600 font-bold text-xs hover:bg-slate-200 rounded-lg transition-colors">{t('feed.cancel')}</button>
                     <button
                         onClick={onSubmit}
                         disabled={!formTitle.trim() && !formContent.trim()}
                         className={`px-6 py-2 text-white font-bold text-xs rounded-lg shadow-sm transition-colors ${(!formTitle.trim() && !formContent.trim()) ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'}`}
                     >
-                        {isEditing ? 'Guardar Cambios' : 'Publicar'}
+                        {isEditing ? t('feed.saveChanges') : t('feed.publish')}
                     </button>
                 </div>
             </div>

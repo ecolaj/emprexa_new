@@ -8,9 +8,11 @@ import { supabase } from '../utils/supabase';
 import { PostCard } from '../components/PostCard';
 import { ImageLightbox } from '../components/ImageLightbox';
 import { usePostInteractions } from '../hooks/usePostInteractions';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Saved: React.FC<NavProps> = ({ navigate }) => {
     const { savedPostIds, toggleSavedPost, user } = useAuth();
+    const { t } = useLanguage();
     const currentUser = user || DEFAULT_USER;
 
     const [savedPosts, setSavedPosts] = useState<Post[]>([]);
@@ -107,7 +109,7 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
                             return {
                                 ...p,
                                 user: userData,
-                                time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Hoy',
+                                time: p.created_at ? new Date(p.created_at).toLocaleDateString() : t('time.today'),
                                 sdgIds: p.sdg_ids || [],
                                 likes: p.likes_count || 0,
                                 isLiked: likedPostIds.has(p.id),
@@ -138,8 +140,8 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
                         <span className="material-symbols-outlined text-2xl filled">bookmark</span>
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-slate-900">Mis Marcadores</h1>
-                        <p className="text-slate-500 text-sm">Artículos que has guardado para leer después.</p>
+                        <h1 className="text-2xl font-black text-slate-900">{t('saved.title')}</h1>
+                        <p className="text-slate-500 text-sm">{t('saved.subtitle')}</p>
                     </div>
                 </div>
 
@@ -147,7 +149,7 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
                 {isLoading ? (
                     <div className="text-center py-20">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                        <p className="text-slate-500 mt-4">Cargando marcadores...</p>
+                        <p className="text-slate-500 mt-4">{t('saved.loading')}</p>
                     </div>
                 ) : savedPosts.length > 0 ? (
                     /* Posts using PostCard component (same as Feed) */
@@ -191,9 +193,9 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
                         <div className="size-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
                             <span className="material-symbols-outlined text-4xl">bookmark_add</span>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">No tienes marcadores aún</h3>
-                        <p className="text-slate-500 mb-6 max-w-sm mx-auto">Guarda publicaciones interesantes pulsando el icono de marcador para leerlas más tarde.</p>
-                        <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">Ir al Feed</button>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">{t('saved.noBookmarks')}</h3>
+                        <p className="text-slate-500 mb-6 max-w-sm mx-auto">{t('saved.emptyDesc')}</p>
+                        <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">{t('saved.goToFeed')}</button>
                     </div>
                 )}
             </div>

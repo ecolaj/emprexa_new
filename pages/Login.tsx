@@ -3,6 +3,7 @@ import { View, NavProps } from '../types';
 import { SDGS, POSTS, PROJECTS } from '../constants';
 import { Logo } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../utils/supabase';
 import { getAuthRedirectUrl, getPasswordResetUrl, getBaseUrl } from '../utils/environment';
 
@@ -26,6 +27,7 @@ interface BackgroundState {
 
 export const Login: React.FC<NavProps> = ({ navigate }) => {
   const { login, isLoading } = useAuth(); // Use Auth Context
+  const { t, language, setLanguage } = useLanguage();
   const [background, setBackground] = useState<BackgroundState | null>(null);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
@@ -196,7 +198,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
       console.error('Registration error:', err);
       setRegisterMessage({
         type: 'error',
-        text: err.message || 'Error al crear la cuenta. Intenta nuevamente.'
+        text: err.message || t('login.errorCreatingAccount')
       });
     } finally {
       setRegisterLoading(false);
@@ -236,17 +238,12 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
 
       // Manejo especial para rate limit en desarrollo
       if (err.message.includes('rate limit') && import.meta.env.DEV) {
-        setLoginError(`
-        ⚠️ Límite de emails alcanzado (modo desarrollo)
-        
-        Para continuar pruebas:
-        1. Ve directamente a: ${getBaseUrl()}/#reset-password
-        2. O espera 1 hora
-        
-        Email ingresado: ${forgotPasswordEmail}
-      `);
+        setLoginError(t('login.rateLimitInstructions', {
+          url: `${getBaseUrl()}/#reset-password`,
+          email: forgotPasswordEmail
+        }));
       } else {
-        setLoginError('Error al enviar el enlace: ' + err.message);
+        setLoginError(t('login.passwordResetError', { error: err.message }));
       }
     }
   };
@@ -289,8 +286,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
             <div className={`flex flex-col items-end transition-all duration-700 ${background?.loaded ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
               <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/20 px-5 py-3 rounded-2xl text-white shadow-lg transition-transform hover:scale-105 max-w-sm">
                 <div className="text-right">
-                  <span className="block text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Objetivo {activeSdgInfo.id}</span>
-                  <span className="block text-sm font-black leading-tight">{activeSdgInfo.label}</span>
+                  <span className="block text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">{t('feed.sdgAbbr')} {activeSdgInfo.id}</span>
+                  <span className="block text-sm font-black leading-tight">{t(`sdgs.${activeSdgInfo.id}.label`) || activeSdgInfo.label}</span>
                 </div>
                 <div className="w-px h-8 bg-white/20"></div>
                 <span className="material-symbols-outlined text-3xl">{activeSdgInfo.icon}</span>
@@ -303,18 +300,18 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
           <div className="max-w-xl mb-12 animate-[fade-in_0.8s_ease-out]">
             <div className="h-1 w-20 bg-primary mb-6 rounded-full shadow-[0_0_15px_rgba(53,158,255,0.6)]"></div>
             <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight tracking-tight mb-4 drop-shadow-lg">
-              Impulsando el cambio global, <br />
-              <span className="text-primary-300">una conexión a la vez.</span>
+              {t('login.drivingChange1')} <br />
+              <span className="text-primary-300">{t('login.drivingChange2')}</span>
             </h1>
             <p className="text-lg text-slate-200 font-medium leading-relaxed opacity-90 drop-shadow-md">
-              Únete a la red más grande de organizaciones dedicados a los Objetivos de Desarrollo Sostenible.
+              {t('login.joinNetwork')}
             </p>
           </div>
 
           <div className="flex justify-between items-end border-t border-white/10 pt-4 text-white/40 text-[10px] font-medium uppercase tracking-widest">
             <span>© Emprexa 2026</span>
             <span className="flex items-center gap-1">
-              Fotos via Unsplash
+              {t('login.photosVia')} Unsplash
             </span>
           </div>
         </div>
@@ -322,15 +319,32 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
 
       {/* Right Panel: Form */}
       <div className="flex w-full lg:w-5/12 flex-col justify-center items-center bg-white p-6 sm:p-12 relative z-30 shadow-2xl">
+
+        {/* Language Selector */}
+        <div className="absolute top-6 right-6 flex items-center bg-slate-100 rounded-lg p-1">
+          <button
+            onClick={() => setLanguage('es')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${language === 'es' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            ES
+          </button>
+          <button
+            onClick={() => setLanguage('en')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${language === 'en' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            EN
+          </button>
+        </div>
+
         <div className="w-full max-w-[400px] flex flex-col gap-8">
           <div className="flex flex-col gap-2">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Bienvenido de nuevo</h2>
-            <p className="text-slate-500 text-base">Ingresa tus datos para continuar impactando.</p>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900">{t('login.welcomeTitle')}</h2>
+            <p className="text-slate-500 text-base">{t('login.welcomeSubtitle')}</p>
           </div>
 
           <form className="flex flex-col gap-5" onSubmit={handleLoginSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Correo electrónico</label>
+              <label className="text-sm font-semibold text-slate-700">{t('login.emailLabel')}</label>
               <div className="relative">
                 <input
                   type="email"
@@ -343,8 +357,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-semibold text-slate-700">Contraseña</label>
-                <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-xs font-bold text-primary hover:underline">¿Olvidaste tu contraseña?</button>
+                <label className="text-sm font-semibold text-slate-700">{t('login.passwordLabel')}</label>
+                <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-xs font-bold text-primary hover:underline">{t('login.forgotPassword')}</button>
               </div>
               <div className="relative">
                 <input
@@ -375,7 +389,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
               ) : (
                 <>
-                  <span>Iniciar Sesión</span>
+                  <span>{t('login.submitButton')}</span>
                   <span className="material-symbols-outlined text-lg transition-transform group-hover:translate-x-1">arrow_forward</span>
                 </>
               )}
@@ -383,7 +397,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
           </form>
 
           <div className="text-center text-sm text-slate-500">
-            ¿No tienes cuenta? <button onClick={() => setIsRegisterOpen(true)} className="text-primary font-bold hover:underline">Regístrate gratis</button>
+            {t('login.noAccount')} <button onClick={() => setIsRegisterOpen(true)} className="text-primary font-bold hover:underline">{t('login.registerFree')}</button>
           </div>
 
           <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
@@ -392,14 +406,14 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
             >
               <span className="material-symbols-outlined text-primary">auto_awesome</span>
-              ¿Qué son los ODS?
+              {t('login.whatAreSdgs')}
             </button>
             <button
               onClick={() => setIsEmprexaModalOpen(true)}
               className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
             >
               <span className="material-symbols-outlined text-primary">info</span>
-              ¿Qué es Emprexa?
+              {t('login.whatIsEmprexa')}
             </button>
           </div>
         </div>
@@ -410,7 +424,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-[fade-in_0.2s_ease-out] flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-              <h3 className="font-bold text-slate-900 text-lg">Crear Cuenta Nueva</h3>
+              <h3 className="font-bold text-slate-900 text-lg">{t('login.registerTitle')}</h3>
               <button onClick={() => setIsRegisterOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -424,23 +438,23 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               )}
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
                 <div>
-                  <label className="text-sm font-bold text-slate-700 block mb-1">Nombre Completo</label>
+                  <label className="text-sm font-bold text-slate-700 block mb-1">{t('login.fullNameLabel')}</label>
                   <input
                     type="text"
                     required
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary"
-                    placeholder="Ej. Ana García"
+                    placeholder={t('login.fullNamePlaceholder')}
                     value={registerData.name}
                     onChange={e => setRegisterData({ ...registerData, name: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-700 block mb-1">Correo Electrónico</label>
+                  <label className="text-sm font-bold text-slate-700 block mb-1">{t('login.emailLabel')}</label>
                   <input
                     type="email"
                     required
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary"
-                    placeholder="ana@ejemplo.com"
+                    placeholder={t('login.emailPlaceholder')}
                     value={registerData.email}
                     onChange={e => setRegisterData({ ...registerData, email: e.target.value })}
                   />
@@ -448,8 +462,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div className="flex justify-between items-end mb-1">
-                      <label className="text-sm font-bold text-slate-700">Contraseña</label>
-                      <span className="text-[10px] text-slate-400 font-medium">Mínimo 6 caracteres</span>
+                      <label className="text-sm font-bold text-slate-700">{t('login.passwordLabel')}</label>
+                      <span className="text-[10px] text-slate-400 font-medium">{t('login.passwordMinChars')}</span>
                     </div>
                     <div className="relative">
                       <input
@@ -472,7 +486,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-bold text-slate-700 block mb-1">Confirmar</label>
+                    <label className="text-sm font-bold text-slate-700 block mb-1">{t('login.confirmPasswordLabel')}</label>
                     <div className="relative">
                       <input
                         type={showRegisterConfirmPassword ? "text" : "password"}
@@ -504,7 +518,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                     className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary"
                   />
                   <label htmlFor="terms" className="text-sm text-slate-600">
-                    He leído y acepto los <button type="button" onClick={() => setIsTermsOpen(true)} className="text-primary font-bold hover:underline">Términos y Condiciones</button>.
+                    {t('login.termsPrefix')} <button type="button" onClick={() => setIsTermsOpen(true)} className="text-primary font-bold hover:underline">{t('login.termsLink')}</button>.
                   </label>
                 </div>
 
@@ -519,10 +533,10 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                   {registerLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
-                      Creando cuenta...
+                      {t('login.creatingAccountButton')}
                     </span>
                   ) : (
-                    'Crear Cuenta'
+                    t('login.createAccountButton')
                   )}
                 </button>
               </form>
@@ -539,8 +553,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               <div className="size-16 bg-blue-50 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-3xl">lock_reset</span>
               </div>
-              <h3 className="font-bold text-slate-900 text-xl">Recuperar Contraseña</h3>
-              <p className="text-slate-500 text-sm mt-1">Ingresa tu correo y te enviaremos un enlace para restablecerla.</p>
+              <h3 className="font-bold text-slate-900 text-xl">{t('login.forgotTitle')}</h3>
+              <p className="text-slate-500 text-sm mt-1">{t('login.forgotSubtitle')}</p>
             </div>
             <div className="p-6">
               <form onSubmit={handleForgotSubmit} className="space-y-4">
@@ -549,18 +563,18 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                   required
                   value={forgotPasswordEmail}
                   onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                  placeholder="tucorreo@ejemplo.com"
+                  placeholder={t('login.forgotEmailPlaceholder')}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary text-center"
                 />
                 <button type="submit" className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all">
-                  Enviar Enlace de Recuperación
+                  {t('login.sendRecoveryLinkButton')}
                 </button>
               </form>
               <button
                 onClick={() => setIsForgotPasswordOpen(false)}
                 className="w-full mt-4 text-sm font-bold text-slate-400 hover:text-slate-600"
               >
-                Volver a Iniciar Sesión
+                {t('login.backToLoginButton')}
               </button>
             </div>
           </div>
@@ -572,173 +586,173 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
         <div className="fixed inset-0 z-[70] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col animate-[fade-in_0.2s_ease-out]">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-              <h3 className="font-bold text-slate-900 text-lg">Términos y Condiciones</h3>
+              <h3 className="font-bold text-slate-900 text-lg">{t('termsModal.modalTitle')}</h3>
               <button onClick={() => setIsTermsOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <div className="p-8 overflow-y-auto text-sm text-slate-600 leading-relaxed space-y-6 text-justify">
               <div className="space-y-6">
-                <h4 className="font-bold text-slate-900 text-lg text-center">TÉRMINOS Y CONDICIONES DE USO - EMPREXA.NET</h4>
+                <h4 className="font-bold text-slate-900 text-lg text-center">{t('termsModal.header')}</h4>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">1. ACEPTACIÓN DE LOS TÉRMINOS</strong>
-                  <p>Al acceder y utilizar la plataforma Emprexa.net ("la Plataforma"), propiedad de ("Emprexa", "nosotros", "nuestro"), usted ("Usuario", "usted") acepta quedar vinculado por estos Términos y Condiciones de Uso ("Términos"), nuestra Política de Privacidad y todas las leyes y regulaciones aplicables. Si no está de acuerdo con alguno de estos términos, tiene prohibido usar o acceder a esta Plataforma.</p>
-                  <p className="mt-2">La Plataforma es una red social diseñada para visibilizar y documentar la injerencia de organizaciones, empresas, gobiernos y ciudadanos en acciones relacionadas con los Objetivos de Desarrollo Sostenible (ODS) de las Naciones Unidas.</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s1Title')}</strong>
+                  <p>{t('termsModal.s1p1')}</p>
+                  <p className="mt-2">{t('termsModal.s1p2')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">2. DEFINICIONES</strong>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s2Title')}</strong>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li><strong>"Contenido":</strong> Cualquier información, texto, gráficos, fotos, videos, documentos u otros materiales cargados, publicados o transmitidos a través de la Plataforma.</li>
-                    <li><strong>"Contenido Generado por el Usuario":</strong> Cualquier Contenido creado, cargado, publicado o transmitido por los Usuarios.</li>
-                    <li><strong>"ODS":</strong> Objetivos de Desarrollo Sostenible establecidos por las Naciones Unidas.</li>
-                    <li><strong>"Cuenta":</strong> El registro único creado por un Usuario para acceder a las funcionalidades de la Plataforma.</li>
-                    <li><strong>"Organización":</strong> Entidad creada dentro de la Plataforma para agrupar acciones, proyectos o iniciativas relacionadas con los ODS.</li>
+                    <li><strong>{t('termsModal.s2i1_strong')}</strong>{t('termsModal.s2i1_desc')}</li>
+                    <li><strong>{t('termsModal.s2i2_strong')}</strong>{t('termsModal.s2i2_desc')}</li>
+                    <li><strong>{t('termsModal.s2i3_strong')}</strong>{t('termsModal.s2i3_desc')}</li>
+                    <li><strong>{t('termsModal.s2i4_strong')}</strong>{t('termsModal.s2i4_desc')}</li>
+                    <li><strong>{t('termsModal.s2i5_strong')}</strong>{t('termsModal.s2i5_desc')}</li>
                   </ul>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">3. ELEGIBILIDAD Y REGISTRO</strong>
-                  <p className="mb-2"><strong>3.1.</strong> La Plataforma está abierta a personas naturales y jurídicas comprometidas con el desarrollo sostenible.</p>
-                  <p className="mb-2"><strong>3.2.</strong> Al registrarse, el Usuario declara y garantiza:</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s3Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s3p1')}</strong>{t('termsModal.s3p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s3p2')}</strong>{t('termsModal.s3p2_desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
-                    <li>Que toda la información proporcionada es veraz, exacta y completa.</li>
-                    <li>Que mantendrá actualizada su información de registro.</li>
-                    <li>Que es responsable de mantener la confidencialidad de su contraseña.</li>
-                    <li>Que es responsable de todas las actividades que ocurran bajo su Cuenta.</li>
+                    <li>{t('termsModal.s3i1')}</li>
+                    <li>{t('termsModal.s3i2')}</li>
+                    <li>{t('termsModal.s3i3')}</li>
+                    <li>{t('termsModal.s3i4')}</li>
                   </ul>
-                  <p><strong>3.3.</strong> Emprexa se reserva el derecho de rechazar, suspender o cancelar cualquier registro a su entera discreción.</p>
+                  <p><strong>{t('termsModal.s3p3')}</strong>{t('termsModal.s3p3_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">4. CONDUCTA DEL USUARIO</strong>
-                  <p className="mb-2"><strong>4.1. Compromiso con los ODS:</strong> El Usuario se compromete a utilizar la Plataforma exclusivamente para fines relacionados con la promoción, documentación, difusión o discusión de acciones vinculadas a los Objetivos de Desarrollo Sostenible.</p>
-                  <p className="mb-2"><strong>4.2. Prohibiciones expresas:</strong> El Usuario NO podrá:</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s4Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s4p1_strong')}</strong>{t('termsModal.s4p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s4p2_strong')}</strong>{t('termsModal.s4p2_desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
-                    <li>Publicar contenido difamatorio, obsceno, pornográfico, amenazante, discriminatorio o que promueva la violencia.</li>
-                    <li>Suplantar la identidad de otra persona o entidad.</li>
-                    <li>Utilizar la Plataforma para fines comerciales no autorizados, spam o publicidad no relacionada con ODS.</li>
-                    <li>Violar derechos de propiedad intelectual de terceros.</li>
-                    <li>Interferir con la seguridad o funcionamiento técnico de la Plataforma.</li>
-                    <li>Recopilar datos de otros usuarios sin su consentimiento expreso.</li>
-                    <li>Publicar información falsa o engañosa sobre impactos o logros en ODS.</li>
+                    <li>{t('termsModal.s4i1')}</li>
+                    <li>{t('termsModal.s4i2')}</li>
+                    <li>{t('termsModal.s4i3')}</li>
+                    <li>{t('termsModal.s4i4')}</li>
+                    <li>{t('termsModal.s4i5')}</li>
+                    <li>{t('termsModal.s4i6')}</li>
+                    <li>{t('termsModal.s4i7')}</li>
                   </ul>
-                  <p><strong>4.3. Veracidad de la información:</strong> El Usuario es el único responsable de la veracidad, exactitud y legalidad del Contenido que publique. Emprexa no verifica ni garantiza la autenticidad de las afirmaciones sobre impactos en ODS.</p>
+                  <p><strong>{t('termsModal.s4p3_strong')}</strong>{t('termsModal.s4p3_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">5. PROPIEDAD INTELECTUAL Y LICENCIAS</strong>
-                  <p className="mb-2"><strong>5.1. Derechos del Usuario:</strong> El Usuario conserva todos los derechos de propiedad intelectual sobre su Contenido Generado por el Usuario.</p>
-                  <p className="mb-2"><strong>5.2. Licencia otorgada a Emprexa:</strong> Al publicar Contenido en la Plataforma, el Usuario otorga a Emprexa una licencia mundial, no exclusiva, libre de regalías, transferible y sublicenciable para:</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s5Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s5p1_strong')}</strong>{t('termsModal.s5p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s5p2_strong')}</strong>{t('termsModal.s5p2_desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
-                    <li>Alojar, almacenar, reproducir, modificar, crear obras derivadas, comunicar, publicar, ejecutar y mostrar dicho Contenido en conexión con la operación y promoción de la Plataforma.</li>
-                    <li>Utilizar el Contenido (incluyendo fotografías y casos de éxito) con fines promocionales, educativos o de divulgación relacionados con los ODS, incluyendo pero no limitado a presentaciones, informes, materiales de marketing y redes sociales de Emprexa.</li>
-                    <li>Esta licencia continúa incluso si el Usuario elimina su Cuenta, según lo establecido en la Sección 9.</li>
+                    <li>{t('termsModal.s5i1')}</li>
+                    <li>{t('termsModal.s5i2')}</li>
+                    <li>{t('termsModal.s5i3')}</li>
                   </ul>
-                  <p className="mb-2"><strong>5.3. Licencia a otros Usuarios:</strong> El Usuario otorga a otros Usuarios de la Plataforma una licencia no exclusiva para acceder a su Contenido a través de la Plataforma, y para usar, mostrar y compartir dicho Contenido según las funcionalidades permitidas por la Plataforma.</p>
-                  <p><strong>5.4. Contenido de Emprexa:</strong> Todos los derechos de propiedad intelectual sobre la Plataforma, su software, diseño, logotipos y contenido creado por Emprexa pertenecen exclusivamente a Emprexa o a sus licenciantes.</p>
+                  <p className="mb-2"><strong>{t('termsModal.s5p3_strong')}</strong>{t('termsModal.s5p3_desc')}</p>
+                  <p><strong>{t('termsModal.s5p4_strong')}</strong>{t('termsModal.s5p4_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">6. PLANES DE SUSCRIPCIÓN Y PAGOS</strong>
-                  <p className="mb-2"><strong>6.1. Planes disponibles:</strong> Emprexa ofrece planes de suscripción gratuitos, básico, pro y premium. Las características específicas de cada plan se detallan en la sección correspondiente de la Plataforma.</p>
-                  <p className="mb-2"><strong>6.2. Pagos:</strong> Los pagos de suscripciones premium se procesan a través de PayPal. El Usuario acepta cumplir con los Términos de Servicio de PayPal.</p>
-                  <p className="mb-2"><strong>6.3. Renovación automática:</strong> Las suscripciones premium se renuevan automáticamente al final de cada período de facturación, a menos que el Usuario cancele su suscripción antes de la fecha de renovación.</p>
-                  <p className="mb-2"><strong>6.4. Reembolsos:</strong> Todos los pagos son no reembolsables, excepto cuando lo exija la ley aplicable.</p>
-                  <p><strong>6.5. Cambios en los planes:</strong> Emprexa se reserva el derecho de modificar las tarifas y características de los planes con 30 días de notificación previa.</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s6Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s6p1_strong')}</strong>{t('termsModal.s6p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s6p2_strong')}</strong>{t('termsModal.s6p2_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s6p3_strong')}</strong>{t('termsModal.s6p3_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s6p4_strong')}</strong>{t('termsModal.s6p4_desc')}</p>
+                  <p><strong>{t('termsModal.s6p5_strong')}</strong>{t('termsModal.s6p5_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">7. MODERACIÓN Y SANCIONES</strong>
-                  <p className="mb-2"><strong>7.1. Derecho de moderación:</strong> Emprexa se reserva el derecho, pero no la obligación, de:</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s7Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s7p1_strong')}</strong>{t('termsModal.s7p1_desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
-                    <li>Monitorear, revisar y moderar cualquier Contenido.</li>
-                    <li>Eliminar o rechazar cualquier Contenido que, a su exclusivo criterio, viole estos Términos.</li>
-                    <li>Suspender o terminar el acceso de cualquier Usuario que viole estos Términos.</li>
+                    <li>{t('termsModal.s7i1')}</li>
+                    <li>{t('termsModal.s7i2')}</li>
+                    <li>{t('termsModal.s7i3')}</li>
                   </ul>
-                  <p className="mb-2"><strong>7.2. Sistema de reportes:</strong> Los Usuarios pueden reportar contenido inapropiado mediante las herramientas proporcionadas en la Plataforma.</p>
-                  <p className="mb-2"><strong>7.3. Escala de sanciones:</strong> Dependiendo de la gravedad de la infracción, Emprexa puede aplicar:</p>
+                  <p className="mb-2"><strong>{t('termsModal.s7p2_strong')}</strong>{t('termsModal.s7p2_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s7p3_strong')}</strong>{t('termsModal.s7p3_desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
-                    <li>Advertencia escrita.</li>
-                    <li>Eliminación del contenido infractor.</li>
-                    <li>Suspensión temporal de la Cuenta (desde 1 día hasta 30 días).</li>
-                    <li>Terminación permanente de la Cuenta.</li>
+                    <li>{t('termsModal.s7i4')}</li>
+                    <li>{t('termsModal.s7i5')}</li>
+                    <li>{t('termsModal.s7i6')}</li>
+                    <li>{t('termsModal.s7i7')}</li>
                   </ul>
-                  <p><strong>7.4. Contenido relacionado con ODS falsos:</strong> La publicación deliberada de información falsa sobre logros en ODS será considerada una infracción grave y puede resultar en la terminación inmediata de la Cuenta.</p>
+                  <p><strong>{t('termsModal.s7p4_strong')}</strong>{t('termsModal.s7p4_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">8. PRIVACIDAD Y PROTECCIÓN DE DATOS</strong>
-                  <p className="mb-2"><strong>8.1. Política de Privacidad:</strong> El tratamiento de datos personales se rige por nuestra Política de Privacidad, que forma parte integral de estos Términos.</p>
-                  <p className="mb-2"><strong>8.2. Datos sensibles:</strong> Dado que la Plataforma trata temas relacionados con ideología (ODS, desarrollo sostenible, impacto social), el Usuario reconoce que puede proporcionar indirectamente datos considerados sensibles según algunas legislaciones. Al proporcionar dicha información, el Usuario consiente expresamente su procesamiento para los fines de la Plataforma.</p>
-                  <p><strong>8.3. Menores de edad:</strong> Si bien no hay restricción de edad, los padres o tutores de menores que utilicen la Plataforma son responsables de su conducta y del contenido que publiquen.</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s8Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s8p1_strong')}</strong>{t('termsModal.s8p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s8p2_strong')}</strong>{t('termsModal.s8p2_desc')}</p>
+                  <p><strong>{t('termsModal.s8p3_strong')}</strong>{t('termsModal.s8p3_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">9. ELIMINACIÓN DE CUENTA Y CONSERVACIÓN DE DATOS</strong>
-                  <p className="mb-2"><strong>9.1. Derecho de eliminación:</strong> El Usuario puede solicitar la eliminación de su Cuenta en cualquier momento mediante las herramientas proporcionadas en la Plataforma.</p>
-                  <p className="mb-2"><strong>9.2. Contenido post-eliminación:</strong> Cuando un Usuario elimina su Cuenta:</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s9Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s9p1_strong')}</strong>{t('termsModal.s9p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s9p2_strong')}</strong>{t('termsModal.s9p2_desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1 mb-2">
-                    <li>Su nombre de usuario y datos personales serán desvinculados del Contenido que haya creado.</li>
-                    <li>Dicho Contenido será reasignado a un usuario genérico identificado como "ex-miembro de Emprexa".</li>
-                    <li>El Contenido permanecerá en la Plataforma para mantener la trazabilidad histórica de las acciones documentadas en relación con los ODS.</li>
-                    <li>La licencia otorgada según la Sección 5.2 continúa vigente.</li>
+                    <li>{t('termsModal.s9i1')}</li>
+                    <li>{t('termsModal.s9i2')}</li>
+                    <li>{t('termsModal.s9i3')}</li>
+                    <li>{t('termsModal.s9i4')}</li>
                   </ul>
-                  <p><strong>9.3. Excepción:</strong> Emprexa se reserva el derecho de eliminar completamente el Contenido de Usuarios que hayan violado gravemente estos Términos.</p>
+                  <p><strong>{t('termsModal.s9p3_strong')}</strong>{t('termsModal.s9p3_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">10. LIMITACIÓN DE RESPONSABILIDAD</strong>
-                  <p className="mb-2"><strong>10.1. Plataforma "tal cual":</strong> La Plataforma se proporciona "tal cual" y "según disponibilidad". Emprexa no garantiza que la Plataforma será ininterrumpida, segura o libre de errores.</p>
-                  <p className="mb-2"><strong>10.2. Contenido de terceros:</strong> Emprexa no respalda, garantiza ni asume responsabilidad por ningún Contenido Generado por el Usuario. El Usuario entiende que al usar la Plataforma puede estar expuesto a Contenido que es inexacto, ofensivo o inapropiado.</p>
-                  <p className="mb-2"><strong>10.3. Impactos y logros en ODS:</strong> Emprexa no verifica ni garantiza las afirmaciones sobre impactos en ODS realizadas por los Usuarios. Cada organización/usuario es responsable de sus propias declaraciones y compromisos.</p>
-                  <p className="mb-2"><strong>10.4. Limitación máxima:</strong> En la máxima medida permitida por la ley, la responsabilidad total de Emprexa hacia cualquier Usuario por todas las reclamaciones derivadas o relacionadas con la Plataforma no excederá el monto pagado por el Usuario a Emprexa en los últimos 6 meses.</p>
-                  <p><strong>10.5. Exclusión de daños indirectos:</strong> Emprexa no será responsable por daños indirectos, incidentales, especiales, consecuentes o punitivos, incluyendo pero no limitado a pérdida de beneficios, datos, uso, buena voluntad u otras pérdidas intangibles.</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s10Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s10p1_strong')}</strong>{t('termsModal.s10p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s10p2_strong')}</strong>{t('termsModal.s10p2_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s10p3_strong')}</strong>{t('termsModal.s10p3_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s10p4_strong')}</strong>{t('termsModal.s10p4_desc')}</p>
+                  <p><strong>{t('termsModal.s10p5_strong')}</strong>{t('termsModal.s10p5_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">11. INDEMNIZACIÓN</strong>
-                  <p className="mb-2">El Usuario acepta indemnizar, defender y mantener indemne a Emprexa, sus directores, empleados y agentes de y contra cualquier reclamación, responsabilidad, daño, pérdida y gasto, incluidos los honorarios razonables de abogados, que surjan de o estén relacionados con:</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s11Title')}</strong>
+                  <p className="mb-2">{t('termsModal.s11desc')}</p>
                   <ul className="list-[lower-alpha] pl-5 space-y-1">
-                    <li>Su uso de la Plataforma.</li>
-                    <li>Su violación de estos Términos.</li>
-                    <li>Su violación de cualquier derecho de un tercero, incluyendo derechos de propiedad intelectual.</li>
-                    <li>Cualquier Contenido que publique en la Plataforma.</li>
+                    <li>{t('termsModal.s11i1')}</li>
+                    <li>{t('termsModal.s11i2')}</li>
+                    <li>{t('termsModal.s11i3')}</li>
+                    <li>{t('termsModal.s11i4')}</li>
                   </ul>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">12. LEY APLICABLE Y JURISDICCIÓN</strong>
-                  <p className="mb-2"><strong>12.1. Legislación aplicable:</strong> Estos Términos se regirán e interpretarán de acuerdo con las leyes de Guatemala, sin tener en cuenta sus principios de conflicto de leyes.</p>
-                  <p className="mb-2"><strong>12.2. Foro:</strong> Cualquier disputa que surja de o esté relacionada con estos Términos se someterá a la jurisdicción exclusiva de los tribunales competentes de la Ciudad de Guatemala, Guatemala.</p>
-                  <p><strong>12.3. Usuarios internacionales:</strong> Los Usuarios fuera de Guatemala son responsables del cumplimiento de todas las leyes locales aplicables en relación con su uso de la Plataforma.</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s12Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s12p1_strong')}</strong>{t('termsModal.s12p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s12p2_strong')}</strong>{t('termsModal.s12p2_desc')}</p>
+                  <p><strong>{t('termsModal.s12p3_strong')}</strong>{t('termsModal.s12p3_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">13. DISPOSICIONES GENERALES</strong>
-                  <p className="mb-2"><strong>13.1. Modificaciones:</strong> Emprexa se reserva el derecho de modificar estos Términos en cualquier momento. Las modificaciones entrarán en vigor 30 días después de su publicación en la Plataforma. El uso continuado de la Plataforma después de dichas modificaciones constituye la aceptación de los Términos revisados.</p>
-                  <p className="mb-2"><strong>13.2. Transferibilidad:</strong> El Usuario no puede ceder ni transferir sus derechos u obligaciones bajo estos Términos sin el consentimiento previo por escrito de Emprexa.</p>
-                  <p className="mb-2"><strong>13.3. Divisibilidad:</strong> Si cualquier disposición de estos Términos se considera inválida o inaplicable, las disposiciones restantes continuarán en pleno vigor y efecto.</p>
-                  <p className="mb-2"><strong>13.4. Acuerdo completo:</strong> Estos Términos, junto con la Política de Privacidad, constituyen el acuerdo completo entre el Usuario y Emprexa con respecto a la Plataforma.</p>
-                  <p className="mb-2"><strong>13.5. Renuncia:</strong> La falta de Emprexa para hacer cumplir cualquier derecho o disposición de estos Términos no constituirá una renuncia a dicho derecho o disposición.</p>
-                  <p><strong>13.6. Notificaciones:</strong> Las notificaciones a los Usuarios se harán por correo electrónico o mediante publicación en la Plataforma. Las notificaciones a Emprexa deben enviarse a: hola@emprexa.net</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s13Title')}</strong>
+                  <p className="mb-2"><strong>{t('termsModal.s13p1_strong')}</strong>{t('termsModal.s13p1_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s13p2_strong')}</strong>{t('termsModal.s13p2_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s13p3_strong')}</strong>{t('termsModal.s13p3_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s13p4_strong')}</strong>{t('termsModal.s13p4_desc')}</p>
+                  <p className="mb-2"><strong>{t('termsModal.s13p5_strong')}</strong>{t('termsModal.s13p5_desc')}</p>
+                  <p><strong>{t('termsModal.s13p6_strong')}</strong>{t('termsModal.s13p6_desc')}</p>
                 </div>
 
                 <div>
-                  <strong className="block text-slate-900 text-base mb-2">14. CONTACTO</strong>
-                  <p>Para preguntas sobre estos Términos y Condiciones, por favor contacte a:</p>
-                  <p className="font-bold mt-2">Emprexa.net</p>
-                  <p>Correo electrónico: hola@emprexa.net</p>
+                  <strong className="block text-slate-900 text-base mb-2">{t('termsModal.s14Title')}</strong>
+                  <p>{t('termsModal.s14p1')}</p>
+                  <p className="font-bold mt-2">{t('termsModal.s14p2')}</p>
+                  <p>{t('termsModal.s14p3')}</p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-200">
-                  <p className="text-xs text-slate-400">Fecha de última actualización: Febrero 2026</p>
+                  <p className="text-xs text-slate-400">{t('termsModal.lastUpdate')}</p>
                 </div>
               </div>
             </div>
             <div className="p-4 border-t border-slate-100 bg-white rounded-b-2xl flex justify-end">
-              <button onClick={() => setIsTermsOpen(false)} className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800">Cerrar</button>
+              <button onClick={() => setIsTermsOpen(false)} className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800">{t('login.close')}</button>
             </div>
           </div>
         </div>
@@ -751,10 +765,10 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
             <div className="p-6 md:p-8 flex flex-col h-full">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Objetivos de Desarrollo Sostenible</h3>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{t('sdgModal.title')}</h3>
                   <p className="text-slate-400 font-medium mt-1 text-sm leading-relaxed max-w-4xl">
-                    Los Objetivos de Desarrollo Sostenible (ODS), también conocidos como Objetivos Globales, fueron adoptados por las Naciones Unidas en 2015 como un llamamiento universal para poner fin a la pobreza, proteger el planeta y garantizar que para el 2030 todas las personas disfruten de paz y prosperidad.
-                    <span className="hidden md:inline"> Los 17 ODS están integrados y reconocen que la acción en un área afectará los resultados en otras.</span>
+                    {t('sdgModal.desc1')}
+                    <span className="hidden md:inline">{t('sdgModal.desc2')}</span>
                   </p>
                 </div>
                 <button onClick={() => { setIsSdgModalOpen(false); setSelectedSdg(null); }} className="size-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0 ml-4">
@@ -774,19 +788,19 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
 
                     <button onClick={() => setSelectedSdg(null)} className="absolute top-6 left-6 flex items-center gap-2 text-white/80 hover:text-white font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl backdrop-blur-sm transition-all text-sm">
                       <span className="material-symbols-outlined text-lg">arrow_back</span>
-                      Volver a la cuadrícula
+                      {t('sdgModal.backToGrid')}
                     </button>
 
                     <div className="relative z-10 text-white">
                       <div className="flex items-center gap-4 mb-4">
-                        <span className="inline-block bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em]">Meta {selectedSdg.id}</span>
+                        <span className="inline-block bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em]">{t('feed.sdgAbbr')} {selectedSdg.id}</span>
                         <div className="flex gap-4 text-xs font-bold text-white/90">
-                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">folder_open</span> {sdgStats[selectedSdg.id]?.projects || 0} Proyectos</span>
-                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">dynamic_feed</span> {sdgStats[selectedSdg.id]?.posts || 0} Publicaciones</span>
+                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">folder_open</span> {sdgStats[selectedSdg.id]?.projects || 0} {t('sdgModal.projects')}</span>
+                          <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">dynamic_feed</span> {sdgStats[selectedSdg.id]?.posts || 0} {t('sdgModal.posts')}</span>
                         </div>
                       </div>
-                      <h4 className="text-4xl md:text-5xl font-black mb-6 leading-[1.1]">{selectedSdg.label}</h4>
-                      <p className="text-xl md:text-2xl text-white/90 font-medium leading-relaxed max-w-2xl">{selectedSdg.description}</p>
+                      <h4 className="text-4xl md:text-5xl font-black mb-6 leading-[1.1]">{t(`sdgs.${selectedSdg.id}.label`) || selectedSdg.label}</h4>
+                      <p className="text-xl md:text-2xl text-white/90 font-medium leading-relaxed max-w-2xl">{t(`sdgs.${selectedSdg.id}.description`) || selectedSdg.description}</p>
                     </div>
                   </div>
                 ) : (
@@ -800,7 +814,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                         >
                           <span className="text-[9px] font-black opacity-80 z-10">0{sdg.id}</span>
                           <span className="material-symbols-outlined text-2xl md:text-3xl font-light z-10">{sdg.icon}</span>
-                          <span className="text-[9px] font-black leading-tight z-10 line-clamp-2">{sdg.short}</span>
+                          <span className="text-[9px] font-black leading-tight z-10 line-clamp-2">{t(`sdgs.${sdg.id}.short`) || sdg.short}</span>
                           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         </button>
 
@@ -809,7 +823,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 z-50 whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-xl pointer-events-none"
                           style={{ backgroundColor: sdg.color }}
                         >
-                          {sdg.label}
+                          {t(`sdgs.${sdg.id}.label`) || sdg.label}
                           <div
                             className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-current"
                             style={{ color: sdg.color }}
@@ -847,40 +861,40 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               <div className="size-20 bg-primary/10 text-primary rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 transform -rotate-6">
                 <Logo className="h-8" />
               </div>
-              <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-6 tracking-tight">Emprexa no es una red social.</h3>
+              <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-6 tracking-tight">{t('emprexaModal.title')}</h3>
               <div className="space-y-4 text-sm md:text-base text-slate-600 font-medium leading-relaxed text-left">
                 <p>
-                  No. Es una <span className="text-primary font-black">red de impacto</span>.
+                  {t('emprexaModal.subtitle1')} <span className="text-primary font-black">{t('emprexaModal.subtitleHighlight')}</span>.
                   <br />
-                  Aquí las historias no compiten por atención.
+                  {t('emprexaModal.subtitle2')}
                 </p>
 
                 <div>
-                  <p className="font-bold text-slate-900 mb-1">Construyen cambio.</p>
+                  <p className="font-bold text-slate-900 mb-1">{t('emprexaModal.buildChange')}</p>
                   <p>
-                    Emprexa es el espacio donde organizaciones, empresas y personas con propósito dan visibilidad a sus acciones alineadas a los Objetivos de Desarrollo Sostenible.
+                    {t('emprexaModal.desc')}
                   </p>
                   <ul className="list-disc pl-5 mt-2 space-y-0.5 text-slate-500 text-xs md:text-sm">
-                    <li>Un lugar sin ruido.</li>
-                    <li>Sin contenido irrelevante.</li>
-                    <li>Sin autopromoción vacía.</li>
-                    <li><strong className="text-slate-700">Solo impacto real.</strong></li>
+                    <li>{t('emprexaModal.point1')}</li>
+                    <li>{t('emprexaModal.point2')}</li>
+                    <li>{t('emprexaModal.point3')}</li>
+                    <li><strong className="text-slate-700">{t('emprexaModal.point4')}</strong></li>
                   </ul>
                 </div>
 
                 <div>
-                  <p className="font-bold text-slate-900">¿Por qué existe?</p>
-                  <p>Porque el impacto aislado se pierde. El impacto conectado se multiplica.</p>
+                  <p className="font-bold text-slate-900">{t('emprexaModal.whyExistsTitle')}</p>
+                  <p>{t('emprexaModal.whyExistsDesc')}</p>
                 </div>
 
                 <div>
-                  <p className="font-bold text-slate-900">¿Por qué publicar es de pago?</p>
-                  <p>Para proteger la calidad, la credibilidad y el propósito. Quien publica aquí asume un compromiso con el valor que entrega.</p>
+                  <p className="font-bold text-slate-900">{t('emprexaModal.whyPaidTitle')}</p>
+                  <p>{t('emprexaModal.whyPaidDesc')}</p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 mt-2">
-                  <p className="text-slate-900 font-black text-lg">Bienvenido a Emprexa.</p>
-                  <p className="text-primary font-bold">Donde el impacto deja de ser invisible.</p>
+                  <p className="text-slate-900 font-black text-lg">{t('emprexaModal.welcome')}</p>
+                  <p className="text-primary font-bold">{t('emprexaModal.slogan')}</p>
                 </div>
               </div>
             </div>
@@ -907,18 +921,16 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 <span className="material-symbols-outlined text-3xl">mark_email_read</span>
               </div>
 
-              <h2 className="text-xl font-bold text-slate-900 mb-2">¡Enlace enviado!</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">{t('login.resetSentTitle')}</h2>
               <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                Se ha enviado un enlace de recuperación a tu correo electrónico.
-                Revisa tu bandeja de entrada (y la carpeta de spam) y haz clic en el enlace
-                para restablecer tu contraseña.
+                {t('login.resetSentSubtitle')}
               </p>
 
               <button
                 onClick={() => setIsPasswordResetSent(false)}
                 className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 transition-all"
               >
-                Entendido
+                {t('login.gotItButton')}
               </button>
             </div>
           </div>
@@ -941,7 +953,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 <span className="material-symbols-outlined text-3xl">error</span>
               </div>
 
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Error al Iniciar Sesión</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">{t('login.loginErrorTitle')}</h2>
               <p className="text-slate-500 text-sm mb-8 leading-relaxed">
                 {loginError}
               </p>
@@ -950,7 +962,7 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                 onClick={() => setLoginError(null)}
                 className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-lg shadow-red-600/20 transition-all"
               >
-                Intentar de Nuevo
+                {t('login.tryAgainButton')}
               </button>
             </div>
           </div>

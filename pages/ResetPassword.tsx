@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, NavProps } from '../types';
 import { Logo } from '../components/Logo';
 import { supabase } from '../utils/supabase';
+import { useLanguage } from '../context/LanguageContext';
 
 export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
+  const { t } = useLanguage();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +43,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
           console.error('❌ Error obteniendo sesión:', sessionError);
           setMessage({
             type: 'error',
-            text: 'Error al verificar la sesión. Por favor, solicita un nuevo enlace.'
+            text: t('resetPassword.linkExpiredMsg')
           });
           setIsValidSession(false);
           return;
@@ -71,7 +73,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
         console.log('⚠️ No hay sesión de recuperación activa');
         setMessage({
           type: 'error',
-          text: 'No hay una sesión de recuperación activa o el enlace ha expirado. Por favor, solicita un nuevo enlace desde el login.'
+          text: t('resetPassword.linkExpiredMsg')
         });
         setIsValidSession(false);
 
@@ -79,7 +81,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
         console.error('❌ Error en checkRecoverySession:', err);
         setMessage({
           type: 'error',
-          text: 'Error al procesar la solicitud. Intenta nuevamente.'
+          text: t('resetPassword.errorGeneric')
         });
         setIsValidSession(false);
       } finally {
@@ -96,7 +98,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
     if (newPassword !== confirmPassword) {
       setMessage({
         type: 'error',
-        text: 'Las contraseñas no coinciden.'
+        text: t('resetPassword.errorNoMatch')
       });
       return;
     }
@@ -104,7 +106,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
     if (newPassword.length < 6) {
       setMessage({
         type: 'error',
-        text: 'La contraseña debe tener al menos 6 caracteres.'
+        text: t('resetPassword.errorLength')
       });
       return;
     }
@@ -121,7 +123,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
 
       setMessage({
         type: 'success',
-        text: '¡Contraseña actualizada exitosamente! Cerrando sesión para seguridad...'
+        text: t('resetPassword.successMsgShort')
       });
 
       // IMPORTANTE: Cerrar sesión después de cambiar contraseña
@@ -134,7 +136,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
       console.error('Error resetting password:', err);
       setMessage({
         type: 'error',
-        text: err.message || 'Error al actualizar la contraseña.'
+        text: err.message || t('resetPassword.errorGeneric')
       });
     } finally {
       setIsLoading(false);
@@ -146,11 +148,11 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <Logo className="h-12 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-slate-900">Restablecer Contraseña</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('resetPassword.title')}</h1>
           <p className="text-slate-500 mt-2">
             {isValidSession
-              ? 'Ingresa tu nueva contraseña'
-              : 'Esperando validación...'
+              ? t('resetPassword.subtitle')
+              : t('resetPassword.processingMsg')
             }
           </p>
         </div>
@@ -165,14 +167,14 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
           <form onSubmit={handleResetPassword} className="space-y-5">
             <div>
               <label className="text-sm font-bold text-slate-700 block mb-2">
-                Nueva Contraseña
+                {t('resetPassword.newPassword')}
               </label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full p-3 bg-white border border-slate-300 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="Mínimo 6 caracteres"
+                placeholder={t('resetPassword.minChars')}
                 required
                 minLength={6}
               />
@@ -180,14 +182,14 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
 
             <div>
               <label className="text-sm font-bold text-slate-700 block mb-2">
-                Confirmar Contraseña
+                {t('resetPassword.confirmPassword')}
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full p-3 bg-white border border-slate-300 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="Repite tu contraseña"
+                placeholder={t('resetPassword.placeholderConfirm')}
                 required
                 minLength={6}
               />
@@ -201,10 +203,10 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
               {isLoading ? (
                 <>
                   <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></span>
-                  Actualizando...
+                  {t('resetPassword.updating')}
                 </>
               ) : (
-                'Establecer Nueva Contraseña'
+                t('resetPassword.button')
               )}
             </button>
 
@@ -213,7 +215,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
               onClick={() => navigate(View.LOGIN)}
               className="w-full py-3 text-slate-600 hover:text-slate-900 font-medium"
             >
-              ← Volver al Login
+              {t('resetPassword.goBack')}
             </button>
           </form>
         ) : (
@@ -223,19 +225,19 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
             </div>
 
             <p className="text-slate-600 mb-6">
-              {message?.text || 'Validando enlace de recuperación...'}
+              {message?.text || t('resetPassword.validating')}
             </p>
 
             {message?.type === 'error' && message.text.includes('expirado') && (
               <div className="mt-6 space-y-3">
                 <p className="text-sm text-slate-500 text-center">
-                  ¿Necesitas un nuevo enlace?
+                  {t('resetPassword.needNewLink')}
                 </p>
                 <button
                   onClick={() => navigate(View.LOGIN)}
                   className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors"
                 >
-                  Volver al Login para solicitar nuevo enlace
+                  {t('resetPassword.backToLoginFull')}
                 </button>
               </div>
             )}
@@ -245,7 +247,7 @@ export const ResetPassword: React.FC<NavProps> = ({ navigate }) => {
                 onClick={() => navigate(View.LOGIN)}
                 className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
               >
-                Volver al Login
+                {t('resetPassword.backToLogin')}
               </button>
             )}
           </div>

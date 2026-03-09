@@ -12,9 +12,11 @@ import { ShareSuccessModal } from '../components/ShareSuccessModal';
 import { supabase } from '../utils/supabase';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { Logo } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
   const { user: authUser, followedUserIds, toggleFollowUser, sendMentionNotifications, savedPostIds, toggleSavedPost } = useAuth();
+  const { t, language } = useLanguage();
   type TabType = 'projects' | 'posts' | 'followers' | 'about';
   // State for fetched data
   const [profileUser, setProfileUser] = useState<User | null>(null);
@@ -134,7 +136,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
         setLocalUserPosts(posts.map(p => ({
           ...p,
           user: postAuthor,
-          time: p.created_at ? formatRelativeTime(p.created_at) : 'Hoy',
+          time: p.created_at ? formatRelativeTime(p.created_at, t) : t('feed.now'),
           sdgIds: p.sdg_ids || [],
           likes: p.likes_count || 0,
           comments: p.comments_count || 0,
@@ -187,8 +189,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Usuario no encontrado</h2>
-          <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">Volver al inicio</button>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">{t('profile.userNotFound')}</h2>
+          <button onClick={() => navigate(View.FEED)} className="text-primary font-bold hover:underline">{t('profile.backToHome')}</button>
         </div>
       </div>
     );
@@ -329,9 +331,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       if (data) {
         const newComment = {
           ...data,
-          userId: authUser.id,
           user: authUser,
-          time: 'Ahora',
+          time: t('feed.now'),
           likes: 0,
           isLiked: false,
           replies: []
@@ -348,7 +349,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       }
     } catch (error) {
       console.error("Error adding comment in profile:", error);
-      alert("No se pudo publicar el comentario.");
+      alert(t('feed.errorSendingComment'));
     }
   };
 
@@ -388,9 +389,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       if (data) {
         const newReply = {
           ...data,
-          userId: authUser.id,
           user: authUser,
-          time: 'Ahora',
+          time: t('feed.now'),
           likes: 0,
           isLiked: false
         };
@@ -411,7 +411,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       }
     } catch (error) {
       console.error("Error adding reply in profile:", error);
-      alert("No se pudo publicar la respuesta.");
+      alert(t('feed.errorPublishingReply'));
     }
     setActiveReplyToId(null);
   };
@@ -445,7 +445,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       if (error) throw error;
     } catch (error) {
       console.error("Error deleting comment:", error);
-      alert("No se pudo eliminar el comentario.");
+      alert(t('feed.errorDeletingComment'));
     }
   };
 
@@ -466,7 +466,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
       if (error) throw error;
     } catch (error) {
       console.error("Error saving comment edit:", error);
-      alert("No se pudo guardar la edición.");
+      alert(t('feed.errorSavingEdit'));
     }
   };
 
@@ -480,8 +480,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
               <Logo className="h-8" />
             </div>
             <div className="flex gap-4 text-sm">
-              <button onClick={() => navigate(View.LOGIN)} className="font-bold text-slate-600 hover:text-slate-900">Entrar</button>
-              <button onClick={() => navigate(View.ONBOARDING)} className="font-bold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">Registrarse</button>
+              <button onClick={() => navigate(View.LOGIN)} className="font-bold text-slate-600 hover:text-slate-900">{t('profile.enter')}</button>
+              <button onClick={() => navigate(View.ONBOARDING)} className="font-bold bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">{t('profile.register')}</button>
             </div>
           </div>
         )}
@@ -526,14 +526,14 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
               <div className="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
                 {isCurrentUser ? (
                   <button onClick={() => navigate(View.SETTINGS)} className="flex-1 md:flex-none px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors shadow-sm">
-                    Editar Perfil
+                    {t('profile.editProfile')}
                   </button>
                 ) : (
                   <button
                     onClick={() => navigate(View.MESSAGES, { userId: user.id })}
                     className="flex-1 md:flex-none px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors shadow-sm"
                   >
-                    Mensaje
+                    {t('profile.message')}
                   </button>
                 )}
                 <button
@@ -541,13 +541,13 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                   className={`flex-1 md:flex-none px-4 py-2 ${isCurrentUser ? 'bg-primary' : isFollowing ? 'bg-slate-100 text-slate-700 border border-slate-200' : 'bg-slate-900 text-white'} rounded-lg font-bold hover:opacity-90 shadow-sm transition-colors flex items-center justify-center gap-2`}
                 >
                   {isCurrentUser ? (
-                    <><span className="material-symbols-outlined">share</span> Compartir</>
+                    <><span className="material-symbols-outlined">share</span> {t('profile.share')}</>
                   ) : (
                     <>
                       <span className={`material-symbols-outlined ${isFollowing ? 'filled text-primary' : ''}`}>
                         {isFollowing ? 'person_check' : 'person_add'}
                       </span>
-                      {isFollowing ? 'Siguiendo' : 'Seguir'}
+                      {isFollowing ? t('profile.following') : t('profile.follow')}
                     </>
                   )}
                 </button>
@@ -558,7 +558,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
             <div>
               <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1">
                 <h1 className="text-3xl font-black text-slate-900">{user.name}</h1>
-                {renderBadge(user.plan || 'free')}
+                {renderBadge(user.plan || 'free', t)}
               </div>
               <p className="text-slate-500 font-medium text-lg mb-2">{user.role}</p>
               {user.organizationId ? (
@@ -579,8 +579,8 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-lg text-slate-400">calendar_month</span>
                   {user.joinedAt
-                    ? `Se unió en ${new Date(user.joinedAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`
-                    : 'Se unió en 2023'}
+                    ? t('profile.joinedIn').replace('{date}', new Date(user.joinedAt).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', { month: 'long', year: 'numeric' }))
+                    : t('profile.joinedIn').replace('{date}', '2023')}
                 </span>
               </div>
             </div>
@@ -590,12 +590,12 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
           <div className="px-4 md:px-8 py-6 flex gap-8 md:gap-12 border-t border-slate-50 overflow-x-auto no-scrollbar">
             {(user.plan && user.plan !== 'free') ? (
               [
-                { label: 'Proyectos', value: stats.projects },
-                { label: 'Posts', value: stats.posts },
-                { label: 'Seguidores', value: stats.followers >= 1000 ? (stats.followers / 1000).toFixed(1) + 'k' : stats.followers },
-                { label: 'Impacto', value: stats.impact, color: 'text-green-600' }
+                { label: t('profile.projects'), value: stats.projects },
+                { label: t('profile.posts'), value: stats.posts },
+                { label: t('profile.followers'), value: stats.followers >= 1000 ? (stats.followers / 1000).toFixed(1) + 'k' : stats.followers },
+                { label: t('profile.impact'), value: stats.impact, color: 'text-green-600' }
               ].map((stat, i) => (
-                <div key={i} className="flex flex-col shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => stat.label === 'Seguidores' && setActiveTab('followers')}>
+                <div key={i} className="flex flex-col shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => stat.label === t('profile.followers') && setActiveTab('followers')}>
                   <span className={`text-xl font-bold ${stat.color || 'text-slate-900'}`}>{stat.value}</span>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">{stat.label}</span>
                 </div>
@@ -603,14 +603,19 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
             ) : (
               <div className="py-2 px-4 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
                 <span className="material-symbols-outlined text-slate-400">lock</span>
-                <p className="text-xs text-slate-500 font-medium">Las métricas avanzadas están disponibles para usuarios <span className="text-primary font-bold">Basic, Pro y Enterprise</span>.</p>
+                <p className="text-xs text-slate-500 font-medium">{t('profile.unlockedMetrics').replace('{plans}', <span className="text-primary font-bold">Basic, Pro y Enterprise</span> as any)}</p>
               </div>
             )}
           </div>
 
           {/* Tabs */}
           <div className="px-4 md:px-8 flex gap-8 mt-2">
-            {[{ id: 'projects', label: 'Proyectos' }, { id: 'posts', label: 'Publicaciones' }, { id: 'followers', label: `Seguidores (${stats.followers})` }, { id: 'about', label: 'Información' }].map(tab => (
+            {[
+              { id: 'projects', label: t('profile.projects') },
+              { id: 'posts', label: t('profile.posts') },
+              { id: 'followers', label: `${t('profile.followers')} (${stats.followers})` },
+              { id: 'about', label: t('profile.about') }
+            ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
@@ -642,11 +647,11 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                         >
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
                           <div className="absolute top-4 left-4 flex gap-2">
-                            {sdg && <span className="bg-white/95 backdrop-blur-sm text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5"><span className="material-symbols-outlined text-sm" style={{ color: sdg.color }}>{sdg.icon}</span>{sdg.label}</span>}
+                            {sdg && <span className="bg-white/95 backdrop-blur-sm text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5"><span className="material-symbols-outlined text-sm" style={{ color: sdg.color }}>{sdg.icon}</span>{t(`sdgs.${sdg.id}.label`) || sdg.label}</span>}
                           </div>
-                          <div className="absolute bottom-4 right-4 focus-visible:">
-                            <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' ? 'bg-green-500' : 'bg-slate-400'}`}>
-                              {project.status}
+                          <div className="absolute bottom-4 right-4">
+                            <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide ${project.status === 'Activo' || project.status === t('projectDetails.statusActive') ? 'bg-green-500' : 'bg-slate-400'}`}>
+                              {project.status === 'Activo' ? t('projectDetails.statusActive') : project.status === 'Concluido' ? t('projectDetails.statusConcluded') : project.status}
                             </span>
                           </div>
                         </div>
@@ -655,18 +660,18 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                     <div className="p-6 flex-1 flex flex-col">
                       <h3 className="font-bold text-xl text-slate-900 mb-2 leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })}>{project.title}</h3>
                       <p className="text-sm text-slate-600 leading-relaxed line-clamp-3 mb-4">{project.description}</p>
-                      <button onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })} className="mt-auto px-4 py-2 bg-slate-50 text-slate-700 text-sm font-bold rounded-lg hover:bg-slate-100 transition-colors self-start border border-slate-200">Ver Proyecto</button>
+                      <button onClick={() => navigate(View.PROJECT_DETAILS, { projectId: project.id })} className="mt-auto px-4 py-2 bg-slate-50 text-slate-700 text-sm font-bold rounded-lg hover:bg-slate-100 transition-colors self-start border border-slate-200">{t('profile.viewProject')}</button>
                     </div>
                   </div>
                 );
               })}
-              {userProjects.length === 0 && <div className="col-span-full text-center py-16 text-slate-500"><p>No hay proyectos activos.</p></div>}
+              {userProjects.length === 0 && <div className="col-span-full text-center py-16 text-slate-500"><p>{t('profile.noProjects')}</p></div>}
             </div>
           )}
 
           {activeTab === 'posts' && (
             <div className="max-w-2xl mx-auto space-y-6 animate-[fade-in_0.3s_ease-out]">
-              {localUserPosts.length === 0 && <div className="text-center py-12 text-slate-500"><p>No hay publicaciones recientes.</p></div>}
+              {localUserPosts.length === 0 && <div className="text-center py-12 text-slate-500"><p>{t('profile.noPosts')}</p></div>}
               {localUserPosts.map(post => (
                 <PostCard
                   key={post.id}
@@ -741,7 +746,7 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
                   <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="material-symbols-outlined text-3xl">group</span>
                   </div>
-                  <p>Aún no hay seguidores para mostrar.</p>
+                  <p>{t('profile.noFollowers')}</p>
                 </div>
               )}
             </div>
@@ -751,13 +756,13 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-[fade-in_0.3s_ease-out]">
               <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-xl border border-slate-200 p-6">
-                  <h3 className="font-bold text-slate-900 mb-4">Biografía</h3>
+                  <h3 className="font-bold text-slate-900 mb-4">{t('profile.bio')}</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">{user.bio}</p>
                 </div>
               </div>
               <div className="space-y-6">
                 <div className="bg-white rounded-xl border border-slate-200 p-6">
-                  <h3 className="font-bold text-slate-900 mb-4">Intereses ODS</h3>
+                  <h3 className="font-bold text-slate-900 mb-4">{t('profile.sdgInterests')}</h3>
                   <div className="grid grid-cols-5 gap-2">
                     {[...(user.sdgInterests || [])].sort((a, b) => a - b).map(id => {
                       const sdg = getSdgInfo(id);
@@ -782,20 +787,20 @@ export const Profile: React.FC<NavProps> = ({ navigate, params }) => {
           isOpen={postToDelete !== null}
           onClose={() => setPostToDelete(null)}
           onConfirm={confirmDeletePost}
-          title="¿Eliminar publicación?"
-          description="Esta acción no se puede deshacer. Tu rastro de impacto se perderá."
-          confirmText="Sí, eliminar"
-          cancelText="No, mantener"
+          title={t('feed.deletePostTitle')}
+          description={t('feed.deletePostDesc')}
+          confirmText={t('feed.yesDelete')}
+          cancelText={t('feed.noKeep')}
         />
 
         <ConfirmModal
           isOpen={commentToDelete !== null}
           onClose={() => setCommentToDelete(null)}
           onConfirm={confirmDeleteComment}
-          title="¿Eliminar comentario?"
-          description="¿Estás seguro de que quieres borrar este comentario? No podrás recuperarlo."
-          confirmText="Eliminar"
-          cancelText="Cancelar"
+          title={t('feed.deleteCommentTitle')}
+          description={t('feed.deleteCommentDesc')}
+          confirmText={t('feed.delete')}
+          cancelText={t('feed.cancel')}
           icon="comment_bank"
         />
 

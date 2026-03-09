@@ -1,21 +1,20 @@
 import React from 'react';
 import { View } from '../types';
-import { USERS } from '../constants';
 
-export const renderBadge = (plan: string) => {
+export const renderBadge = (plan: string, t: (key: string) => string) => {
   switch (plan) {
     case 'basic':
-      return <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Basic</span>;
+      return <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{t('feed.plans.basic')}</span>;
     case 'pro':
       return (
         <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1">
-          <span className="material-symbols-outlined text-[10px] filled">verified</span> Pro
+          <span className="material-symbols-outlined text-[10px] filled">verified</span> {t('feed.plans.pro')}
         </span>
       );
     case 'enterprise':
       return (
         <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1">
-          <span className="material-symbols-outlined text-[10px] filled">verified_user</span> Enterprise
+          <span className="material-symbols-outlined text-[10px] filled">verified_user</span> {t('feed.plans.enterprise')}
         </span>
       );
     default:

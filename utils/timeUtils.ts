@@ -1,4 +1,4 @@
-export const formatRelativeTime = (date: Date | string | number): string => {
+export const formatRelativeTime = (date: Date | string | number, t?: (key: string) => string): string => {
   const d = new Date(date);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
@@ -9,16 +9,16 @@ export const formatRelativeTime = (date: Date | string | number): string => {
 
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  if (diffSecs < 60) return 'Ahora';
-  if (diffMins < 60) return `${diffMins} min`;
-  if (diffHours < 24) return `Hoy, ${timeStr}`;
-  if (diffDays === 1) return `Ayer, ${timeStr}`;
-  if (diffDays < 7) return `${diffDays} d`;
+  if (diffSecs < 60) return t ? t('time.now') : 'Ahora';
+  if (diffMins < 60) return `${diffMins} ${t ? t('time.min') : 'min'}`;
+  if (diffHours < 24) return `${t ? t('time.today') : 'Hoy'}, ${timeStr}`;
+  if (diffDays === 1) return `${t ? t('time.yesterday') : 'Ayer'}, ${timeStr}`;
+  if (diffDays < 7) return `${diffDays} ${t ? t('time.days') : 'd'}`;
   
   return `${d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}, ${timeStr}`;
 };
 
-export const formatMessageTime = (date: Date | string | number): string => {
+export const formatMessageTime = (date: Date | string | number, t?: (key: string) => string): string => {
   const d = new Date(date);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
@@ -27,7 +27,7 @@ export const formatMessageTime = (date: Date | string | number): string => {
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
   if (isToday) return timeStr;
-  if (isYesterday) return `Ayer, ${timeStr}`;
+  if (isYesterday) return `${t ? t('time.yesterday') : 'Ayer'}, ${timeStr}`;
   
   return `${d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}, ${timeStr}`;
 };

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ConfirmModalProps {
     isOpen: boolean;
@@ -19,12 +20,16 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     onConfirm,
     title,
     description,
-    confirmText = "Confirmar",
-    cancelText = "Cancelar",
+    confirmText,
+    cancelText,
     type = 'danger',
     icon = 'delete'
 }) => {
+    const { t } = useLanguage();
     if (!isOpen) return null;
+
+    const finalConfirmText = confirmText || t('feed.confirm');
+    const finalCancelText = cancelText || t('feed.cancel');
 
     const colors = {
         danger: {
@@ -74,13 +79,13 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                             }}
                             className={`w-full py-3 ${activeColor.button} text-white rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2`}
                         >
-                            {confirmText}
+                            {finalConfirmText}
                         </button>
                         <button
                             onClick={onClose}
                             className="w-full py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all"
                         >
-                            {cancelText}
+                            {finalCancelText}
                         </button>
                     </div>
                 </div>

@@ -15,9 +15,11 @@ import { supabase } from '../utils/supabase';
 import { getBaseUrl } from '../utils/environment';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { usePostInteractions } from '../hooks/usePostInteractions';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const { user, savedPostIds, toggleSavedPost, followedUserIds, followedSdgIds, sendMentionNotifications, isLoading: authLoading, activateTrial } = useAuth();
+  const { t } = useLanguage();
 
   // AUDIT FIX: Removed fallback to hardcoded "Juan Pérez".
   // If user is not logged in, we shouldn't show fake data.
@@ -141,7 +143,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
             return {
               ...p,
               user: userData || DEFAULT_USER,
-              time: p.created_at ? formatRelativeTime(p.created_at) : 'Hoy',
+              time: p.created_at ? formatRelativeTime(p.created_at, t) : t('feed.today'),
               sdgIds: p.sdg_ids || [],
               likes: p.likes_count || 0,
               comments: p.comments_count || 0,
@@ -174,7 +176,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
             plan: p.author_plan,
             location: p.author_location
           },
-          time: p.created_at ? formatRelativeTime(p.created_at) : 'Hoy',
+          time: p.created_at ? formatRelativeTime(p.created_at, t) : t('feed.today'),
           location: p.location || p.author_location || 'Global',
           sdgIds: p.sdg_ids || [],
           likes: p.likes_count || 0,
@@ -293,15 +295,15 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
   const [showPostModal, setShowPostModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formPostId, setFormPostId] = useState<number | null>(null);
+  const [formPostId, setFormPostId] = useState<ID | null>(null);
   const [formTitle, setFormTitle] = useState('');
   const [formContent, setFormContent] = useState('');
   const [formSdgs, setFormSdgs] = useState<number[]>([]);
   const [formImages, setFormImages] = useState<string[]>([]);
   const [formYoutubeUrl, setFormYoutubeUrl] = useState('');
 
-  const [commentToDelete, setCommentToDelete] = useState<{ postId: number, commentId: string } | null>(null);
-  const [postToDelete, setPostToDelete] = useState<number | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<{ postId: ID, commentId: string } | null>(null);
+  const [postToDelete, setPostToDelete] = useState<ID | null>(null);
 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
@@ -352,7 +354,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const handleSubmitPost = async () => {
     // Validación CRÍTICA: El campo 'content' es NOT NULL en la base de datos
     if (!formContent.trim()) {
-      alert("El contenido de la publicación no puede estar vacío");
+      alert(t('feed.emptyPostError'));
       return;
     }
 
@@ -397,7 +399,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
       if (error) {
         console.error('Error inserting post:', error);
-        alert('Error al publicar: ' + error.message);
+        alert(t('feed.publishError') + error.message);
         return;
       }
 
@@ -415,7 +417,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         const newPost: Post = {
           ...data,
           user: userData,
-          time: formatRelativeTime(new Date()),
+          time: formatRelativeTime(new Date(), t),
           sdgIds: data.sdg_ids || [],
           likes: 0,
           comments: 0,
@@ -483,13 +485,13 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                 ></div>
                 <div>
                   <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{currentUser.name}</h3>
-                  <div className="mt-1">{renderBadge(currentUser.plan || 'free')}</div>
+                  <div className="mt-1">{renderBadge(currentUser.plan || 'free', t)}</div>
                 </div>
               </div>
               <div className="flex justify-between text-center text-sm pt-4 border-t border-slate-100">
-                <div><span className="block font-bold text-slate-900">{userStats.followers}</span><span className="text-xs text-slate-500">Seguidores</span></div>
-                <div><span className="block font-bold text-slate-900">{userStats.projects}</span><span className="text-xs text-slate-500">Proyectos</span></div>
-                <div><span className="block font-bold text-slate-900">{userStats.posts}</span><span className="text-xs text-slate-500">Posts</span></div>
+                <div><span className="block font-bold text-slate-900">{userStats.followers}</span><span className="text-xs text-slate-500">{t('feed.followers')}</span></div>
+                <div><span className="block font-bold text-slate-900">{userStats.projects}</span><span className="text-xs text-slate-500">{t('feed.projects')}</span></div>
+                <div><span className="block font-bold text-slate-900">{userStats.posts}</span><span className="text-xs text-slate-500">{t('feed.posts')}</span></div>
               </div>
             </div>
 
@@ -501,8 +503,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                     <span className="material-symbols-outlined text-white text-2xl">redeem</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-black text-white text-sm mb-1">¡Regalo de Bienvenida!</h3>
-                    <p className="text-white/90 text-xs leading-relaxed">Activa tu kit ENTERPRISE gratis: 5 posts o 30 días</p>
+                    <h3 className="font-black text-white text-sm mb-1">{t('feed.welcomeGift')}</h3>
+                    <p className="text-white/90 text-xs leading-relaxed">{t('feed.activateEnterpriseKit')}</p>
                   </div>
                 </div>
                 <button
@@ -510,7 +512,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   className="w-full bg-white text-primary font-bold py-2.5 rounded-lg hover:bg-slate-50 transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 text-sm flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-lg">celebration</span>
-                  Activar Ahora
+                  {t('feed.activateNow')}
                 </button>
               </div>
             )}
@@ -519,18 +521,18 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
               <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 shadow-lg border border-green-400/30">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="material-symbols-outlined text-white filled">workspace_premium</span>
-                  <h3 className="font-black text-white text-sm">Modo ENTERPRISE Activo</h3>
+                  <h3 className="font-black text-white text-sm">{t('feed.enterpriseModeActive')}</h3>
                 </div>
                 <div className="space-y-2">
                   {currentUser.trialPostsRemaining !== undefined && currentUser.trialPostsRemaining > 0 && (
                     <div className="flex items-center justify-between text-white/90 text-xs">
-                      <span>Posts restantes:</span>
+                      <span>{t('feed.postsRemaining')}</span>
                       <span className="font-bold bg-white/20 px-2 py-1 rounded">{currentUser.trialPostsRemaining}</span>
                     </div>
                   )}
                   {currentUser.trialEndsAt && (
                     <div className="flex items-center justify-between text-white/90 text-xs">
-                      <span>Días restantes:</span>
+                      <span>{t('feed.daysRemaining')}</span>
                       <span className="font-bold bg-white/20 px-2 py-1 rounded">
                         {Math.max(0, Math.ceil((new Date(currentUser.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))}
                       </span>
@@ -541,7 +543,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   onClick={() => navigate(View.PRICING)}
                   className="w-full mt-3 bg-white/20 backdrop-blur text-white font-bold py-2 rounded-lg hover:bg-white/30 transition-all text-xs"
                 >
-                  Mantener ENTERPRISE después
+                  {t('feed.keepEnterprise')}
                 </button>
               </div>
             )}
@@ -562,25 +564,25 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   onClick={() => { resetPostForm(); setShowPostModal(true); }}
                   className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-6 text-left text-slate-500 text-sm font-medium hover:bg-slate-100 transition-colors"
                 >
-                  ¿Qué impacto has generado hoy, {currentUser.name?.split(' ')[0]}?
+                  {t('feed.whatImpactToday').replace('{name}', currentUser.name?.split(' ')[0] || '')}
                 </button>
               </div>
               <div className="flex justify-between items-center mt-5 pl-1 invisible md:visible">
                 <div className="flex gap-2">
                   <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-50 rounded-xl flex items-center gap-2 text-xs font-black transition-all">
                     <span className="material-symbols-outlined text-[20px] text-blue-500 filled">image</span>
-                    Multimedia
+                    {t('feed.multimedia')}
                   </button>
                   <button onClick={() => { resetPostForm(); setShowPostModal(true); }} className="px-5 py-2.5 text-slate-600 hover:bg-slate-50 rounded-xl flex items-center gap-2 text-xs font-black transition-all">
                     <span className="material-symbols-outlined text-[20px] text-emerald-500 filled">link</span>
-                    Recursos
+                    {t('feed.resources')}
                   </button>
                 </div>
                 <button
                   onClick={() => { resetPostForm(); setShowPostModal(true); }}
                   className="bg-slate-900 text-white px-10 py-3 rounded-2xl text-xs font-black hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                 >
-                  Publicar Impacto
+                  {t('feed.publishImpact')}
                 </button>
               </div>
             </div>
@@ -591,18 +593,18 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                 <div className="text-center md:text-left">
                   <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
                     <span className="material-symbols-outlined text-blue-400 text-xl filled">visibility</span>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">Modo Observador</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300">{t('feed.observerMode')}</p>
                   </div>
-                  <h3 className="text-xl font-black tracking-tight mb-2">Únete a la Acción Social</h3>
+                  <h3 className="text-xl font-black tracking-tight mb-2">{t('feed.joinSocialAction')}</h3>
                   <p className="text-blue-100/60 text-xs leading-relaxed max-w-sm">
-                    Estás viendo el impacto global, pero para documentar el tuyo necesitas una cuenta activa.
+                    {t('feed.viewingGlobalImpact')}
                   </p>
                 </div>
                 <button
                   onClick={() => navigate(View.PRICING)}
                   className="bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-blue-400 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/20 whitespace-nowrap"
                 >
-                  Desbloquear Posts
+                  {t('feed.unlockPosts')}
                 </button>
               </div>
             </div>
@@ -645,18 +647,19 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
 
           {/* Infinite Scroll Anchor & Message */}
           <div ref={feedEndRef} className="py-12 text-center">
-            {isLoadingMore ? (
+            {isLoadingMore && (
               <div className="flex flex-col items-center gap-2">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-slate-500 text-xs font-medium">Buscando más impacto...</p>
+                <p className="text-slate-500 text-xs font-medium">{t('feed.searchingMoreImpact')}</p>
               </div>
-            ) : !hasMore && postsToDisplay.length > 0 ? (
+            )}
+            {!hasMore && postsToDisplay.length > 0 && (
               <div className="flex flex-col items-center gap-2 opacity-60">
                 <span className="material-symbols-outlined text-slate-400">task_alt</span>
-                <p className="text-slate-400 text-sm font-medium">Has llegado al final del camino</p>
-                <p className="text-slate-300 text-[10px] uppercase tracking-widest">¡Excelente trabajo explorando!</p>
+                <p className="text-slate-400 text-sm font-medium">{t('feed.endOfRoad')}</p>
+                <p className="text-slate-300 text-[10px] uppercase tracking-widest">{t('feed.greatJobExploring')}</p>
               </div>
-            ) : null}
+            )}
           </div>
         </div>
 
@@ -665,42 +668,42 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 sticky top-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-slate-900 flex items-center gap-2 text-base">
-                <span className="material-symbols-outlined text-primary text-xl">hub</span> Tu Centro de Impacto
+                <span className="material-symbols-outlined text-primary text-xl">hub</span> {t('feed.yourImpactCenter')}
               </h3>
               <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">
-                Desde tu última sesión
+                {t('feed.sinceLastSession')}
               </span>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {trendingSdgs.map((t) => (
+              {trendingSdgs.map((sdg) => (
                 <div
-                  key={t.id}
+                  key={sdg.id}
                   className="group relative flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-all cursor-pointer border border-transparent hover:border-slate-100"
-                  onMouseEnter={() => setActiveTooltipSdg(t.id)}
+                  onMouseEnter={() => setActiveTooltipSdg(sdg.id)}
                   onMouseLeave={() => setActiveTooltipSdg(null)}
-                  onClick={() => navigate(View.SDG_FEED, { id: t.id })}
+                  onClick={() => navigate(View.SDG_FEED, { id: sdg.id })}
                 >
                   {/* SDG Icon with Numeric Level */}
                   <div
                     className="size-11 rounded-lg flex flex-col items-center justify-center text-white shrink-0 shadow-md transform group-hover:scale-110 transition-transform relative"
-                    style={{ backgroundColor: t.color }}
+                    style={{ backgroundColor: sdg.color }}
                   >
-                    <span className="material-symbols-outlined text-xl">{t.icon}</span>
-                    <span className="text-[10px] font-black leading-none">{t.id}</span>
+                    <span className="material-symbols-outlined text-xl">{sdg.icon}</span>
+                    <span className="text-[10px] font-black leading-none">{sdg.id}</span>
 
                     {/* Tooltip Estilo PostFormModal */}
-                    {activeTooltipSdg === t.id && (
+                    {activeTooltipSdg === sdg.id && (
                       <div
                         className="absolute -top-10 left-1/2 -translate-x-1/2 z-50 py-1 px-2.5 rounded-lg shadow-xl animate-[fade-in_0.2s_ease-out] pointer-events-none whitespace-nowrap transition-all duration-200"
-                        style={{ backgroundColor: t.color }}
+                        style={{ backgroundColor: sdg.color }}
                       >
                         <span className="text-white text-[10px] font-bold tracking-wide">
-                          {t.short || t.label}
+                          {t(`sdgs.${sdg.id}.short`) || sdg.short || sdg.label}
                         </span>
                         <div
                           className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"
-                          style={{ backgroundColor: t.color }}
+                          style={{ backgroundColor: sdg.color }}
                         ></div>
                       </div>
                     )}
@@ -709,10 +712,10 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h4 className="text-xs font-bold text-slate-800 truncate" style={{ maxWidth: '100%' }}>{t.label}</h4>
-                      {t.newActivity > 0 && (
+                      <h4 className="text-xs font-bold text-slate-800 truncate" style={{ maxWidth: '100%' }}>{t(`sdgs.${sdg.id}.label`) || sdg.label}</h4>
+                      {sdg.newActivity > 0 && (
                         <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse">
-                          +{t.newActivity}
+                          +{sdg.newActivity}
                         </span>
                       )}
                     </div>
@@ -720,10 +723,10 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                       <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${Math.min(t.totalActivity * 10, 100)}%`, backgroundColor: t.color }}
+                          style={{ width: `${Math.min(sdg.totalActivity * 10, 100)}%`, backgroundColor: sdg.color }}
                         ></div>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400">{t.totalActivity} total</span>
+                      <span className="text-[10px] font-bold text-slate-400">{sdg.totalActivity} {t('feed.total')}</span>
                     </div>
                   </div>
                 </div>
@@ -734,7 +737,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   <div className="size-12 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-2">
                     <span className="material-symbols-outlined text-2xl">search_off</span>
                   </div>
-                  <p className="text-xs text-slate-400 font-bold italic px-4">Configura tus preferencias para ver tu impacto.</p>
+                  <p className="text-xs text-slate-400 font-bold italic px-4">{t('feed.configurePreferences')}</p>
                 </div>
               )}
             </div>
@@ -743,7 +746,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
               onClick={() => navigate(View.SETTINGS)}
               className="w-full mt-6 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-dashed border-slate-200"
             >
-              Configurar Mis Causas
+              {t('feed.configureCauses')}
             </button>
           </div>
         </div>
@@ -787,20 +790,20 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
         isOpen={postToDelete !== null}
         onClose={() => setPostToDelete(null)}
         onConfirm={confirmDeletePost}
-        title="¿Eliminar publicación?"
-        description="Esta acción no se puede deshacer. Tu historia de impacto dejará de ser visible para la comunidad."
-        confirmText="Sí, eliminar"
-        cancelText="No, mantener"
+        title={t('feed.deletePostTitle')}
+        description={t('feed.deletePostDesc')}
+        confirmText={t('feed.yesDelete')}
+        cancelText={t('feed.noKeep')}
       />
 
       <ConfirmModal
         isOpen={commentToDelete !== null}
         onClose={() => setCommentToDelete(null)}
         onConfirm={confirmDeleteComment}
-        title="¿Eliminar comentario?"
-        description="¿Estás seguro de que quieres borrar este comentario? No podrás recuperarlo."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        title={t('feed.deleteCommentTitle')}
+        description={t('feed.deleteCommentDesc')}
+        confirmText={t('feed.delete')}
+        cancelText={t('feed.cancel')}
         icon="comment_bank"
       />
       <ShareSuccessModal
@@ -830,8 +833,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                 <div className="size-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <span className="material-symbols-outlined text-white text-5xl">workspace_premium</span>
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2">¡Activa tu Kit ENTERPRISE!</h2>
-                <p className="text-white/90 text-sm">Desbloquea la experiencia completa de Emprexa</p>
+                <h2 className="text-2xl font-black text-white mb-2">{t('feed.activateEnterpriseTitle')}</h2>
+                <p className="text-white/90 text-sm">{t('feed.activateEnterpriseSubtitle')}</p>
               </div>
             </div>
 
@@ -843,8 +846,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                     <span className="material-symbols-outlined text-green-600">check_circle</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">5 Publicaciones Full Access</h4>
-                    <p className="text-slate-500 text-xs">Documenta tu impacto con herramientas de nivel corporativo</p>
+                    <h4 className="font-bold text-slate-900 text-sm">{t('feed.fivePostsAccess')}</h4>
+                    <p className="text-slate-500 text-xs">{t('feed.documentImpact')}</p>
                   </div>
                 </div>
 
@@ -853,8 +856,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                     <span className="material-symbols-outlined text-blue-600">calendar_month</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">30 Días de Acceso</h4>
-                    <p className="text-slate-500 text-xs">Disfruta todas las funciones premium</p>
+                    <h4 className="font-bold text-slate-900 text-sm">{t('feed.thirtyDaysAccess')}</h4>
+                    <p className="text-slate-500 text-xs">{t('feed.enjoyPremium')}</p>
                   </div>
                 </div>
 
@@ -863,8 +866,8 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                     <span className="material-symbols-outlined text-purple-600">trending_up</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">Métricas Avanzadas</h4>
-                    <p className="text-slate-500 text-xs">Mide tu impacto real en la comunidad</p>
+                    <h4 className="font-bold text-slate-900 text-sm">{t('feed.advancedMetrics')}</h4>
+                    <p className="text-slate-500 text-xs">{t('feed.measureRealImpact')}</p>
                   </div>
                 </div>
               </div>
@@ -874,7 +877,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                 <div className="flex items-start gap-2">
                   <span className="material-symbols-outlined text-amber-600 text-lg">info</span>
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    <strong>Nota:</strong> Este cupón es único y se activará inmediatamente. Lo que ocurra primero (5 posts o 30 días) determinará cuándo expira.
+                    <strong>{t('feed.note')}</strong> {t('feed.couponNote')}
                   </p>
                 </div>
               </div>
@@ -885,7 +888,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   onClick={() => setShowTrialConfirmModal(false)}
                   className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors"
                 >
-                  Más Tarde
+                  {t('feed.later')}
                 </button>
                 <button
                   onClick={() => {
@@ -895,7 +898,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
                   className="flex-1 py-3 bg-gradient-to-r from-primary to-purple-600 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-lg">celebration</span>
-                  Activar Ahora
+                  {t('feed.activateNow')}
                 </button>
               </div>
             </div>
