@@ -210,8 +210,8 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     if (!show) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[600px] flex flex-col overflow-hidden animate-[fade-in_0.2s_ease-out]">
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center sm:p-4">
+            <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-[600px] flex flex-col overflow-hidden animate-[fade-in_0.2s_ease-out]">
                 <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100 bg-white">
                     <h2 className="text-base font-bold text-slate-800">{isEditing ? t('feed.editPost') : t('feed.createPost')}</h2>
                     <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
@@ -219,7 +219,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
                     </button>
                 </div>
 
-                <div className="p-5 space-y-3 overflow-y-auto max-h-[75vh] overflow-x-hidden">
+                <div className="p-5 space-y-3 flex-1 overflow-y-auto sm:max-h-[75vh] overflow-x-hidden">
                     <input
                         type="text"
                         placeholder={t('feed.titlePlaceholder')}

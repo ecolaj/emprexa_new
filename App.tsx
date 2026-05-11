@@ -29,6 +29,7 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { AuthCallback } from './components/AuthCallback';
 import { ResetPassword } from './pages/ResetPassword';
 import { ProcessRecovery } from './pages/ProcessRecovery';
+import { BottomNav } from './components/BottomNav';
 import {
   BrowserRouter as Router,
   Routes,
@@ -161,7 +162,7 @@ function AppContent() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
       />
-      <div className="flex-1 flex flex-col overflow-hidden relative pt-16 lg:pt-0">
+      <div className="flex-1 flex flex-col overflow-hidden relative pt-16 pb-16 lg:pt-0 lg:pb-0">
         <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 fixed top-0 left-0 w-full z-[50]">
           <div className="flex items-center gap-2"><Logo className="h-8" /></div>
           <div className="flex items-center gap-4">
@@ -169,14 +170,11 @@ function AppContent() {
               <span className="material-symbols-outlined">chat</span>
               {totalUnreadMessages > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">{totalUnreadMessages}</span>}
             </button>
-            <button onClick={() => appNavigate(View.NOTIFICATIONS)} className="relative text-slate-500">
-              <span className="material-symbols-outlined">notifications</span>
-              {totalUnreadNotifications > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">{totalUnreadNotifications}</span>}
-            </button>
             <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-500 p-2 rounded-lg z-50"><span className="material-symbols-outlined text-2xl">menu</span></button>
           </div>
         </header>
         {component}
+        <BottomNav currentView={view} navigate={appNavigate} />
       </div>
     </div>
   );
