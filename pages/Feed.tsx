@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import { View, NavProps, Post, ID } from '../types';
 import { SDGS, POSTS, USERS } from '../constants';
 import { DEFAULT_USER } from '../utils/defaults';
@@ -20,6 +21,8 @@ import { useLanguage } from '../context/LanguageContext';
 export const Feed: React.FC<NavProps> = ({ navigate }) => {
   const { user, savedPostIds, toggleSavedPost, followedUserIds, followedSdgIds, sendMentionNotifications, isLoading: authLoading, activateTrial } = useAuth();
   const { t } = useLanguage();
+  const location = useLocation();
+  const routerNavigate = useRouterNavigate();
 
   // AUDIT FIX: Removed fallback to hardcoded "Juan Pérez".
   // If user is not logged in, we shouldn't show fake data.
@@ -444,6 +447,18 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
     setIsEditing(false);
     setShowPostModal(false);
   };
+
+  useEffect(() => {
+    if (location.state?.createPost && !showPostModal) {
+      if (currentUser?.plan !== 'free') {
+        resetPostForm();
+        setShowPostModal(true);
+      } else {
+        handleLockedAction('post');
+      }
+      routerNavigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, showPostModal, currentUser, routerNavigate]);
 
   const startEditPost = (post: Post) => {
     setFormPostId(post.id);

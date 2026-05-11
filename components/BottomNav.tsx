@@ -31,10 +31,9 @@ export const BottomNav: React.FC<NavProps> = ({ currentView, navigate }) => {
           </button>
         ))}
 
-        {/* Center Action Button (+) */}
         <div className="relative -top-5">
           <button
-            onClick={() => navigate(View.FEED)}
+            onClick={() => navigate(View.FEED, { createPost: true })}
             className="flex items-center justify-center w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark hover:scale-105 transition-transform"
           >
             <span className="material-symbols-outlined text-[32px]">add</span>

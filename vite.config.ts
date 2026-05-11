@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+          includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo.png'],
           manifest: {
             name: 'Emprexa',
             short_name: 'Emprexa',
@@ -23,14 +23,16 @@ export default defineConfig(({ mode }) => {
             theme_color: '#ffffff',
             icons: [
               {
-                src: 'pwa-192x192.png',
+                src: 'logo.png',
                 sizes: '192x192',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any maskable'
               },
               {
-                src: 'pwa-512x512.png',
+                src: 'logo.png',
                 sizes: '512x512',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any maskable'
               }
             ]
           }

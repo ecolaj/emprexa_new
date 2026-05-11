@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View } from './types';
 import { Sidebar } from './components/Sidebar';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useLanguage } from './context/LanguageContext';
 import { Loading } from './components/Loading';
 import { Login } from './pages/Login';
 import { Onboarding } from './pages/Onboarding';
@@ -43,6 +44,7 @@ import {
 
 function AppContent() {
   const { user, isLoading, totalUnreadMessages, totalUnreadNotifications } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -166,6 +168,12 @@ function AppContent() {
         <header className="lg:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 fixed top-0 left-0 w-full z-[50]">
           <div className="flex items-center gap-2"><Logo className="h-8" /></div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+              className="flex items-center justify-center font-black text-[11px] uppercase w-7 h-7 rounded-full bg-slate-100 text-slate-600 hover:bg-primary hover:text-white transition-colors"
+            >
+              {language}
+            </button>
             <button onClick={() => appNavigate(View.MESSAGES)} className="relative text-slate-500">
               <span className="material-symbols-outlined">chat</span>
               {totalUnreadMessages > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 border-2 border-white rounded-full text-[10px] text-white flex items-center justify-center font-bold">{totalUnreadMessages}</span>}
