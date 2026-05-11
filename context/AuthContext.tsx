@@ -654,6 +654,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNotifications([]);
         setIsLoading(false);
       }
+      window.location.href = '/login';
     }
   };
 

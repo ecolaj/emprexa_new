@@ -204,7 +204,6 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
   const confirmLogout = async () => {
     await logout();
     setShowLogoutModal(false);
-    navigate(View.LOGIN);
   };
 
   return (
