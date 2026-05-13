@@ -337,6 +337,21 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
         </div>
 
         <div className="w-full max-w-[400px] flex flex-col gap-8">
+
+          {/* Logo — solo visible en móvil/PWA (en desktop está en el panel izquierdo) */}
+          <div className="lg:hidden flex flex-col items-center gap-3 pb-2">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Emprexa Logo" className="h-12 w-12 object-contain rounded-xl shadow-md" />
+              <span className="text-3xl font-black tracking-tight text-slate-900" style={{ letterSpacing: '-0.02em' }}>
+                Emprexa
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest text-center">
+              Red de Impacto Social · ODS 2030
+            </p>
+            <div className="h-px w-16 bg-primary rounded-full opacity-60 mt-1"></div>
+          </div>
+
           <div className="flex flex-col gap-2">
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">{t('login.welcomeTitle')}</h2>
             <p className="text-slate-500 text-base">{t('login.welcomeSubtitle')}</p>
