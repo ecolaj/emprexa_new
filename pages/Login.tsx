@@ -320,8 +320,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
       {/* Right Panel: Form */}
       <div className="flex w-full lg:w-5/12 flex-col justify-center items-center bg-white p-6 sm:p-12 relative z-30 shadow-2xl">
 
-        {/* Language Selector */}
-        <div className="absolute top-6 right-6 flex items-center bg-slate-100 rounded-lg p-1">
+        {/* Language Selector — visible only on desktop (absolute). On mobile it's inside the logo block below) */}
+        <div className="hidden lg:flex absolute top-6 right-6 items-center bg-slate-100 rounded-lg p-1">
           <button
             onClick={() => setLanguage('es')}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${language === 'es' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -340,6 +340,25 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
 
           {/* Logo — solo visible en móvil/PWA (en desktop está en el panel izquierdo) */}
           <div className="lg:hidden flex flex-col items-center gap-3 pb-2">
+
+            {/* Selector de idioma móvil — en flujo normal, alineado a la derecha */}
+            <div className="w-full flex justify-end">
+              <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                <button
+                  onClick={() => setLanguage('es')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${language === 'es' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  ES
+                </button>
+                <button
+                  onClick={() => setLanguage('en')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${language === 'en' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  EN
+                </button>
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="Emprexa Logo" className="h-12 w-12 object-contain rounded-xl shadow-md" />
               <span className="text-3xl font-black tracking-tight text-slate-900" style={{ letterSpacing: '-0.02em' }}>
