@@ -813,16 +813,22 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
               <div className="flex-1 flex flex-col justify-center min-h-0 relative">
                 {selectedSdg ? (
                   <div
-                    className="h-full rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col justify-end animate-[fade-in_0.4s_ease-out]"
+                    className="h-full rounded-[2rem] p-5 md:p-12 relative overflow-hidden flex flex-col justify-end animate-[fade-in_0.4s_ease-out]"
                     style={{ backgroundColor: selectedSdg.color }}
                   >
                     <span className="absolute -top-10 -right-10 material-symbols-outlined text-[300px] text-white/20 pointer-events-none select-none">
                       {selectedSdg.icon}
                     </span>
 
-                    <button onClick={() => setSelectedSdg(null)} className="absolute top-6 left-6 flex items-center gap-2 text-white/80 hover:text-white font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl backdrop-blur-sm transition-all text-sm">
+                    {/* Botón volver — solo en desktop (texto + icono) */}
+                    <button onClick={() => setSelectedSdg(null)} className="hidden md:flex absolute top-6 left-6 items-center gap-2 text-white/80 hover:text-white font-bold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl backdrop-blur-sm transition-all text-sm">
                       <span className="material-symbols-outlined text-lg">arrow_back</span>
                       {t('sdgModal.backToGrid')}
+                    </button>
+
+                    {/* Botón X — solo en móvil/PWA, esquina superior derecha */}
+                    <button onClick={() => setSelectedSdg(null)} className="md:hidden absolute top-4 right-4 size-9 flex items-center justify-center bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl text-white transition-all">
+                      <span className="material-symbols-outlined text-xl">close</span>
                     </button>
 
                     <div className="relative z-10 text-white">
@@ -833,8 +839,8 @@ export const Login: React.FC<NavProps> = ({ navigate }) => {
                           <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-sm">dynamic_feed</span> {sdgStats[selectedSdg.id]?.posts || 0} {t('sdgModal.posts')}</span>
                         </div>
                       </div>
-                      <h4 className="text-4xl md:text-5xl font-black mb-6 leading-[1.1]">{t(`sdgs.${selectedSdg.id}.label`) || selectedSdg.label}</h4>
-                      <p className="text-xl md:text-2xl text-white/90 font-medium leading-relaxed max-w-2xl">{t(`sdgs.${selectedSdg.id}.description`) || selectedSdg.description}</p>
+                      <h4 className="text-2xl md:text-5xl font-black mb-3 md:mb-6 leading-[1.15]">{t(`sdgs.${selectedSdg.id}.label`) || selectedSdg.label}</h4>
+                      <p className="text-sm md:text-2xl text-white/90 font-medium leading-relaxed max-w-2xl">{t(`sdgs.${selectedSdg.id}.description`) || selectedSdg.description}</p>
                     </div>
                   </div>
                 ) : (
