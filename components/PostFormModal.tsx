@@ -43,7 +43,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
     onRemoveImage
 }) => {
     const { user: authUser, followedUserIds } = useAuth();
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -211,7 +211,7 @@ export const PostFormModal: React.FC<PostFormModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center sm:p-4">
-            <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-[600px] flex flex-col overflow-hidden animate-[fade-in_0.2s_ease-out]">
+            <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-h-screen sm:max-h-[90vh] sm:max-w-[600px] flex flex-col overflow-y-auto sm:overflow-hidden animate-[fade-in_0.2s_ease-out]">
                 <div className="flex justify-between items-center px-5 py-3 border-b border-slate-100 bg-white">
                     <h2 className="text-base font-bold text-slate-800">{isEditing ? t('feed.editPost') : t('feed.createPost')}</h2>
                     <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">

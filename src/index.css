@@ -1,0 +1,12 @@
+/* Global mobile scroll handling */
+@media (max-width: 640px) {
+  html, body, #root {
+    overflow-x: hidden;
+    overscroll-behavior-y: contain; /* allow only vertical scroll, prevent elastic side scroll */
+    height: 100%;
+  }
+  /* Ensure internal flex containers do not overflow horizontally */
+  .flex-1, .overflow-hidden, .overflow-x-hidden {
+    overflow-x: hidden !important;
+  }
+}
