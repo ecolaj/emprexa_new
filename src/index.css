@@ -2,11 +2,18 @@
 @media (max-width: 640px) {
   html, body, #root {
     overflow-x: hidden;
-    overscroll-behavior-y: contain; /* allow only vertical scroll, prevent elastic side scroll */
+    overflow-y: auto;
+    overscroll-behavior: contain; /* restrict both axes */
     height: 100%;
+    touch-action: pan-y; /* allow only vertical pan */
   }
   /* Ensure internal flex containers do not overflow horizontally */
   .flex-1, .overflow-hidden, .overflow-x-hidden {
     overflow-x: hidden !important;
+  }
+  /* Prevent horizontal scroll on any element with overflow-y-auto */
+  .overflow-y-auto {
+    overflow-x: hidden !important;
+    touch-action: pan-y;
   }
 }
