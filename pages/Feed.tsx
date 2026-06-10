@@ -486,7 +486,7 @@ export const Feed: React.FC<NavProps> = ({ navigate }) => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f0f2f5] p-0 md:p-6 lg:p-8" onClick={() => { setActiveMenuPostId(null); setActiveMenuCommentId(null); }}>
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f0f2f5] p-0 md:p-6 lg:p-8" onClick={() => { setActiveMenuPostId(null); setActiveMenuCommentId(null); }}>
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Left Sidebar */}
