@@ -132,7 +132,7 @@ export const Saved: React.FC<NavProps> = ({ navigate }) => {
     }, [savedPostIds, user]);
 
     return (
-        <div className="flex-1 overflow-y-auto bg-slate-50">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50">
             <div className="max-w-2xl mx-auto p-4 md:p-6">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-6">

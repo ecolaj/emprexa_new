@@ -207,7 +207,7 @@ export const ProfileSettings: React.FC<NavProps> = ({ navigate }) => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-50">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50">
       <div className="max-w-5xl mx-auto p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>

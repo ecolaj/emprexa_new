@@ -472,7 +472,7 @@ export const SinglePost: React.FC<NavProps> = ({ navigate, params }) => {
             )}
 
             {/* Main Content */}
-            <div className="flex-1 flex justify-center p-4 md:p-8 overflow-y-auto">
+            <div className="flex-1 flex justify-center p-4 md:p-8 overflow-y-auto overflow-x-hidden">
                 <div className="w-full max-w-2xl">
                     {/* Back Button */}
                     <button

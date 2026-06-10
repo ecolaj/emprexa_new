@@ -273,7 +273,7 @@ export const Search: React.FC<NavProps> = ({ navigate }) => {
   const hasResults = results.people.length > 0 || results.projects.length > 0 || results.orgs.length > 0 || results.realProjects.length > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
 
         {/* Search Header */}

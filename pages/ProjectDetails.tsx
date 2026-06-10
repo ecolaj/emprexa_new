@@ -525,7 +525,7 @@ export const ProjectDetails: React.FC<NavProps> = ({ navigate, params }) => {
 
     return (
         <>
-            <div className="flex-1 overflow-y-auto bg-slate-50">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50">
 
                 {/* Hero Header */}
                 <div className="relative h-[300px] md:h-[400px] w-full bg-slate-900 group overflow-hidden">

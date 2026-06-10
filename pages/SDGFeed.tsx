@@ -169,7 +169,7 @@ export const SDGFeed: React.FC<NavProps> = ({ navigate, params }) => {
   if (!sdg) return null;
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
       {/* Banner */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto pt-6 px-6">
